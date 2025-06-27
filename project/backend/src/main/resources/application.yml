@@ -4,7 +4,7 @@
 server:
   port: 38080
   servlet:
-    context-path: /api
+    context-path: /
 
 spring:
   application:
@@ -61,6 +61,10 @@ spring:
       fail-on-empty-beans: false
     deserialization:
       fail-on-unknown-properties: false
+    # 添加LocalDate格式化配置
+    format:
+      date: yyyy-MM-dd
+      date-time: yyyy-MM-dd HH:mm:ss
   
   # 配置文件加载
   config:

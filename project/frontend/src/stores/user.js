@@ -135,10 +135,10 @@ export const useUserStore = defineStore('user', () => {
    * 更新用户信息
    * @param {Object} updateData - 更新的用户信息
    */
-  const updateUserInfo = async (updateData) => {
+  const updateUserInfo = async (userId, updateData) => {
     try {
       loading.value = true
-      const response = await userApi.updateUserInfo(updateData)
+      const response = await userApi.updateUserInfo(userId, updateData)
       
       // 适配新的后端响应格式 (EventResponse)
       if (response.code === 200 && response.data) {

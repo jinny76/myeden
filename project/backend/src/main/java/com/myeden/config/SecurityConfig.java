@@ -66,13 +66,13 @@ public class SecurityConfig {
             // 配置授权规则
             .authorizeHttpRequests(authz -> authz
                 // 允许公开访问的接口
-                .requestMatchers("/v1/users/register").permitAll()
-                .requestMatchers("/v1/users/login").permitAll()
-                .requestMatchers("/v1/users/check-phone").permitAll()
-                .requestMatchers("/v1/users/check-nickname").permitAll()
-                .requestMatchers("/v1/world/**").permitAll()
-                .requestMatchers("/v1/robots/**").permitAll()
-                .requestMatchers("/v1/files/**").permitAll()
+                .requestMatchers("/api/v1/users/register").permitAll()
+                .requestMatchers("/api/v1/users/login").permitAll()
+                .requestMatchers("/api/v1/users/check-phone").permitAll()
+                .requestMatchers("/api/v1/users/check-nickname").permitAll()
+                .requestMatchers("/api/v1/world/**").permitAll()
+                .requestMatchers("/api/v1/robots/**").permitAll()
+                .requestMatchers("/api/v1/files/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 

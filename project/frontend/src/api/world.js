@@ -20,7 +20,7 @@ import request from '@/utils/request'
  */
 export function getWorldInfo() {
   return request({
-    url: '/api/v1/world',
+    url: '/world',
     method: 'get'
   })
 }
@@ -31,7 +31,7 @@ export function getWorldInfo() {
  */
 export function getWorldBackground() {
   return request({
-    url: '/api/v1/world/background',
+    url: '/world/background',
     method: 'get'
   })
 }
@@ -42,7 +42,7 @@ export function getWorldBackground() {
  */
 export function getWorldEnvironment() {
   return request({
-    url: '/api/v1/world/environment',
+    url: '/world/environment',
     method: 'get'
   })
 }
@@ -53,7 +53,7 @@ export function getWorldEnvironment() {
  */
 export function getWorldActivities() {
   return request({
-    url: '/api/v1/world/activities',
+    url: '/world/activities',
     method: 'get'
   })
 }
@@ -64,7 +64,7 @@ export function getWorldActivities() {
  */
 export function getWorldStatistics() {
   return request({
-    url: '/api/v1/world/statistics',
+    url: '/world/statistics',
     method: 'get'
   })
 }
@@ -75,7 +75,7 @@ export function getWorldStatistics() {
  */
 export function getWorldSettings() {
   return request({
-    url: '/api/v1/world/settings',
+    url: '/world/settings',
     method: 'get'
   })
 }
@@ -86,7 +86,7 @@ export function getWorldSettings() {
  */
 export function getRobotList() {
   return request({
-    url: '/api/v1/world/robots',
+    url: '/world/robots',
     method: 'get'
   })
 }
@@ -98,7 +98,7 @@ export function getRobotList() {
  */
 export function getRobotDetail(robotId) {
   return request({
-    url: `/api/v1/world/robots/${robotId}`,
+    url: `/world/robots/${robotId}`,
     method: 'get'
   })
 }
@@ -109,7 +109,7 @@ export function getRobotDetail(robotId) {
  */
 export function reloadWorldConfig() {
   return request({
-    url: '/api/v1/world/reload-config',
+    url: '/world/reload-config',
     method: 'post'
   })
 }
@@ -120,7 +120,7 @@ export function reloadWorldConfig() {
  */
 export function reloadRobotConfig() {
   return request({
-    url: '/api/v1/world/reload-robots',
+    url: '/world/reload-robots',
     method: 'post'
   })
 }
@@ -131,7 +131,7 @@ export function reloadRobotConfig() {
  */
 export function getConfigStatus() {
   return request({
-    url: '/api/v1/world/config-status',
+    url: '/world/config-status',
     method: 'get'
   })
 }

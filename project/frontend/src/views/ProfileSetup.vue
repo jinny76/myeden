@@ -237,11 +237,11 @@ const handleSave = async () => {
     }
     
     // 使用store的updateUserInfo方法
-    const response = await userStore.updateUserInfo({
+    const response = await userStore.updateUserInfo(userId, {
       nickname: formData.nickname,
       gender: formData.gender,
       birthday: formData.birthday,
-      bio: formData.bio
+      introduction: formData.bio
     })
     
     if (response.code === 200) {

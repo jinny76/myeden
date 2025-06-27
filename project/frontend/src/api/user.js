@@ -37,7 +37,7 @@ export function register(data) {
  */
 export function login(data) {
   return request({
-    url: '/api/v1/users/login',
+    url: '/users/login',
     method: 'post',
     data
   })
@@ -49,7 +49,7 @@ export function login(data) {
  */
 export function getUserInfo() {
   return request({
-    url: '/api/v1/users/me',
+    url: '/users/me',
     method: 'get'
   })
 }
@@ -59,9 +59,9 @@ export function getUserInfo() {
  * @param {Object} data - 用户信息
  * @returns {Promise} 更新结果
  */
-export function updateUserInfo(data) {
+export function updateUserInfo(userId, data) {
   return request({
-    url: '/api/v1/users/profile',
+    url: `/users/${userId}`,
     method: 'put',
     data
   })
@@ -75,7 +75,7 @@ export function updateUserInfo(data) {
  */
 export function uploadAvatar(userId, formData) {
   return request({
-    url: `/api/v1/users/${userId}/avatar`,
+    url: `/users/${userId}/avatar`,
     method: 'post',
     data: formData,
     headers: {
@@ -90,7 +90,7 @@ export function uploadAvatar(userId, formData) {
  */
 export function completeFirstLogin() {
   return request({
-    url: '/api/v1/users/complete-first-login',
+    url: '/users/complete-first-login',
     method: 'post'
   })
 }
@@ -102,7 +102,7 @@ export function completeFirstLogin() {
  */
 export function checkPhone(phone) {
   return request({
-    url: '/api/v1/users/check-phone',
+    url: '/users/check-phone',
     method: 'get',
     params: { phone }
   })
@@ -115,7 +115,7 @@ export function checkPhone(phone) {
  */
 export function checkNickname(nickname) {
   return request({
-    url: '/api/v1/users/check-nickname',
+    url: '/users/check-nickname',
     method: 'get',
     params: { nickname }
   })
@@ -129,7 +129,7 @@ export function checkNickname(nickname) {
  */
 export function searchUsers(nickname, limit = 10) {
   return request({
-    url: '/api/v1/users/search',
+    url: '/users/search',
     method: 'get',
     params: { nickname, limit }
   })
@@ -142,7 +142,7 @@ export function searchUsers(nickname, limit = 10) {
  */
 export function getRecentUsers(limit = 10) {
   return request({
-    url: '/api/v1/users/recent',
+    url: '/users/recent',
     method: 'get',
     params: { limit }
   })
@@ -154,7 +154,7 @@ export function getRecentUsers(limit = 10) {
  */
 export function getUserStatistics() {
   return request({
-    url: '/api/v1/users/statistics',
+    url: '/users/statistics',
     method: 'get'
   })
 }

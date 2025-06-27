@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -56,7 +57,7 @@ class UserServiceTest {
         testUser.setTitle("测试者");
         testUser.setGender("男");
         testUser.setAge(25);
-        testUser.setBirthday(LocalDateTime.now().minusYears(25));
+        testUser.setBirthday(LocalDate.now().minusYears(25));
         testUser.setIntroduction("这是一个测试用户");
         testUser.setBackground("测试背景");
         testUser.setBloodType("A");

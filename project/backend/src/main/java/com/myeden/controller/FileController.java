@@ -28,7 +28,7 @@ import java.nio.file.Paths;
  * @since 2024-01-01
  */
 @RestController
-@RequestMapping("/v1/files")
+@RequestMapping("/api/v1/files")
 public class FileController {
     
     private static final Logger logger = LoggerFactory.getLogger(FileController.class);

@@ -4,6 +4,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
@@ -72,7 +73,7 @@ public class User {
     /**
      * 生日
      */
-    private LocalDateTime birthday;
+    private LocalDate birthday;
     
     /**
      * 一句话介绍
@@ -210,11 +211,11 @@ public class User {
         this.age = age;
     }
     
-    public LocalDateTime getBirthday() {
+    public LocalDate getBirthday() {
         return birthday;
     }
     
-    public void setBirthday(LocalDateTime birthday) {
+    public void setBirthday(LocalDate birthday) {
         this.birthday = birthday;
     }
     
