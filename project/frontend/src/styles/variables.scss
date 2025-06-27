@@ -1,0 +1,152 @@
+/**
+ * SCSS变量定义
+ * 
+ * 功能说明：
+ * - 定义应用的颜色主题
+ * - 定义尺寸和间距
+ * - 定义字体和阴影
+ * - 支持深色模式
+ * 
+ * @author MyEden Team
+ * @version 1.0.0
+ * @since 2024-01-01
+ */
+
+// 主色调
+$primary-color: #409EFF;
+$primary-light: #79BBFF;
+$primary-dark: #337ECC;
+
+// 功能色
+$success-color: #67C23A;
+$warning-color: #E6A23C;
+$danger-color: #F56C6C;
+$info-color: #909399;
+
+// 文本颜色
+$text-color: #303133;
+$text-regular: #606266;
+$text-secondary: #909399;
+$text-placeholder: #C0C4CC;
+$text-muted: #909399;
+$text-light: #FFFFFF;
+
+// 背景颜色
+$bg-color: #F5F7FA;
+$bg-white: #FFFFFF;
+$bg-light: #FAFAFA;
+$bg-dark: #F5F5F5;
+
+// 边框颜色
+$border-color: #DCDFE6;
+$border-light: #E4E7ED;
+$border-lighter: #EBEEF5;
+$border-extra-light: #F2F6FC;
+
+// 卡片样式
+$card-bg: #FFFFFF;
+$card-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+$card-hover-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.15);
+
+// 滚动条颜色
+$scrollbar-track-color: #F5F5F5;
+$scrollbar-thumb-color: #C1C1C1;
+$scrollbar-thumb-hover-color: #A8A8A8;
+
+// 链接颜色
+$link-color: #409EFF;
+$link-hover-color: #337ECC;
+
+// 深色模式颜色
+$dark-bg-color: #1A1A1A;
+$dark-text-color: #E5E5E5;
+$dark-text-secondary: #B0B0B0;
+$dark-border-color: #404040;
+$dark-card-bg: #2D2D2D;
+$dark-card-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.3);
+$dark-card-hover-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.4);
+$dark-input-bg: #404040;
+
+// 尺寸变量
+$border-radius: 4px;
+$border-radius-sm: 2px;
+$border-radius-lg: 8px;
+$border-radius-round: 50%;
+
+// 间距变量
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-xxl: 48px;
+
+// 字体大小
+$font-size-xs: 12px;
+$font-size-sm: 14px;
+$font-size-base: 16px;
+$font-size-lg: 18px;
+$font-size-xl: 20px;
+$font-size-2xl: 24px;
+$font-size-3xl: 30px;
+$font-size-4xl: 36px;
+
+// 字体粗细
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 行高
+$line-height-tight: 1.25;
+$line-height-normal: 1.5;
+$line-height-relaxed: 1.75;
+
+// 阴影
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+// 过渡动画
+$transition-fast: 0.15s ease;
+$transition-base: 0.3s ease;
+$transition-slow: 0.5s ease;
+
+// 断点
+$breakpoint-xs: 480px;
+$breakpoint-sm: 768px;
+$breakpoint-md: 992px;
+$breakpoint-lg: 1200px;
+$breakpoint-xl: 1600px;
+
+// Z-index层级
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+
+// 特殊颜色（伊甸园主题）
+$eden-primary: #FF6B9D; // 温暖的粉色
+$eden-secondary: #4ECDC4; // 清新的青色
+$eden-accent: #45B7D1; // 天空蓝
+$eden-warm: #FFA07A; // 温暖的橙色
+$eden-cool: #98D8C8; // 凉爽的绿色
+
+// 渐变背景
+$gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$gradient-warm: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+$gradient-cool: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+$gradient-eden: linear-gradient(135deg, #FF6B9D 0%, #4ECDC4 100%);
+
+// 机器人主题色
+$robot-warm: #FFB6C1; // 小暖的粉色
+$robot-wise: #87CEEB; // 小智的蓝色
+$robot-happy: #FFD700; // 小乐的金色
+$robot-quiet: #DDA0DD; // 小静的紫色
+$robot-brave: #FF6347; // 小勇的红色 

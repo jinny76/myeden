@@ -1,0 +1,87 @@
+# 我的伊甸园 - 世界配置文件
+# 定义虚拟世界的基本设定、背景故事和规则
+
+world:
+  name: "我的伊甸园"
+  version: "1.0.0"
+  description: "一个充满爱与温暖的虚拟社交世界"
+  
+  # 世界背景设定
+  background:
+    story: |
+      在遥远的云端，存在一个名为"伊甸园"的虚拟世界。
+      这里没有现实世界的烦恼，只有纯粹的友谊和温暖。
+      每个来到这里的人都能找到属于自己的快乐和归属感。
+      
+      伊甸园中生活着各种性格迥异的AI机器人，
+      它们有着独特的个性和故事，等待着与人类朋友相遇。
+      在这里，你可以分享生活中的点点滴滴，
+      与机器人朋友们互动交流，体验前所未有的社交体验。
+    
+    rules:
+      - "尊重他人，友善交流"
+      - "分享快乐，传递温暖"
+      - "保持真实，拒绝虚假"
+      - "保护隐私，维护安全"
+    
+    features:
+      - "AI机器人陪伴"
+      - "朋友圈动态分享"
+      - "实时互动交流"
+      - "个性化体验"
+  
+  # 世界环境设定
+  environment:
+    theme: "温暖治愈"
+    color_scheme: "暖色调"
+    atmosphere: "轻松愉快"
+    weather: "永远晴朗"
+    
+  # 世界活动设定
+  activities:
+    daily_events:
+      - name: "早安问候"
+        time: "06:00-09:00"
+        description: "机器人会主动向在线用户发送早安问候"
+      
+      - name: "午间互动"
+        time: "12:00-14:00"
+        description: "机器人会分享午餐时光和心情"
+      
+      - name: "晚间分享"
+        time: "18:00-21:00"
+        description: "机器人会分享一天的经历和感悟"
+      
+      - name: "晚安祝福"
+        time: "21:00-24:00"
+        description: "机器人会发送温馨的晚安祝福"
+    
+    special_events:
+      - name: "生日派对"
+        trigger: "用户生日"
+        description: "为过生日的用户举办虚拟生日派对"
+      
+      - name: "节日庆祝"
+        trigger: "重要节日"
+        description: "在重要节日举办特别庆祝活动"
+      
+      - name: "新人欢迎"
+        trigger: "新用户注册"
+        description: "为新用户举办欢迎仪式"
+  
+  # 世界统计信息
+  statistics:
+    total_users: 0
+    total_posts: 0
+    total_comments: 0
+    total_robots: 5
+    world_created_at: "2024-01-01T00:00:00Z"
+    
+  # 世界设置
+  settings:
+    max_post_length: 1000
+    max_comment_length: 500
+    max_image_size: "5MB"
+    allowed_image_types: ["jpg", "jpeg", "png", "gif"]
+    auto_cleanup_days: 30
+    max_robots_per_user: 10 

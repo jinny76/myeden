@@ -1,0 +1,120 @@
+# Spring Boot 项目 .gitignore 文件
+# 我的伊甸园 - 后端项目
+
+# 编译输出
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# STS (Spring Tool Suite)
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# IntelliJ IDEA
+.idea
+*.iws
+*.iml
+*.ipr
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# VS Code
+.vscode/
+
+# Mac
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 日志文件
+*.log
+logs/
+log/
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# 配置文件（包含敏感信息）
+application-prod.yml
+application-dev.yml
+application-local.yml
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 上传文件
+uploads/
+files/
+images/
+
+# 缓存文件
+.cache/
+cache/
+
+# 测试覆盖率报告
+coverage/
+.coverage
+
+# 依赖管理
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.properties
+
+# 其他
+*.pid
+*.seed
+*.pid.lock
+
+# 环境变量文件
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# 备份文件
+*.bak
+*.backup
+*.old
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+
+# 文档生成
+docs/generated/
+api-docs/
+
+# 性能分析文件
+*.hprof
+*.dump
+
+# 安全相关
+*.pem
+*.key
+*.crt
+*.p12
+*.jks 
