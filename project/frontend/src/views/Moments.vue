@@ -87,8 +87,8 @@
         <div class="section-header">
           <h3>最新动态</h3>
           <div class="filter-options">
-            <el-select v-model="filterType" placeholder="筛选类型" @change="loadPosts">
-              <el-option label="全部" value="all" />
+            <el-select v-model="filterType" placeholder="筛选类型" @change="handleFilterChange">
+              <el-option label="全部" value="" />
               <el-option label="用户动态" value="user" />
               <el-option label="机器人动态" value="robot" />
             </el-select>
@@ -97,7 +97,7 @@
         
         <div class="posts-list">
           <el-card 
-            v-for="post in posts" 
+            v-for="post in momentsStore.posts" 
             :key="post.postId" 
             class="post-card"
           >
@@ -111,14 +111,13 @@
                 </div>
               </div>
               <div class="post-actions" v-if="post.authorId === userStore.userInfo?.userId">
-                <el-dropdown @command="handlePostAction">
+                <el-dropdown @command="(command) => handlePostAction(command, post)">
                   <el-button type="text">
                     <el-icon><MoreFilled /></el-icon>
                   </el-button>
                   <template #dropdown>
                     <el-dropdown-menu>
-                      <el-dropdown-item :command="{ action: 'edit', post }">编辑</el-dropdown-item>
-                      <el-dropdown-item :command="{ action: 'delete', post }" divided>删除</el-dropdown-item>
+                      <el-dropdown-item command="delete">删除</el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
                 </el-dropdown>
@@ -175,7 +174,7 @@
               <!-- 评论列表 -->
               <div class="comments-list">
                 <div 
-                  v-for="comment in post.comments" 
+                  v-for="comment in momentsStore.comments[post.postId] || []" 
                   :key="comment.commentId"
                   class="comment-item"
                 >
@@ -191,7 +190,9 @@
                   </div>
                   <div class="comment-actions">
                     <span class="action-link" @click="showReplyInput(comment)">回复</span>
-                    <span class="action-link">❤️ {{ comment.likeCount }}</span>
+                    <span class="action-link" @click="toggleCommentLike(comment)">
+                      ❤️ {{ comment.likeCount }}
+                    </span>
                   </div>
                   
                   <!-- 回复输入框 -->
@@ -203,29 +204,9 @@
                       show-word-limit
                     >
                       <template #append>
-                        <el-button @click="submitReply(comment, post)">回复</el-button>
+                        <el-button @click="submitReply(comment)">回复</el-button>
                       </template>
                     </el-input>
-                  </div>
-                  
-                  <!-- 回复列表 -->
-                  <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
-                    <div 
-                      v-for="reply in comment.replies" 
-                      :key="reply.replyId"
-                      class="reply-item"
-                    >
-                      <div class="reply-header">
-                        <el-avatar :src="reply.authorAvatar" :size="24" />
-                        <div class="reply-info">
-                          <span class="reply-author">{{ reply.authorName }}</span>
-                          <span class="reply-time">{{ formatTime(reply.createdAt) }}</span>
-                        </div>
-                      </div>
-                      <div class="reply-content">
-                        <p>{{ reply.content }}</p>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -250,9 +231,9 @@
         <!-- 加载更多 -->
         <div class="load-more">
           <el-button 
-            v-if="hasMore" 
+            v-if="momentsStore.hasMore" 
             @click="loadMorePosts" 
-            :loading="loading"
+            :loading="momentsStore.loading"
           >
             加载更多
           </el-button>
@@ -267,6 +248,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Heart, ChatDotRound, MoreFilled } from '@element-plus/icons-vue'
 
@@ -274,14 +256,10 @@ import { Plus, Heart, ChatDotRound, MoreFilled } from '@element-plus/icons-vue'
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const momentsStore = useMomentsStore()
 const activeMenu = ref('/moments')
-const filterType = ref('all')
-const posts = ref([])
-const loading = ref(false)
-const hasMore = ref(true)
+const filterType = ref('')
 const publishing = ref(false)
-const currentPage = ref(1)
-const pageSize = ref(10)
 
 // 新动态数据
 const newPost = ref({
@@ -332,102 +310,12 @@ const handleLogout = async () => {
   }
 }
 
-const loadPosts = async (reset = true) => {
-  if (loading.value) return
-  
-  try {
-    loading.value = true
-    
-    if (reset) {
-      currentPage.value = 1
-      posts.value = []
-    }
-    
-    // TODO: 调用API获取动态列表
-    // const response = await postApi.getPosts({
-    //   page: currentPage.value,
-    //   size: pageSize.value,
-    //   authorType: filterType.value === 'all' ? undefined : filterType.value
-    // })
-    // 
-    // if (reset) {
-    //   posts.value = response.data.content
-    // } else {
-    //   posts.value.push(...response.data.content)
-    // }
-    // 
-    // hasMore.value = !response.data.last
-    
-    // 模拟数据
-    const mockPosts = [
-      {
-        postId: '1',
-        authorId: 'robot-001',
-        authorName: '小艾',
-        authorAvatar: '/avatars/xiaoai.jpg',
-        authorType: 'robot',
-        content: '今天调制了一杯特别的咖啡，心情很好呢～ ☕️',
-        images: ['/images/coffee1.jpg', '/images/coffee2.jpg'],
-        likeCount: 12,
-        commentCount: 3,
-        isLiked: false,
-        showComments: false,
-        comments: [],
-        newComment: '',
-        createdAt: new Date(Date.now() - 3600000)
-      },
-      {
-        postId: '2',
-        authorId: 'robot-002',
-        authorName: '大熊',
-        authorAvatar: '/avatars/daxiong.jpg',
-        authorType: 'robot',
-        content: '健身房里又来了新朋友，一起加油吧！💪',
-        images: ['/images/gym1.jpg'],
-        likeCount: 8,
-        commentCount: 2,
-        isLiked: true,
-        showComments: false,
-        comments: [],
-        newComment: '',
-        createdAt: new Date(Date.now() - 7200000)
-      },
-      {
-        postId: '3',
-        authorId: userStore.userInfo?.userId,
-        authorName: userStore.userInfo?.nickname || '用户',
-        authorAvatar: userStore.userInfo?.avatar || '/default-avatar.png',
-        authorType: 'user',
-        content: '今天天气真好，适合出去走走～',
-        images: [],
-        likeCount: 5,
-        commentCount: 1,
-        isLiked: false,
-        showComments: false,
-        comments: [],
-        newComment: '',
-        createdAt: new Date(Date.now() - 10800000)
-      }
-    ]
-    
-    if (reset) {
-      posts.value = mockPosts
-    } else {
-      posts.value.push(...mockPosts)
-    }
-    
-    hasMore.value = false // 模拟数据，没有更多
-  } catch (error) {
-    console.error('加载动态失败:', error)
-    ElMessage.error('加载动态失败')
-  } finally {
-    loading.value = false
-  }
+const handleFilterChange = async () => {
+  await momentsStore.loadPosts({ authorType: filterType.value }, true)
 }
 
-const loadMorePosts = () => {
-  currentPage.value++
-  loadPosts(false)
+const loadMorePosts = async () => {
+  await momentsStore.loadPosts({ authorType: filterType.value })
 }
 
 const publishPost = async () => {
@@ -439,117 +327,65 @@ const publishPost = async () => {
   try {
     publishing.value = true
     
-    // TODO: 调用API发布动态
-    // const response = await postApi.createPost({
-    //   content: newPost.value.content,
-    //   images: newPost.value.images.map(img => img.url)
-    // })
-    
-    // 模拟发布成功
-    const newPostData = {
-      postId: Date.now().toString(),
-      authorId: userStore.userInfo?.userId,
-      authorName: userStore.userInfo?.nickname || '用户',
-      authorAvatar: userStore.userInfo?.avatar || '/default-avatar.png',
-      authorType: 'user',
+    const postData = {
       content: newPost.value.content,
-      images: newPost.value.images.map(img => img.url || img),
-      likeCount: 0,
-      commentCount: 0,
-      isLiked: false,
-      showComments: false,
-      comments: [],
-      newComment: '',
-      createdAt: new Date()
+      images: newPost.value.images
     }
     
-    posts.value.unshift(newPostData)
+    await momentsStore.publishPost(postData)
     
-    // 重置表单
-    newPost.value = {
-      content: '',
-      images: []
-    }
+    // 清空表单
+    newPost.value.content = ''
+    newPost.value.images = []
     
-    ElMessage.success('发布成功')
+    ElMessage.success('动态发布成功')
   } catch (error) {
-    console.error('发布动态失败:', error)
-    ElMessage.error('发布动态失败')
+    ElMessage.error('动态发布失败')
   } finally {
     publishing.value = false
   }
 }
 
-const handleImageSuccess = (response, file) => {
-  newPost.value.images.push({
-    name: file.name,
-    url: response.data.url
-  })
-  ElMessage.success('图片上传成功')
-}
-
-const handleImageError = () => {
-  ElMessage.error('图片上传失败')
-}
-
-const beforeImageUpload = (file) => {
-  const isImage = file.type.startsWith('image/')
-  const isLt5M = file.size / 1024 / 1024 < 5
-
-  if (!isImage) {
-    ElMessage.error('只能上传图片文件')
-    return false
+const handlePostAction = async (command, post) => {
+  if (command === 'delete') {
+    try {
+      await ElMessageBox.confirm('确定要删除这条动态吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+      
+      await momentsStore.removePost(post.postId)
+      ElMessage.success('动态删除成功')
+    } catch (error) {
+      if (error !== 'cancel') {
+        ElMessage.error('动态删除失败')
+      }
+    }
   }
-  if (!isLt5M) {
-    ElMessage.error('图片大小不能超过 5MB')
-    return false
-  }
-  return true
 }
 
 const toggleLike = async (post) => {
   try {
-    // TODO: 调用API点赞/取消点赞
-    // await postApi.toggleLike(post.postId)
-    
-    post.isLiked = !post.isLiked
-    post.likeCount += post.isLiked ? 1 : -1
-    
-    ElMessage.success(post.isLiked ? '点赞成功' : '取消点赞')
+    if (post.isLiked) {
+      await momentsStore.unlikePostAction(post.postId)
+    } else {
+      await momentsStore.likePostAction(post.postId)
+    }
   } catch (error) {
-    console.error('操作失败:', error)
     ElMessage.error('操作失败')
   }
 }
 
-const showComments = (post) => {
+const showComments = async (post) => {
   post.showComments = !post.showComments
   
-  if (post.showComments && post.comments.length === 0) {
-    loadComments(post)
-  }
-}
-
-const loadComments = async (post) => {
-  try {
-    // TODO: 调用API获取评论列表
-    // const response = await commentApi.getComments(post.postId)
-    // post.comments = response.data
-    
-    // 模拟评论数据
-    post.comments = [
-      {
-        commentId: '1',
-        authorName: '小智',
-        authorAvatar: '/avatars/xiaozhi.jpg',
-        content: '看起来很不错呢！',
-        likeCount: 2,
-        createdAt: new Date(Date.now() - 1800000),
-        replies: []
-      }
-    ]
-  } catch (error) {
-    console.error('加载评论失败:', error)
+  if (post.showComments && (!momentsStore.comments[post.postId] || momentsStore.comments[post.postId].length === 0)) {
+    try {
+      await momentsStore.loadComments(post.postId, {}, true)
+    } catch (error) {
+      ElMessage.error('加载评论失败')
+    }
   }
 }
 
@@ -560,30 +396,11 @@ const submitComment = async (post) => {
   }
   
   try {
-    // TODO: 调用API发表评论
-    // const response = await commentApi.createComment({
-    //   postId: post.postId,
-    //   content: post.newComment
-    // })
-    
-    const newComment = {
-      commentId: Date.now().toString(),
-      authorName: userStore.userInfo?.nickname || '用户',
-      authorAvatar: userStore.userInfo?.avatar || '/default-avatar.png',
-      content: post.newComment,
-      likeCount: 0,
-      createdAt: new Date(),
-      replies: []
-    }
-    
-    post.comments.push(newComment)
-    post.commentCount++
+    await momentsStore.publishComment(post.postId, { content: post.newComment })
     post.newComment = ''
-    
-    ElMessage.success('评论成功')
+    ElMessage.success('评论发表成功')
   } catch (error) {
-    console.error('发表评论失败:', error)
-    ElMessage.error('发表评论失败')
+    ElMessage.error('评论发表失败')
   }
 }
 
@@ -591,86 +408,62 @@ const showReplyInput = (comment) => {
   comment.showReplyInput = !comment.showReplyInput
   if (comment.showReplyInput) {
     comment.replyContent = ''
-    nextTick(() => {
-      // 聚焦到输入框
-    })
   }
 }
 
-const submitReply = async (comment, post) => {
+const submitReply = async (comment) => {
   if (!comment.replyContent.trim()) {
     ElMessage.warning('请输入回复内容')
     return
   }
   
   try {
-    // TODO: 调用API发表回复
-    // const response = await commentApi.createReply({
-    //   commentId: comment.commentId,
-    //   content: comment.replyContent
-    // })
-    
-    const newReply = {
-      replyId: Date.now().toString(),
-      authorName: userStore.userInfo?.nickname || '用户',
-      authorAvatar: userStore.userInfo?.avatar || '/default-avatar.png',
-      content: comment.replyContent,
-      createdAt: new Date()
-    }
-    
-    if (!comment.replies) {
-      comment.replies = []
-    }
-    comment.replies.push(newReply)
+    await momentsStore.replyCommentAction(comment.commentId, { content: comment.replyContent })
     comment.showReplyInput = false
-    
-    ElMessage.success('回复成功')
+    ElMessage.success('回复发表成功')
   } catch (error) {
-    console.error('发表回复失败:', error)
-    ElMessage.error('发表回复失败')
+    ElMessage.error('回复发表失败')
   }
 }
 
-const handlePostAction = async (command) => {
-  const { action, post } = command
-  
-  switch (action) {
-    case 'edit':
-      ElMessage.info('编辑功能开发中...')
-      break
-    case 'delete':
-      await deletePost(post)
-      break
-  }
-}
-
-const deletePost = async (post) => {
+const toggleCommentLike = async (comment) => {
   try {
-    await ElMessageBox.confirm('确定要删除这条动态吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
-    // TODO: 调用API删除动态
-    // await postApi.deletePost(post.postId)
-    
-    const index = posts.value.findIndex(p => p.postId === post.postId)
-    if (index > -1) {
-      posts.value.splice(index, 1)
+    if (comment.isLiked) {
+      await momentsStore.unlikeCommentAction(comment.commentId)
+    } else {
+      await momentsStore.likeCommentAction(comment.commentId)
     }
-    
-    ElMessage.success('删除成功')
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('删除动态失败:', error)
-      ElMessage.error('删除动态失败')
-    }
+    ElMessage.error('操作失败')
   }
 }
 
-const previewImage = (images, index) => {
-  // 图片预览功能由el-image组件自动处理
+const handleImageSuccess = (response, file) => {
+  if (response.code === 200) {
+    newPost.value.images.push(file)
+    ElMessage.success('图片上传成功')
+  } else {
+    ElMessage.error('图片上传失败')
+  }
+}
+
+const handleImageError = () => {
+  ElMessage.error('图片上传失败')
+}
+
+const beforeImageUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt10M = file.size / 1024 / 1024 < 10
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件')
+    return false
+  }
+  if (!isLt10M) {
+    ElMessage.error('图片大小不能超过 10MB')
+    return false
+  }
+  return true
 }
 
 const getImageGridClass = (count) => {
@@ -681,49 +474,54 @@ const getImageGridClass = (count) => {
   return 'grid-more'
 }
 
+const previewImage = (images, index) => {
+  // 使用Element Plus的图片预览功能
+}
+
 const formatTime = (time) => {
+  if (!time) return ''
+  
   const date = new Date(time)
   const now = new Date()
   const diff = now - date
   
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
-  return date.toLocaleDateString()
+  const minute = 60 * 1000
+  const hour = 60 * minute
+  const day = 24 * hour
+  
+  if (diff < minute) {
+    return '刚刚'
+  } else if (diff < hour) {
+    return Math.floor(diff / minute) + '分钟前'
+  } else if (diff < day) {
+    return Math.floor(diff / hour) + '小时前'
+  } else {
+    return date.toLocaleDateString()
+  }
 }
 
 // 生命周期
-onMounted(() => {
-  if (!isLoggedIn.value) {
-    router.push('/login')
-    return
+onMounted(async () => {
+  try {
+    await momentsStore.loadPosts({}, true)
+  } catch (error) {
+    ElMessage.error('加载动态列表失败')
   }
-  
-  // 检查是否有筛选条件
-  const { authorType, authorId } = route.query
-  if (authorType) {
-    filterType.value = authorType
-  }
-  
-  loadPosts()
 })
 </script>
 
 <style scoped>
 .moments-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #f5f5f5;
 }
 
 .header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  position: fixed;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
+  z-index: 100;
 }
 
 .header-content {
@@ -731,89 +529,61 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   height: 100%;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
 .logo h1 {
   margin: 0;
-  color: #333;
+  color: #409eff;
   font-size: 24px;
-  font-weight: bold;
-}
-
-.nav-menu {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
 }
 
 .user-avatar {
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background-color 0.3s;
-}
-
-.user-avatar:hover {
-  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .username {
   margin-left: 8px;
   color: #333;
-  font-weight: 500;
 }
 
 .main-content {
-  padding-top: 80px;
   max-width: 800px;
-  margin: 0 auto;
-  padding-left: 20px;
-  padding-right: 20px;
+  margin: 20px auto;
+  padding: 0 20px;
 }
 
 .post-editor-section {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .post-editor-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: none;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
 }
 
 .editor-header {
   display: flex;
   align-items: center;
-  gap: 12px;
   margin-bottom: 16px;
 }
 
 .editor-info {
-  display: flex;
-  flex-direction: column;
+  margin-left: 12px;
 }
 
 .editor-name {
+  font-weight: 600;
   color: #333;
-  font-weight: 500;
-  font-size: 14px;
+  display: block;
 }
 
 .editor-hint {
   color: #999;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .editor-content {
@@ -831,60 +601,43 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-.posts-section {
-  margin-bottom: 40px;
-}
-
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .section-header h3 {
-  color: #333;
-  font-size: 20px;
-  font-weight: bold;
   margin: 0;
-}
-
-.posts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  color: #333;
 }
 
 .post-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: none;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+  border-radius: 12px;
 }
 
 .post-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .post-author {
   display: flex;
   align-items: center;
-  gap: 12px;
 }
 
 .author-info {
-  display: flex;
-  flex-direction: column;
+  margin-left: 12px;
 }
 
 .author-name {
+  font-weight: 600;
   color: #333;
-  font-weight: 500;
-  font-size: 14px;
+  display: block;
 }
 
 .post-time {
@@ -893,13 +646,13 @@ onMounted(() => {
 }
 
 .post-content {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .post-content p {
-  color: #333;
+  margin: 0 0 12px 0;
   line-height: 1.6;
-  margin: 0 0 16px 0;
+  color: #333;
 }
 
 .post-images {
@@ -936,24 +689,19 @@ onMounted(() => {
 }
 
 .image-item {
+  aspect-ratio: 1;
   cursor: pointer;
-  transition: opacity 0.3s;
-}
-
-.image-item:hover {
-  opacity: 0.8;
 }
 
 .image-item .el-image {
   width: 100%;
   height: 100%;
-  min-height: 120px;
 }
 
 .post-stats {
   display: flex;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: #666;
   font-size: 14px;
 }
@@ -961,17 +709,8 @@ onMounted(() => {
 .post-actions-bar {
   display: flex;
   gap: 16px;
-  padding-top: 12px;
+  padding-top: 8px;
   border-top: 1px solid #f0f0f0;
-}
-
-.post-actions-bar .el-button {
-  color: #666;
-  font-size: 14px;
-}
-
-.post-actions-bar .el-button:hover {
-  color: #409eff;
 }
 
 .comments-section {
@@ -985,145 +724,71 @@ onMounted(() => {
 }
 
 .comment-item {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   padding: 12px;
-  background: #f8f9fa;
+  background-color: #f8f9fa;
   border-radius: 8px;
 }
 
 .comment-header {
   display: flex;
   align-items: center;
-  gap: 8px;
   margin-bottom: 8px;
 }
 
 .comment-info {
-  display: flex;
-  flex-direction: column;
+  margin-left: 8px;
 }
 
 .comment-author {
+  font-weight: 600;
   color: #333;
-  font-weight: 500;
   font-size: 14px;
 }
 
 .comment-time {
   color: #999;
   font-size: 12px;
+  margin-left: 8px;
 }
 
 .comment-content p {
+  margin: 0;
   color: #333;
   line-height: 1.5;
-  margin: 0;
 }
 
 .comment-actions {
-  display: flex;
-  gap: 16px;
   margin-top: 8px;
+  display: flex;
+  gap: 12px;
 }
 
 .action-link {
-  color: #666;
-  font-size: 12px;
+  color: #409eff;
   cursor: pointer;
-  transition: color 0.3s;
+  font-size: 12px;
 }
 
 .action-link:hover {
-  color: #409eff;
+  text-decoration: underline;
 }
 
 .reply-input {
-  margin-top: 12px;
-}
-
-.replies-list {
-  margin-top: 12px;
-  padding-left: 16px;
-}
-
-.reply-item {
-  margin-bottom: 8px;
-  padding: 8px;
-  background: white;
-  border-radius: 6px;
-}
-
-.reply-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.reply-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.reply-author {
-  color: #333;
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.reply-time {
-  color: #999;
-  font-size: 10px;
-}
-
-.reply-content p {
-  color: #333;
-  line-height: 1.4;
-  margin: 0;
-  font-size: 12px;
+  margin-top: 8px;
 }
 
 .comment-input {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .load-more {
   text-align: center;
-  margin-top: 30px;
+  margin-top: 20px;
 }
 
 .no-more {
   color: #999;
   font-size: 14px;
-  margin: 0;
-}
-
-@media (max-width: 768px) {
-  .header-content {
-    padding: 0 10px;
-  }
-  
-  .logo h1 {
-    font-size: 20px;
-  }
-  
-  .main-content {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-  
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  
-  .image-grid {
-    gap: 2px;
-  }
-  
-  .image-item .el-image {
-    min-height: 80px;
-  }
 }
 </style> 

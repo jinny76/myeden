@@ -301,4 +301,59 @@ public interface CommentRepository extends MongoRepository<Comment, String> {
      */
     @Query(value = "{'authorType': ?0, 'createdAt': {$gte: ?1}}", count = true)
     long countTodayCommentsByType(String authorType, java.time.LocalDateTime startOfDay);
+    
+    /**
+     * 根据评论ID和是否删除查找评论
+     * @param commentId 评论ID
+     * @param isDeleted 是否删除
+     * @return 评论信息
+     */
+    Optional<Comment> findByCommentIdAndIsDeleted(String commentId, Boolean isDeleted);
+    
+    /**
+     * 根据动态ID和父评论ID为null且未删除分页查找评论
+     * @param postId 动态ID
+     * @param pageable 分页参数
+     * @return 评论分页结果
+     */
+    Page<Comment> findByPostIdAndParentIdIsNullAndIsDeletedFalse(String postId, Pageable pageable);
+    
+    /**
+     * 根据父评论ID和未删除分页查找回复
+     * @param parentId 父评论ID
+     * @param pageable 分页参数
+     * @return 回复分页结果
+     */
+    Page<Comment> findByParentIdAndIsDeletedFalse(String parentId, Pageable pageable);
+    
+    /**
+     * 根据动态ID和未删除分页查找评论
+     * @param postId 动态ID
+     * @param pageable 分页参数
+     * @return 评论分页结果
+     */
+    Page<Comment> findByPostIdAndIsDeletedFalse(String postId, Pageable pageable);
+    
+    /**
+     * 根据作者ID和未删除分页查找评论
+     * @param authorId 作者ID
+     * @param pageable 分页参数
+     * @return 评论分页结果
+     */
+    Page<Comment> findByAuthorIdAndIsDeletedFalse(String authorId, Pageable pageable);
+    
+    /**
+     * 根据作者类型和未删除分页查找评论
+     * @param authorType 作者类型
+     * @param pageable 分页参数
+     * @return 评论分页结果
+     */
+    Page<Comment> findByAuthorTypeAndIsDeletedFalse(String authorType, Pageable pageable);
+    
+    /**
+     * 根据评论ID和未删除查找评论
+     * @param commentId 评论ID
+     * @return 评论信息
+     */
+    Optional<Comment> findByCommentIdAndIsDeletedFalse(String commentId);
 } 

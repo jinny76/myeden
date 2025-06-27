@@ -156,4 +156,13 @@ public class FileService {
             }
         }
     }
+    
+    /**
+     * 上传图片文件
+     * @param file 图片文件
+     * @return 图片URL
+     */
+    public String uploadImage(MultipartFile file) {
+        return uploadFile(file, "images");
+    }
 } 

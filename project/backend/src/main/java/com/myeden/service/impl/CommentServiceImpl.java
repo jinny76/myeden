@@ -1,0 +1,579 @@
+package com.myeden.service.impl;
+
+import com.myeden.entity.Comment;
+import com.myeden.entity.Post;
+import com.myeden.entity.User;
+import com.myeden.entity.Robot;
+import com.myeden.repository.CommentRepository;
+import com.myeden.repository.PostRepository;
+import com.myeden.repository.UserRepository;
+import com.myeden.repository.RobotRepository;
+import com.myeden.service.CommentService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * 评论管理服务实现类
+ * 
+ * 功能说明：
+ * - 实现评论发布、查询、删除功能
+ * - 支持评论回复功能
+ * - 管理评论的点赞和回复统计
+ * - 支持分页查询和排序
+ * 
+ * @author MyEden Team
+ * @version 1.0.0
+ * @since 2024-01-01
+ */
+@Service
+public class CommentServiceImpl implements CommentService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(CommentServiceImpl.class);
+    
+    @Autowired
+    private CommentRepository commentRepository;
+    
+    @Autowired
+    private PostRepository postRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private RobotRepository robotRepository;
+    
+    @Override
+    public CommentResult createComment(String postId, String authorId, String authorType, String content) {
+        try {
+            logger.info("开始创建评论，动态ID: {}, 作者ID: {}, 作者类型: {}", postId, authorId, authorType);
+            
+            // 验证参数
+            if (!StringUtils.hasText(content)) {
+                throw new IllegalArgumentException("评论内容不能为空");
+            }
+            
+            if (!StringUtils.hasText(postId)) {
+                throw new IllegalArgumentException("动态ID不能为空");
+            }
+            
+            if (!StringUtils.hasText(authorId)) {
+                throw new IllegalArgumentException("作者ID不能为空");
+            }
+            
+            if (!StringUtils.hasText(authorType)) {
+                throw new IllegalArgumentException("作者类型不能为空");
+            }
+            
+            // 验证动态是否存在
+            Optional<Post> postOpt = postRepository.findByPostIdAndIsDeletedFalse(postId);
+            if (postOpt.isEmpty()) {
+                throw new IllegalArgumentException("动态不存在");
+            }
+            
+            // 验证作者是否存在
+            String authorName = "";
+            String authorAvatar = "";
+            
+            if ("user".equals(authorType)) {
+                Optional<User> userOpt = userRepository.findByUserId(authorId);
+                if (userOpt.isEmpty()) {
+                    throw new IllegalArgumentException("用户不存在");
+                }
+                User user = userOpt.get();
+                authorName = user.getNickname();
+                authorAvatar = user.getAvatar();
+            } else if ("robot".equals(authorType)) {
+                Optional<Robot> robotOpt = robotRepository.findByRobotId(authorId);
+                if (robotOpt.isEmpty()) {
+                    throw new IllegalArgumentException("机器人不存在");
+                }
+                Robot robot = robotOpt.get();
+                authorName = robot.getName();
+                authorAvatar = robot.getAvatar();
+            } else {
+                throw new IllegalArgumentException("无效的作者类型");
+            }
+            
+            // 创建评论实体
+            Comment comment = new Comment();
+            comment.setCommentId(generateCommentId());
+            comment.setPostId(postId);
+            comment.setAuthorId(authorId);
+            comment.setAuthorType(authorType);
+            comment.setContent(content);
+            comment.setParentId(null); // 一级评论
+            comment.setReplyToId(null); // 一级评论
+            comment.setLikeCount(0);
+            comment.setReplyCount(0);
+            comment.setIsDeleted(false);
+            comment.setCreatedAt(LocalDateTime.now());
+            comment.setUpdatedAt(LocalDateTime.now());
+            
+            // 保存到数据库
+            Comment savedComment = commentRepository.save(comment);
+            
+            // 更新动态的评论数
+            Post post = postOpt.get();
+            post.setCommentCount(post.getCommentCount() + 1);
+            post.setUpdatedAt(LocalDateTime.now());
+            postRepository.save(post);
+            
+            logger.info("评论创建成功，评论ID: {}", savedComment.getCommentId());
+            
+            return new CommentResult(
+                savedComment.getCommentId(),
+                savedComment.getContent(),
+                savedComment.getParentId(),
+                savedComment.getReplyToId(),
+                savedComment.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            );
+            
+        } catch (Exception e) {
+            logger.error("创建评论失败", e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public CommentResult replyComment(String commentId, String authorId, String authorType, String content) {
+        try {
+            logger.info("开始回复评论，评论ID: {}, 作者ID: {}, 作者类型: {}", commentId, authorId, authorType);
+            
+            // 验证参数
+            if (!StringUtils.hasText(content)) {
+                throw new IllegalArgumentException("回复内容不能为空");
+            }
+            
+            if (!StringUtils.hasText(commentId)) {
+                throw new IllegalArgumentException("评论ID不能为空");
+            }
+            
+            if (!StringUtils.hasText(authorId)) {
+                throw new IllegalArgumentException("作者ID不能为空");
+            }
+            
+            if (!StringUtils.hasText(authorType)) {
+                throw new IllegalArgumentException("作者类型不能为空");
+            }
+            
+            // 验证原评论是否存在
+            Optional<Comment> parentCommentOpt = commentRepository.findByCommentIdAndIsDeletedFalse(commentId);
+            if (parentCommentOpt.isEmpty()) {
+                throw new IllegalArgumentException("原评论不存在");
+            }
+            
+            Comment parentComment = parentCommentOpt.get();
+            
+            // 验证作者是否存在
+            String authorName = "";
+            String authorAvatar = "";
+            
+            if ("user".equals(authorType)) {
+                Optional<User> userOpt = userRepository.findByUserId(authorId);
+                if (userOpt.isEmpty()) {
+                    throw new IllegalArgumentException("用户不存在");
+                }
+                User user = userOpt.get();
+                authorName = user.getNickname();
+                authorAvatar = user.getAvatar();
+            } else if ("robot".equals(authorType)) {
+                Optional<Robot> robotOpt = robotRepository.findByRobotId(authorId);
+                if (robotOpt.isEmpty()) {
+                    throw new IllegalArgumentException("机器人不存在");
+                }
+                Robot robot = robotOpt.get();
+                authorName = robot.getName();
+                authorAvatar = robot.getAvatar();
+            } else {
+                throw new IllegalArgumentException("无效的作者类型");
+            }
+            
+            // 创建回复评论
+            Comment reply = new Comment();
+            reply.setCommentId(generateCommentId());
+            reply.setPostId(parentComment.getPostId());
+            reply.setAuthorId(authorId);
+            reply.setAuthorType(authorType);
+            reply.setContent(content);
+            reply.setParentId(commentId); // 父评论ID
+            reply.setReplyToId(parentComment.getAuthorId()); // 回复目标ID
+            reply.setLikeCount(0);
+            reply.setReplyCount(0);
+            reply.setIsDeleted(false);
+            reply.setCreatedAt(LocalDateTime.now());
+            reply.setUpdatedAt(LocalDateTime.now());
+            
+            // 保存到数据库
+            Comment savedReply = commentRepository.save(reply);
+            
+            // 更新父评论的回复数
+            parentComment.setReplyCount(parentComment.getReplyCount() + 1);
+            parentComment.setUpdatedAt(LocalDateTime.now());
+            commentRepository.save(parentComment);
+            
+            // 更新动态的评论数
+            Optional<Post> postOpt = postRepository.findByPostIdAndIsDeletedFalse(parentComment.getPostId());
+            if (postOpt.isPresent()) {
+                Post post = postOpt.get();
+                post.setCommentCount(post.getCommentCount() + 1);
+                post.setUpdatedAt(LocalDateTime.now());
+                postRepository.save(post);
+            }
+            
+            logger.info("回复评论成功，回复ID: {}", savedReply.getCommentId());
+            
+            return new CommentResult(
+                savedReply.getCommentId(),
+                savedReply.getContent(),
+                savedReply.getParentId(),
+                savedReply.getReplyToId(),
+                savedReply.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            );
+            
+        } catch (Exception e) {
+            logger.error("回复评论失败", e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public CommentListResult getCommentList(String postId, int page, int size) {
+        try {
+            logger.info("获取动态评论列表，动态ID: {}, 页码: {}, 大小: {}", postId, page, size);
+            
+            // 创建分页请求
+            Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+            
+            // 查询一级评论（parentId为null）
+            Page<Comment> commentPage = commentRepository.findByPostIdAndParentIdIsNullAndIsDeletedFalse(postId, pageable);
+            
+            // 转换为摘要信息
+            List<CommentSummary> commentSummaries = commentPage.getContent().stream()
+                .map(this::convertToCommentSummary)
+                .collect(Collectors.toList());
+            
+            logger.info("获取动态评论列表成功，总数: {}", commentPage.getTotalElements());
+            
+            return new CommentListResult(
+                commentSummaries,
+                (int) commentPage.getTotalElements(),
+                page,
+                size
+            );
+            
+        } catch (Exception e) {
+            logger.error("获取动态评论列表失败", e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public CommentListResult getReplyList(String commentId, int page, int size) {
+        try {
+            logger.info("获取评论回复列表，评论ID: {}, 页码: {}, 大小: {}", commentId, page, size);
+            
+            // 创建分页请求
+            Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+            
+            // 查询回复（parentId为commentId）
+            Page<Comment> replyPage = commentRepository.findByParentIdAndIsDeletedFalse(commentId, pageable);
+            
+            // 转换为摘要信息
+            List<CommentSummary> replySummaries = replyPage.getContent().stream()
+                .map(this::convertToCommentSummary)
+                .collect(Collectors.toList());
+            
+            logger.info("获取评论回复列表成功，总数: {}", replyPage.getTotalElements());
+            
+            return new CommentListResult(
+                replySummaries,
+                (int) replyPage.getTotalElements(),
+                page,
+                size
+            );
+            
+        } catch (Exception e) {
+            logger.error("获取评论回复列表失败", e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public CommentDetail getCommentDetail(String commentId) {
+        try {
+            logger.info("获取评论详情，评论ID: {}", commentId);
+            
+            // 查询评论
+            Optional<Comment> commentOpt = commentRepository.findByCommentIdAndIsDeletedFalse(commentId);
+            if (commentOpt.isEmpty()) {
+                throw new IllegalArgumentException("评论不存在");
+            }
+            
+            Comment comment = commentOpt.get();
+            
+            // 获取作者信息
+            String authorName = "";
+            String authorAvatar = "";
+            
+            if ("user".equals(comment.getAuthorType())) {
+                Optional<User> userOpt = userRepository.findByUserId(comment.getAuthorId());
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    authorName = user.getNickname();
+                    authorAvatar = user.getAvatar();
+                }
+            } else if ("robot".equals(comment.getAuthorType())) {
+                Optional<Robot> robotOpt = robotRepository.findByRobotId(comment.getAuthorId());
+                if (robotOpt.isPresent()) {
+                    Robot robot = robotOpt.get();
+                    authorName = robot.getName();
+                    authorAvatar = robot.getAvatar();
+                }
+            }
+            
+            // 获取回复目标信息
+            String replyToName = "";
+            if (comment.getReplyToId() != null) {
+                if ("user".equals(comment.getAuthorType())) {
+                    Optional<User> replyToUserOpt = userRepository.findByUserId(comment.getReplyToId());
+                    if (replyToUserOpt.isPresent()) {
+                        replyToName = replyToUserOpt.get().getNickname();
+                    }
+                } else if ("robot".equals(comment.getAuthorType())) {
+                    Optional<Robot> replyToRobotOpt = robotRepository.findByRobotId(comment.getReplyToId());
+                    if (replyToRobotOpt.isPresent()) {
+                        replyToName = replyToRobotOpt.get().getName();
+                    }
+                }
+            }
+            
+            // TODO: 获取点赞用户列表和当前用户是否点赞状态
+            List<String> likedUsers = new ArrayList<>();
+            boolean isLiked = false;
+            
+            logger.info("获取评论详情成功");
+            
+            return new CommentDetail(
+                comment.getCommentId(),
+                comment.getPostId(),
+                comment.getAuthorId(),
+                comment.getAuthorType(),
+                authorName,
+                authorAvatar,
+                comment.getContent(),
+                comment.getParentId(),
+                comment.getReplyToId(),
+                replyToName,
+                comment.getLikeCount(),
+                comment.getReplyCount(),
+                isLiked,
+                likedUsers,
+                comment.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                comment.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            );
+            
+        } catch (Exception e) {
+            logger.error("获取评论详情失败", e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public boolean deleteComment(String commentId, String authorId) {
+        try {
+            logger.info("删除评论，评论ID: {}, 作者ID: {}", commentId, authorId);
+            
+            // 查询评论
+            Optional<Comment> commentOpt = commentRepository.findByCommentIdAndIsDeletedFalse(commentId);
+            if (commentOpt.isEmpty()) {
+                throw new IllegalArgumentException("评论不存在");
+            }
+            
+            Comment comment = commentOpt.get();
+            
+            // 验证权限
+            if (!comment.getAuthorId().equals(authorId)) {
+                throw new IllegalArgumentException("无权限删除此评论");
+            }
+            
+            // 软删除
+            comment.setIsDeleted(true);
+            comment.setUpdatedAt(LocalDateTime.now());
+            commentRepository.save(comment);
+            
+            // 更新动态的评论数
+            Optional<Post> postOpt = postRepository.findByPostIdAndIsDeletedFalse(comment.getPostId());
+            if (postOpt.isPresent()) {
+                Post post = postOpt.get();
+                if (post.getCommentCount() > 0) {
+                    post.setCommentCount(post.getCommentCount() - 1);
+                    post.setUpdatedAt(LocalDateTime.now());
+                    postRepository.save(post);
+                }
+            }
+            
+            // 如果是回复，更新父评论的回复数
+            if (comment.getParentId() != null) {
+                Optional<Comment> parentCommentOpt = commentRepository.findByCommentIdAndIsDeletedFalse(comment.getParentId());
+                if (parentCommentOpt.isPresent()) {
+                    Comment parentComment = parentCommentOpt.get();
+                    if (parentComment.getReplyCount() > 0) {
+                        parentComment.setReplyCount(parentComment.getReplyCount() - 1);
+                        parentComment.setUpdatedAt(LocalDateTime.now());
+                        commentRepository.save(parentComment);
+                    }
+                }
+            }
+            
+            logger.info("评论删除成功");
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("删除评论失败", e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public boolean likeComment(String commentId, String userId) {
+        try {
+            logger.info("点赞评论，评论ID: {}, 用户ID: {}", commentId, userId);
+            
+            // 查询评论
+            Optional<Comment> commentOpt = commentRepository.findByCommentIdAndIsDeletedFalse(commentId);
+            if (commentOpt.isEmpty()) {
+                throw new IllegalArgumentException("评论不存在");
+            }
+            
+            Comment comment = commentOpt.get();
+            
+            // TODO: 检查用户是否已经点赞
+            // 这里需要实现点赞记录表来跟踪用户的点赞状态
+            
+            // 增加点赞数
+            comment.setLikeCount(comment.getLikeCount() + 1);
+            comment.setUpdatedAt(LocalDateTime.now());
+            commentRepository.save(comment);
+            
+            logger.info("评论点赞成功");
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("点赞评论失败", e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public boolean unlikeComment(String commentId, String userId) {
+        try {
+            logger.info("取消点赞评论，评论ID: {}, 用户ID: {}", commentId, userId);
+            
+            // 查询评论
+            Optional<Comment> commentOpt = commentRepository.findByCommentIdAndIsDeletedFalse(commentId);
+            if (commentOpt.isEmpty()) {
+                throw new IllegalArgumentException("评论不存在");
+            }
+            
+            Comment comment = commentOpt.get();
+            
+            // TODO: 检查用户是否已经点赞
+            // 这里需要实现点赞记录表来跟踪用户的点赞状态
+            
+            // 减少点赞数
+            if (comment.getLikeCount() > 0) {
+                comment.setLikeCount(comment.getLikeCount() - 1);
+                comment.setUpdatedAt(LocalDateTime.now());
+                commentRepository.save(comment);
+            }
+            
+            logger.info("取消点赞成功");
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("取消点赞失败", e);
+            throw e;
+        }
+    }
+    
+    /**
+     * 将Comment实体转换为CommentSummary
+     */
+    private CommentSummary convertToCommentSummary(Comment comment) {
+        // 获取作者信息
+        String authorName = "";
+        String authorAvatar = "";
+        
+        if ("user".equals(comment.getAuthorType())) {
+            Optional<User> userOpt = userRepository.findByUserId(comment.getAuthorId());
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                authorName = user.getNickname();
+                authorAvatar = user.getAvatar();
+            }
+        } else if ("robot".equals(comment.getAuthorType())) {
+            Optional<Robot> robotOpt = robotRepository.findByRobotId(comment.getAuthorId());
+            if (robotOpt.isPresent()) {
+                Robot robot = robotOpt.get();
+                authorName = robot.getName();
+                authorAvatar = robot.getAvatar();
+            }
+        }
+        
+        // 获取回复目标信息
+        String replyToName = "";
+        if (comment.getReplyToId() != null) {
+            if ("user".equals(comment.getAuthorType())) {
+                Optional<User> replyToUserOpt = userRepository.findByUserId(comment.getReplyToId());
+                if (replyToUserOpt.isPresent()) {
+                    replyToName = replyToUserOpt.get().getNickname();
+                }
+            } else if ("robot".equals(comment.getAuthorType())) {
+                Optional<Robot> replyToRobotOpt = robotRepository.findByRobotId(comment.getReplyToId());
+                if (replyToRobotOpt.isPresent()) {
+                    replyToName = replyToRobotOpt.get().getName();
+                }
+            }
+        }
+        
+        // TODO: 获取当前用户是否点赞状态
+        boolean isLiked = false;
+        
+        return new CommentSummary(
+            comment.getCommentId(),
+            comment.getPostId(),
+            comment.getAuthorId(),
+            comment.getAuthorType(),
+            authorName,
+            authorAvatar,
+            comment.getContent(),
+            comment.getParentId(),
+            comment.getReplyToId(),
+            replyToName,
+            comment.getLikeCount(),
+            comment.getReplyCount(),
+            isLiked,
+            comment.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+            comment.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        );
+    }
+    
+    /**
+     * 生成评论ID
+     */
+    private String generateCommentId() {
+        return "comment_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+} 

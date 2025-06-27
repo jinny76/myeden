@@ -247,4 +247,68 @@ public interface PostRepository extends MongoRepository<Post, String> {
      */
     @Query(value = "{'authorType': ?0, 'createdAt': {$gte: ?1}}", count = true)
     long countTodayPostsByType(String authorType, java.time.LocalDateTime startOfDay);
+    
+    /**
+     * 根据动态ID和是否删除查找动态
+     * @param postId 动态ID
+     * @param isDeleted 是否删除
+     * @return 动态信息
+     */
+    Optional<Post> findByPostIdAndIsDeleted(String postId, Boolean isDeleted);
+    
+    /**
+     * 根据作者ID和是否删除分页查找动态
+     * @param authorId 作者ID
+     * @param isDeleted 是否删除
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    Page<Post> findByAuthorIdAndIsDeleted(String authorId, Boolean isDeleted, Pageable pageable);
+    
+    /**
+     * 根据作者类型和是否删除分页查找动态
+     * @param authorType 作者类型
+     * @param isDeleted 是否删除
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    Page<Post> findByAuthorTypeAndIsDeleted(String authorType, Boolean isDeleted, Pageable pageable);
+    
+    /**
+     * 根据是否删除分页查找动态
+     * @param isDeleted 是否删除
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    Page<Post> findByIsDeleted(Boolean isDeleted, Pageable pageable);
+    
+    /**
+     * 根据动态ID和未删除查找动态
+     * @param postId 动态ID
+     * @return 动态信息
+     */
+    Optional<Post> findByPostIdAndIsDeletedFalse(String postId);
+    
+    /**
+     * 根据作者ID和未删除分页查找动态
+     * @param authorId 作者ID
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    Page<Post> findByAuthorIdAndIsDeletedFalse(String authorId, Pageable pageable);
+    
+    /**
+     * 根据作者类型和未删除分页查找动态
+     * @param authorType 作者类型
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    Page<Post> findByAuthorTypeAndIsDeletedFalse(String authorType, Pageable pageable);
+    
+    /**
+     * 根据未删除分页查找动态
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    Page<Post> findByIsDeletedFalse(Pageable pageable);
 } 

@@ -225,26 +225,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useWorldStore } from '@/stores/world'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 // 响应式数据
 const router = useRouter()
 const userStore = useUserStore()
+const worldStore = useWorldStore()
 const activeMenu = ref('/world')
-const worldInfo = ref({
-  name: '我的伊甸园',
-  description: '一个充满AI机器人的虚拟社交世界',
-  background: '这是一个名为"我的伊甸园"的虚拟世界，这里生活着各种性格迥异的AI机器人。每个机器人都有自己独特的性格、职业和生活方式。他们会在合适的时间发布动态、评论和回复，与用户进行自然的社交互动。',
-  worldview: '在这个世界中，AI机器人具有真实的情感和个性，他们会根据自己的设定进行社交活动。用户可以与这些机器人进行互动，体验真实的社交氛围。'
-})
-const robots = ref([])
-const todayStats = ref({
-  postCount: 0,
-  commentCount: 0,
-  replyCount: 0
-})
 const robotDetailVisible = ref(false)
 const selectedRobot = ref(null)
+const selectedRobotDetail = ref(null)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -273,6 +264,7 @@ const handleLogout = async () => {
     })
     
     await userStore.logout()
+    worldStore.clearWorld()
     ElMessage.success('退出登录成功')
     router.push('/login')
   } catch (error) {
@@ -282,116 +274,33 @@ const handleLogout = async () => {
   }
 }
 
-const loadWorldInfo = async () => {
+const showRobotDetail = async (robot) => {
   try {
-    // TODO: 调用API获取世界信息
-    // const response = await worldApi.getWorldInfo()
-    // worldInfo.value = response.data
+    selectedRobot.value = robot
+    robotDetailVisible.value = true
     
-    // 模拟数据已在ref中设置
-  } catch (error) {
-    console.error('加载世界信息失败:', error)
-    ElMessage.error('加载世界信息失败')
-  }
-}
-
-const loadRobots = async () => {
-  try {
-    // TODO: 调用API获取机器人列表
-    // const response = await robotApi.getRobots()
-    // robots.value = response.data
-    
-    // 模拟数据
-    robots.value = [
-      {
-        robotId: 'robot-001',
-        name: '小艾',
-        avatar: '/avatars/xiaoai.jpg',
-        gender: '女',
-        introduction: '温柔细心的咖啡师，喜欢调制各种美味的咖啡',
-        personality: '温柔、细心、善解人意，总是能给人带来温暖的感觉',
-        profession: '咖啡师',
-        mbti: 'ISFJ',
-        replySpeed: 7,
-        replyFrequency: 8,
-        shareFrequency: 6,
-        activeTimeRanges: [
-          { startTime: '08:00', endTime: '12:00' },
-          { startTime: '14:00', endTime: '18:00' }
-        ],
-        isActive: true
-      },
-      {
-        robotId: 'robot-002',
-        name: '大熊',
-        avatar: '/avatars/daxiong.jpg',
-        gender: '男',
-        introduction: '阳光开朗的健身教练，热爱运动和健康生活',
-        personality: '阳光、开朗、积极向上，总是充满正能量',
-        profession: '健身教练',
-        mbti: 'ENFP',
-        replySpeed: 9,
-        replyFrequency: 7,
-        shareFrequency: 8,
-        activeTimeRanges: [
-          { startTime: '06:00', endTime: '10:00' },
-          { startTime: '16:00', endTime: '20:00' }
-        ],
-        isActive: true
-      },
-      {
-        robotId: 'robot-003',
-        name: '小智',
-        avatar: '/avatars/xiaozhi.jpg',
-        gender: '男',
-        introduction: '博学多才的程序员，喜欢分享技术知识',
-        personality: '理性、博学、乐于分享，总是能给出专业的建议',
-        profession: '程序员',
-        mbti: 'INTJ',
-        replySpeed: 6,
-        replyFrequency: 5,
-        shareFrequency: 7,
-        activeTimeRanges: [
-          { startTime: '09:00', endTime: '12:00' },
-          { startTime: '19:00', endTime: '23:00' }
-        ],
-        isActive: false
-      }
-    ]
-  } catch (error) {
-    console.error('加载机器人列表失败:', error)
-    ElMessage.error('加载机器人列表失败')
-  }
-}
-
-const loadTodayStats = async () => {
-  try {
-    // TODO: 调用API获取今日统计
-    // const response = await statsApi.getTodayStats()
-    // todayStats.value = response.data
-    
-    // 模拟数据
-    todayStats.value = {
-      postCount: 15,
-      commentCount: 42,
-      replyCount: 28
+    // 获取机器人详情
+    const cachedDetail = worldStore.getRobotDetail(robot.id)
+    if (cachedDetail) {
+      selectedRobotDetail.value = cachedDetail
+    } else {
+      await worldStore.fetchRobotDetail(robot.id)
+      selectedRobotDetail.value = worldStore.getRobotDetail(robot.id)
     }
   } catch (error) {
-    console.error('加载统计数据失败:', error)
+    console.error('获取机器人详情失败:', error)
+    ElMessage.error('获取机器人详情失败')
   }
 }
 
-const showRobotDetail = (robot) => {
-  selectedRobot.value = robot
-  robotDetailVisible.value = true
-}
-
-const viewRobotPosts = () => {
-  robotDetailVisible.value = false
-  router.push({
-    path: '/moments',
-    query: { authorType: 'robot', authorId: selectedRobot.value.robotId }
-  })
+const retryLoad = async () => {
+  try {
+    await worldStore.initWorld()
+    ElMessage.success('重新加载成功')
+  } catch (error) {
+    console.error('重新加载失败:', error)
+    ElMessage.error('重新加载失败')
+  }
 }
 
 const getProgressColor = (frequency) => {
@@ -401,15 +310,18 @@ const getProgressColor = (frequency) => {
 }
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
   if (!isLoggedIn.value) {
     router.push('/login')
     return
   }
   
-  loadWorldInfo()
-  loadRobots()
-  loadTodayStats()
+  try {
+    await worldStore.initWorld()
+  } catch (error) {
+    console.error('初始化世界数据失败:', error)
+    ElMessage.error('加载世界数据失败')
+  }
 })
 </script>
 
