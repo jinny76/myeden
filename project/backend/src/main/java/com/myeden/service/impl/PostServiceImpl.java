@@ -3,11 +3,14 @@ package com.myeden.service.impl;
 import com.myeden.entity.Post;
 import com.myeden.entity.User;
 import com.myeden.entity.Robot;
+import com.myeden.entity.PostLike;
 import com.myeden.repository.PostRepository;
 import com.myeden.repository.UserRepository;
 import com.myeden.repository.RobotRepository;
+import com.myeden.repository.PostLikeRepository;
 import com.myeden.service.PostService;
 import com.myeden.service.FileService;
+import com.myeden.service.WebSocketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +35,8 @@ import java.util.stream.Collectors;
  * - 支持图片上传和处理
  * - 管理动态的点赞和评论统计
  * - 支持分页查询和排序
+ * - 集成WebSocket实时消息推送
+ * - 完善点赞功能，防止重复点赞
  * 
  * @author MyEden Team
  * @version 1.0.0
@@ -52,7 +57,13 @@ public class PostServiceImpl implements PostService {
     private RobotRepository robotRepository;
     
     @Autowired
+    private PostLikeRepository postLikeRepository;
+    
+    @Autowired
     private FileService fileService;
+    
+    @Autowired
+    private WebSocketService webSocketService;
     
     @Override
     public PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images) {
@@ -124,6 +135,24 @@ public class PostServiceImpl implements PostService {
             Post savedPost = postRepository.save(post);
             
             logger.info("动态创建成功，动态ID: {}", savedPost.getPostId());
+            
+            // 推送WebSocket消息
+            try {
+                Map<String, Object> postData = new HashMap<>();
+                postData.put("postId", savedPost.getPostId());
+                postData.put("authorId", savedPost.getAuthorId());
+                postData.put("authorType", savedPost.getAuthorType());
+                postData.put("authorName", authorName);
+                postData.put("authorAvatar", authorAvatar);
+                postData.put("content", savedPost.getContent());
+                postData.put("images", savedPost.getImages());
+                postData.put("createdAt", savedPost.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                
+                webSocketService.pushPostUpdate(postData);
+                logger.info("WebSocket动态更新消息推送成功");
+            } catch (Exception e) {
+                logger.warn("WebSocket消息推送失败", e);
+            }
             
             return new PostResult(
                 savedPost.getPostId(),
@@ -207,9 +236,12 @@ public class PostServiceImpl implements PostService {
                 }
             }
             
-            // TODO: 获取点赞用户列表和当前用户是否点赞状态
-            List<String> likedUsers = new ArrayList<>();
-            boolean isLiked = false;
+            // 获取点赞用户列表和当前用户是否点赞状态
+            List<PostLike> postLikes = postLikeRepository.findByPostId(postId);
+            List<String> likedUsers = postLikes.stream()
+                .map(PostLike::getUserId)
+                .collect(Collectors.toList());
+            boolean isLiked = false; // 这里需要传入当前用户ID来判断，暂时设为false
             
             logger.info("获取动态详情成功");
             
@@ -280,8 +312,22 @@ public class PostServiceImpl implements PostService {
             
             Post post = postOpt.get();
             
-            // TODO: 检查用户是否已经点赞
-            // 这里需要实现点赞记录表来跟踪用户的点赞状态
+            // 检查用户是否已经点赞
+            Optional<PostLike> existingLike = postLikeRepository.findByPostIdAndUserId(postId, userId);
+            if (existingLike.isPresent()) {
+                logger.warn("用户已经点赞过此动态: postId={}, userId={}", postId, userId);
+                return false;
+            }
+            
+            // 创建点赞记录
+            PostLike postLike = PostLike.builder()
+                .postLikeId(generatePostLikeId())
+                .postId(postId)
+                .userId(userId)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+            postLikeRepository.save(postLike);
             
             // 增加点赞数
             post.setLikeCount(post.getLikeCount() + 1);
@@ -310,8 +356,15 @@ public class PostServiceImpl implements PostService {
             
             Post post = postOpt.get();
             
-            // TODO: 检查用户是否已经点赞
-            // 这里需要实现点赞记录表来跟踪用户的点赞状态
+            // 检查用户是否已经点赞
+            Optional<PostLike> existingLike = postLikeRepository.findByPostIdAndUserId(postId, userId);
+            if (existingLike.isEmpty()) {
+                logger.warn("用户未点赞过此动态: postId={}, userId={}", postId, userId);
+                return false;
+            }
+            
+            // 删除点赞记录
+            postLikeRepository.delete(existingLike.get());
             
             // 减少点赞数
             if (post.getLikeCount() > 0) {
@@ -364,6 +417,13 @@ public class PostServiceImpl implements PostService {
      * 将Post实体转换为PostSummary
      */
     private PostSummary convertToPostSummary(Post post) {
+        return convertToPostSummary(post, null);
+    }
+    
+    /**
+     * 将Post实体转换为PostSummary（带用户点赞状态）
+     */
+    private PostSummary convertToPostSummary(Post post, String currentUserId) {
         // 获取作者信息
         String authorName = "";
         String authorAvatar = "";
@@ -384,8 +444,12 @@ public class PostServiceImpl implements PostService {
             }
         }
         
-        // TODO: 获取当前用户是否点赞状态
+        // 获取当前用户是否点赞状态
         boolean isLiked = false;
+        if (currentUserId != null) {
+            Optional<PostLike> userLike = postLikeRepository.findByPostIdAndUserId(post.getPostId(), currentUserId);
+            isLiked = userLike.isPresent();
+        }
         
         return new PostSummary(
             post.getPostId(),
@@ -408,5 +472,12 @@ public class PostServiceImpl implements PostService {
      */
     private String generatePostId() {
         return "post_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    
+    /**
+     * 生成点赞记录ID
+     */
+    private String generatePostLikeId() {
+        return "post_like_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
 } 

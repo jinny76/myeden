@@ -4,11 +4,14 @@ import com.myeden.entity.Comment;
 import com.myeden.entity.Post;
 import com.myeden.entity.User;
 import com.myeden.entity.Robot;
+import com.myeden.entity.CommentLike;
 import com.myeden.repository.CommentRepository;
 import com.myeden.repository.PostRepository;
 import com.myeden.repository.UserRepository;
 import com.myeden.repository.RobotRepository;
+import com.myeden.repository.CommentLikeRepository;
 import com.myeden.service.CommentService;
+import com.myeden.service.WebSocketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +35,7 @@ import java.util.stream.Collectors;
  * - 支持评论回复功能
  * - 管理评论的点赞和回复统计
  * - 支持分页查询和排序
+ * - 集成WebSocket实时消息推送
  * 
  * @author MyEden Team
  * @version 1.0.0
@@ -53,6 +57,12 @@ public class CommentServiceImpl implements CommentService {
     
     @Autowired
     private RobotRepository robotRepository;
+    
+    @Autowired
+    private CommentLikeRepository commentLikeRepository;
+    
+    @Autowired
+    private WebSocketService webSocketService;
     
     @Override
     public CommentResult createComment(String postId, String authorId, String authorType, String content) {
@@ -131,6 +141,26 @@ public class CommentServiceImpl implements CommentService {
             postRepository.save(post);
             
             logger.info("评论创建成功，评论ID: {}", savedComment.getCommentId());
+            
+            // 推送WebSocket消息
+            try {
+                Map<String, Object> commentData = new HashMap<>();
+                commentData.put("commentId", savedComment.getCommentId());
+                commentData.put("postId", savedComment.getPostId());
+                commentData.put("authorId", savedComment.getAuthorId());
+                commentData.put("authorType", savedComment.getAuthorType());
+                commentData.put("authorName", authorName);
+                commentData.put("authorAvatar", authorAvatar);
+                commentData.put("content", savedComment.getContent());
+                commentData.put("parentId", savedComment.getParentId());
+                commentData.put("replyToId", savedComment.getReplyToId());
+                commentData.put("createdAt", savedComment.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                
+                webSocketService.pushCommentUpdate(commentData);
+                logger.info("WebSocket评论更新消息推送成功");
+            } catch (Exception e) {
+                logger.warn("WebSocket消息推送失败", e);
+            }
             
             return new CommentResult(
                 savedComment.getCommentId(),
@@ -359,9 +389,12 @@ public class CommentServiceImpl implements CommentService {
                 }
             }
             
-            // TODO: 获取点赞用户列表和当前用户是否点赞状态
-            List<String> likedUsers = new ArrayList<>();
-            boolean isLiked = false;
+            // 获取点赞用户列表和当前用户是否点赞状态
+            List<CommentLike> commentLikes = commentLikeRepository.findByCommentId(commentId);
+            List<String> likedUsers = commentLikes.stream()
+                .map(CommentLike::getUserId)
+                .collect(Collectors.toList());
+            boolean isLiked = false; // 这里需要传入当前用户ID来判断，暂时设为false
             
             logger.info("获取评论详情成功");
             
@@ -459,8 +492,22 @@ public class CommentServiceImpl implements CommentService {
             
             Comment comment = commentOpt.get();
             
-            // TODO: 检查用户是否已经点赞
-            // 这里需要实现点赞记录表来跟踪用户的点赞状态
+            // 检查用户是否已经点赞
+            Optional<CommentLike> existingLike = commentLikeRepository.findByCommentIdAndUserId(commentId, userId);
+            if (existingLike.isPresent()) {
+                logger.warn("用户已经点赞过此评论: commentId={}, userId={}", commentId, userId);
+                return false;
+            }
+            
+            // 创建点赞记录
+            CommentLike commentLike = CommentLike.builder()
+                .commentLikeId(generateCommentLikeId())
+                .commentId(commentId)
+                .userId(userId)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+            commentLikeRepository.save(commentLike);
             
             // 增加点赞数
             comment.setLikeCount(comment.getLikeCount() + 1);
@@ -489,8 +536,15 @@ public class CommentServiceImpl implements CommentService {
             
             Comment comment = commentOpt.get();
             
-            // TODO: 检查用户是否已经点赞
-            // 这里需要实现点赞记录表来跟踪用户的点赞状态
+            // 检查用户是否已经点赞
+            Optional<CommentLike> existingLike = commentLikeRepository.findByCommentIdAndUserId(commentId, userId);
+            if (existingLike.isEmpty()) {
+                logger.warn("用户未点赞过此评论: commentId={}, userId={}", commentId, userId);
+                return false;
+            }
+            
+            // 删除点赞记录
+            commentLikeRepository.delete(existingLike.get());
             
             // 减少点赞数
             if (comment.getLikeCount() > 0) {
@@ -512,6 +566,13 @@ public class CommentServiceImpl implements CommentService {
      * 将Comment实体转换为CommentSummary
      */
     private CommentSummary convertToCommentSummary(Comment comment) {
+        return convertToCommentSummary(comment, null);
+    }
+    
+    /**
+     * 将Comment实体转换为CommentSummary（带用户点赞状态）
+     */
+    private CommentSummary convertToCommentSummary(Comment comment, String currentUserId) {
         // 获取作者信息
         String authorName = "";
         String authorAvatar = "";
@@ -548,8 +609,12 @@ public class CommentServiceImpl implements CommentService {
             }
         }
         
-        // TODO: 获取当前用户是否点赞状态
+        // 获取当前用户是否点赞状态
         boolean isLiked = false;
+        if (currentUserId != null) {
+            Optional<CommentLike> userLike = commentLikeRepository.findByCommentIdAndUserId(comment.getCommentId(), currentUserId);
+            isLiked = userLike.isPresent();
+        }
         
         return new CommentSummary(
             comment.getCommentId(),
@@ -575,5 +640,12 @@ public class CommentServiceImpl implements CommentService {
      */
     private String generateCommentId() {
         return "comment_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    
+    /**
+     * 生成评论点赞记录ID
+     */
+    private String generateCommentLikeId() {
+        return "comment_like_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
 } 

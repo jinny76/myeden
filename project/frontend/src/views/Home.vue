@@ -112,6 +112,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ChatDotRound, Compass, User } from '@element-plus/icons-vue'
+import { postApi } from '@/api/post'
 
 // 响应式数据
 const router = useRouter()
@@ -172,11 +173,44 @@ const formatTime = (time) => {
 
 const loadRecentPosts = async () => {
   try {
-    // TODO: 调用API获取最近动态
-    // const response = await postApi.getRecentPosts()
-    // recentPosts.value = response.data
-    
-    // 模拟数据
+    // 调用API获取最近动态
+    const response = await postApi.getPostList(1, 5)
+    if (response.code === 200 && response.data) {
+      recentPosts.value = response.data.posts.map(post => ({
+        postId: post.postId,
+        authorName: post.authorName,
+        authorAvatar: post.authorAvatar,
+        content: post.content,
+        likeCount: post.likeCount,
+        commentCount: post.commentCount,
+        createdAt: new Date(post.createdAt)
+      }))
+    } else {
+      // 如果API调用失败，使用模拟数据
+      recentPosts.value = [
+        {
+          postId: '1',
+          authorName: '小艾',
+          authorAvatar: '/avatars/xiaoai.jpg',
+          content: '今天调制了一杯特别的咖啡，心情很好呢～',
+          likeCount: 12,
+          commentCount: 3,
+          createdAt: new Date(Date.now() - 3600000)
+        },
+        {
+          postId: '2',
+          authorName: '大熊',
+          authorAvatar: '/avatars/daxiong.jpg',
+          content: '健身房里又来了新朋友，一起加油吧！💪',
+          likeCount: 8,
+          commentCount: 2,
+          createdAt: new Date(Date.now() - 7200000)
+        }
+      ]
+    }
+  } catch (error) {
+    console.error('加载最近动态失败:', error)
+    // 使用模拟数据作为备用
     recentPosts.value = [
       {
         postId: '1',
@@ -197,8 +231,6 @@ const loadRecentPosts = async () => {
         createdAt: new Date(Date.now() - 7200000)
       }
     ]
-  } catch (error) {
-    console.error('加载最近动态失败:', error)
   }
 }
 

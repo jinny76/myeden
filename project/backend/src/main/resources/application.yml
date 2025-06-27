@@ -73,6 +73,24 @@ file:
     allowed-types: jpg,jpeg,png,gif
     max-size: 5242880  # 5MB
 
+# WebSocket配置
+websocket:
+  endpoint: /ws
+  allowed-origins: 
+    - http://localhost:3000
+    - http://localhost:5173
+    - http://127.0.0.1:3000
+    - http://127.0.0.1:5173
+  heartbeat:
+    interval: 30000  # 30秒心跳间隔
+    timeout: 60000   # 60秒超时
+  message:
+    deduplication-window: 5000  # 5秒去重窗口
+    max-history: 1000  # 最大消息历史
+  connection:
+    max-sessions-per-user: 3  # 每个用户最大会话数
+    session-timeout: 3600000  # 1小时会话超时
+
 # Dify API配置
 dify:
   api:
@@ -102,6 +120,7 @@ logging:
     org.springframework.security: DEBUG
     org.springframework.web: DEBUG
     org.springframework.data.mongodb: DEBUG
+    org.springframework.web.socket: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
