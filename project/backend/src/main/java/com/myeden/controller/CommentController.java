@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/v1")
-@CrossOrigin(origins = "*")
 public class CommentController {
     
     private static final Logger logger = LoggerFactory.getLogger(CommentController.class);

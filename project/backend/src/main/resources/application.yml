@@ -1,5 +1,5 @@
 # 我的伊甸园 - 应用配置文件
-# 包含数据库、Redis、JWT、文件上传等配置
+# 包含数据库、JWT、文件上传等配置
 
 server:
   port: 38080
@@ -10,7 +10,7 @@ spring:
   application:
     name: my-eden-backend
   
-  # MongoDB配置
+  # MongoDB配置 - 性能优化版本
   data:
     mongodb:
       host: localhost
@@ -20,20 +20,30 @@ spring:
       password: password!
       authentication-database: myeden
       auto-index-creation: true
+      # 连接池配置
+      connection-pool:
+        max-size: 100
+        min-size: 5
+        max-wait-time: 30000
+        max-connection-life-time: 300000
+        max-connection-idle-time: 60000
+      # 查询优化配置
+      read-preference: primary
+      write-concern: majority
+      read-concern: majority
+      # 索引优化
+      index-creation: true
+      # 查询超时配置
+      socket-timeout: 30000
+      connect-timeout: 10000
+      server-selection-timeout: 30000
+      # 批量操作优化
+      batch-size: 1000
+      # 聚合管道优化
+      aggregation-options:
+        allow-disk-use: true
+        max-time: 30000
 
-    redis:
-      host: 192.168.1.190
-      port: 6379
-      password: 
-      database: 0
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-          max-wait: -1ms
-  
   # 文件上传配置
   servlet:
     multipart:
@@ -76,11 +86,7 @@ file:
 # WebSocket配置
 websocket:
   endpoint: /ws
-  allowed-origins: 
-    - http://localhost:3000
-    - http://localhost:5173
-    - http://127.0.0.1:3000
-    - http://127.0.0.1:5173
+  allowed-origin-patterns: "*"
   heartbeat:
     interval: 30000  # 30秒心跳间隔
     timeout: 60000   # 60秒超时
@@ -147,11 +153,7 @@ management:
 
 # 跨域配置
 cors:
-  allowed-origins: 
-    - http://localhost:3000
-    - http://localhost:5173
-    - http://127.0.0.1:3000
-    - http://127.0.0.1:5173
+  allowed-origin-patterns: "*"
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
   allowed-headers: "*"
   allow-credentials: true

@@ -27,7 +27,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/posts")
-@CrossOrigin(origins = "*")
 public class PostController {
     
     private static final Logger logger = LoggerFactory.getLogger(PostController.class);

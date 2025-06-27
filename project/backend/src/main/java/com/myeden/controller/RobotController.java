@@ -18,7 +18,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/robots")
-@CrossOrigin(origins = "*")
 public class RobotController {
     
     @Autowired

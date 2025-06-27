@@ -1,0 +1,33 @@
+spring:
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: test_myeden
+      auto-index-creation: false
+  main:
+    allow-bean-definition-overriding: true
+
+# 测试环境配置
+logging:
+  level:
+    com.myeden: DEBUG
+    org.springframework.web: DEBUG
+
+# Dify配置（测试环境）
+dify:
+  enabled: false
+  url: http://localhost:8080
+  key: test-key
+
+# 应用配置
+app:
+  jwt:
+    secret: test-jwt-secret-key-for-testing-purposes-only
+    expiration: 86400000
+
+# 禁用Redis健康检查
+management:
+  health:
+    redis:
+      enabled: false

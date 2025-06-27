@@ -10,7 +10,6 @@ import com.myeden.service.WebSocketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -50,11 +49,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     @Autowired
     private WebSocketService webSocketService;
     
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-    
     private final Random random = new Random();
     private final ConcurrentHashMap<String, RobotDailyStats> dailyStats = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Object> localCache = new ConcurrentHashMap<>();
     
     /**
      * 机器人每日行为统计内部类
@@ -80,6 +77,25 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             replyCount = 0;
             lastReset = LocalDateTime.now();
         }
+    }
+    
+    /**
+     * 本地缓存操作 - 替代Redis功能
+     */
+    private void setCacheValue(String key, Object value) {
+        localCache.put(key, value);
+    }
+    
+    private Object getCacheValue(String key) {
+        return localCache.get(key);
+    }
+    
+    private void deleteCacheValue(String key) {
+        localCache.remove(key);
+    }
+    
+    private boolean hasCacheKey(String key) {
+        return localCache.containsKey(key);
     }
     
     @Override

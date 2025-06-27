@@ -23,7 +23,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/world")
-@CrossOrigin(origins = "*")
 public class WorldController {
     
     @Autowired

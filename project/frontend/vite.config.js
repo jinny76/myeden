@@ -6,13 +6,14 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 /**
- * Vite配置文件
+ * Vite配置文件 - 性能优化版本
  * 
  * 功能说明：
  * - 配置Vue 3开发环境
  * - 自动导入Element Plus组件
  * - 配置路径别名
  * - 配置开发服务器
+ * - 性能优化配置（代码分割、懒加载、压缩等）
  * 
  * @author MyEden Team
  * @version 1.0.0
@@ -77,16 +78,50 @@ export default defineConfig({
     terserOptions: {
       compress: {
         drop_console: true,
-        drop_debugger: true
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        passes: 2
+      },
+      mangle: {
+        toplevel: true
       }
     },
     rollupOptions: {
       output: {
+        // 代码分割配置
+        manualChunks: {
+          // Vue核心库
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          // Element Plus UI库
+          'element-plus': ['element-plus'],
+          // Socket.io客户端
+          'socket-io': ['socket.io-client'],
+          // 工具库
+          'utils': ['axios', 'dayjs']
+        },
         chunkFileNames: 'js/[name]-[hash].js',
         entryFileNames: 'js/[name]-[hash].js',
-        assetFileNames: '[ext]/[name]-[hash].[ext]'
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split('.')
+          const ext = info[info.length - 1]
+          if (/\.(css)$/.test(assetInfo.name)) {
+            return `css/[name]-[hash].${ext}`
+          }
+          if (/\.(png|jpe?g|gif|svg|webp|ico)$/.test(assetInfo.name)) {
+            return `images/[name]-[hash].${ext}`
+          }
+          if (/\.(woff2?|eot|ttf|otf)$/.test(assetInfo.name)) {
+            return `fonts/[name]-[hash].${ext}`
+          }
+          return `${ext}/[name]-[hash].${ext}`
+        }
       }
-    }
+    },
+    // 构建优化配置
+    chunkSizeWarningLimit: 1000,
+    reportCompressedSize: false,
+    // 启用CSS代码分割
+    cssCodeSplit: true
   },
   
   css: {
@@ -94,11 +129,45 @@ export default defineConfig({
       scss: {
         additionalData: `@import "@/styles/variables.scss";`
       }
+    },
+    // CSS优化配置
+    postcss: {
+      plugins: [
+        require('autoprefixer'),
+        require('cssnano')({
+          preset: ['default', {
+            discardComments: {
+              removeAll: true
+            },
+            normalizeWhitespace: true
+          }]
+        })
+      ]
     }
   },
   
   define: {
     __VUE_OPTIONS_API__: false,
     __VUE_PROD_DEVTOOLS__: false
+  },
+
+  // 优化配置
+  optimizeDeps: {
+    include: [
+      'vue',
+      'vue-router',
+      'pinia',
+      'element-plus',
+      'axios',
+      'socket.io-client',
+      'dayjs'
+    ],
+    exclude: []
+  },
+
+  // 预构建配置
+  preview: {
+    port: 35001,
+    open: true
   }
 }) 

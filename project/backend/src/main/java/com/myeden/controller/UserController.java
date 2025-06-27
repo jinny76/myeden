@@ -4,6 +4,7 @@ import com.myeden.entity.User;
 import com.myeden.service.JwtService;
 import com.myeden.service.UserService;
 import com.myeden.controller.EventResponse;
+import com.myeden.config.RequireAuthentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,7 +28,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/users")
-@CrossOrigin(origins = "*")
 public class UserController {
     
     @Autowired
@@ -152,10 +152,34 @@ public class UserController {
     /**
      * 更新用户信息
      * PUT /api/v1/users/{userId}
+     * 
+     * 安全要求：
+     * - 需要JWT认证
+     * - 只能更新自己的用户信息
      */
     @PutMapping("/{userId}")
-    public ResponseEntity<EventResponse> updateUser(@PathVariable String userId, @RequestBody User userUpdate) {
+    public ResponseEntity<EventResponse> updateUser(@PathVariable String userId, @RequestBody User userUpdate, HttpServletRequest request) {
         try {
+            // 从请求头获取token进行身份验证
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body(EventResponse.error(401, "未提供有效的认证token"));
+            }
+            
+            String token = authHeader.substring(7);
+            
+            // 从token中提取当前用户ID
+            String currentUserId = jwtService.extractUserId(token);
+            if (currentUserId == null) {
+                return ResponseEntity.status(401).body(EventResponse.error(401, "Token无效"));
+            }
+            
+            // 授权检查：确保用户只能更新自己的信息
+            if (!currentUserId.equals(userId)) {
+                return ResponseEntity.status(403).body(EventResponse.error(403, "只能更新自己的用户信息"));
+            }
+            
+            // 执行用户信息更新
             User updatedUser = userService.updateUser(userId, userUpdate);
             
             return ResponseEntity.ok(EventResponse.success(updatedUser, "更新用户信息成功"));
@@ -168,10 +192,34 @@ public class UserController {
     /**
      * 上传用户头像
      * POST /api/v1/users/{userId}/avatar
+     * 
+     * 安全要求：
+     * - 需要JWT认证
+     * - 只能上传自己的头像
      */
     @PostMapping("/{userId}/avatar")
-    public ResponseEntity<EventResponse> uploadAvatar(@PathVariable String userId, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<EventResponse> uploadAvatar(@PathVariable String userId, @RequestParam("file") MultipartFile file, HttpServletRequest request) {
         try {
+            // 从请求头获取token进行身份验证
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body(EventResponse.error(401, "未提供有效的认证token"));
+            }
+            
+            String token = authHeader.substring(7);
+            
+            // 从token中提取当前用户ID
+            String currentUserId = jwtService.extractUserId(token);
+            if (currentUserId == null) {
+                return ResponseEntity.status(401).body(EventResponse.error(401, "Token无效"));
+            }
+            
+            // 授权检查：确保用户只能上传自己的头像
+            if (!currentUserId.equals(userId)) {
+                return ResponseEntity.status(403).body(EventResponse.error(403, "只能上传自己的头像"));
+            }
+            
+            // 执行头像上传
             String avatarUrl = userService.uploadAvatar(userId, file);
             
             return ResponseEntity.ok(EventResponse.success(Map.of("avatarUrl", avatarUrl), "头像上传成功"));
@@ -184,10 +232,34 @@ public class UserController {
     /**
      * 完成首次登录
      * POST /api/v1/users/{userId}/complete-first-login
+     * 
+     * 安全要求：
+     * - 需要JWT认证
+     * - 只能完成自己的首次登录
      */
     @PostMapping("/{userId}/complete-first-login")
-    public ResponseEntity<EventResponse> completeFirstLogin(@PathVariable String userId) {
+    public ResponseEntity<EventResponse> completeFirstLogin(@PathVariable String userId, HttpServletRequest request) {
         try {
+            // 从请求头获取token进行身份验证
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body(EventResponse.error(401, "未提供有效的认证token"));
+            }
+            
+            String token = authHeader.substring(7);
+            
+            // 从token中提取当前用户ID
+            String currentUserId = jwtService.extractUserId(token);
+            if (currentUserId == null) {
+                return ResponseEntity.status(401).body(EventResponse.error(401, "Token无效"));
+            }
+            
+            // 授权检查：确保用户只能完成自己的首次登录
+            if (!currentUserId.equals(userId)) {
+                return ResponseEntity.status(403).body(EventResponse.error(403, "只能完成自己的首次登录"));
+            }
+            
+            // 执行首次登录完成
             userService.completeFirstLogin(userId);
             
             return ResponseEntity.ok(EventResponse.success(null, "首次登录完成"));
