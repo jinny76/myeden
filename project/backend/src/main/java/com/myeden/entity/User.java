@@ -332,23 +332,52 @@ public class User {
     }
     
     /**
-     * 更新用户信息
+     * 更新用户信息（只更新非空属性）
      */
     public void updateUser(User user) {
-        this.nickname = user.getNickname();
-        this.avatar = user.getAvatar();
-        this.title = user.getTitle();
-        this.gender = user.getGender();
-        this.age = user.getAge();
-        this.birthday = user.getBirthday();
-        this.introduction = user.getIntroduction();
-        this.background = user.getBackground();
-        this.bloodType = user.getBloodType();
-        this.mbti = user.getMbti();
-        this.favoriteColor = user.getFavoriteColor();
-        this.likes = user.getLikes();
-        this.dislikes = user.getDislikes();
-        this.isFirstLogin = user.getIsFirstLogin();
+        if (user.getNickname() != null) {
+            this.nickname = user.getNickname();
+        }
+        // 头像不在这里更新，由专门的头像上传接口处理
+        // if (user.getAvatar() != null) {
+        //     this.avatar = user.getAvatar();
+        // }
+        if (user.getTitle() != null) {
+            this.title = user.getTitle();
+        }
+        if (user.getGender() != null) {
+            this.gender = user.getGender();
+        }
+        if (user.getAge() != null) {
+            this.age = user.getAge();
+        }
+        if (user.getBirthday() != null) {
+            this.birthday = user.getBirthday();
+        }
+        if (user.getIntroduction() != null) {
+            this.introduction = user.getIntroduction();
+        }
+        if (user.getBackground() != null) {
+            this.background = user.getBackground();
+        }
+        if (user.getBloodType() != null) {
+            this.bloodType = user.getBloodType();
+        }
+        if (user.getMbti() != null) {
+            this.mbti = user.getMbti();
+        }
+        if (user.getFavoriteColor() != null) {
+            this.favoriteColor = user.getFavoriteColor();
+        }
+        if (user.getLikes() != null && !user.getLikes().isEmpty()) {
+            this.likes = user.getLikes();
+        }
+        if (user.getDislikes() != null && !user.getDislikes().isEmpty()) {
+            this.dislikes = user.getDislikes();
+        }
+        if (user.getIsFirstLogin() != null) {
+            this.isFirstLogin = user.getIsFirstLogin();
+        }
         this.updatedAt = LocalDateTime.now();
     }
     

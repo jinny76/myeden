@@ -56,6 +56,7 @@ export function getUserInfo() {
 
 /**
  * 更新用户信息
+ * @param {string} userId - 用户ID
  * @param {Object} data - 用户信息
  * @returns {Promise} 更新结果
  */
@@ -86,11 +87,12 @@ export function uploadAvatar(userId, formData) {
 
 /**
  * 完成首次登录
+ * @param {string} userId - 用户ID
  * @returns {Promise} 操作结果
  */
-export function completeFirstLogin() {
+export function completeFirstLogin(userId) {
   return request({
-    url: '/users/complete-first-login',
+    url: `/users/${userId}/complete-first-login`,
     method: 'post'
   })
 }

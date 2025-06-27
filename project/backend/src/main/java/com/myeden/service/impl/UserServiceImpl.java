@@ -5,6 +5,8 @@ import com.myeden.repository.UserRepository;
 import com.myeden.service.FileService;
 import com.myeden.service.JwtService;
 import com.myeden.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,8 @@ import java.util.concurrent.TimeUnit;
  */
 @Service
 public class UserServiceImpl implements UserService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
     
     @Autowired
     private UserRepository userRepository;

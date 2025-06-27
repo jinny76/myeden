@@ -22,7 +22,7 @@
               :http-request="handleAvatarUpload"
               accept="image/jpeg,image/png,image/gif"
             >
-              <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
+              <img v-if="avatarUrl" :src="avatarUrl" class="avatar" @error="handleAvatarError" />
               <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
             </el-upload>
             <p class="upload-tip">点击上传头像</p>
@@ -82,12 +82,13 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { userApi } from '@/api/user'
+import { getUserAvatarUrl, buildAvatarUrl, generateDefaultAvatar, handleAvatarError as handleAvatarErrorUtil } from '@/utils/avatar'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -128,25 +129,48 @@ const profileRules = {
 
 // 初始化头像URL
 const initAvatarUrl = () => {
-  // 优先使用用户store中的头像
-  if (userStore.userInfo?.avatar) {
-    const userAvatar = userStore.userInfo.avatar
-    // 使用后端API接口构建头像URL
-    let apiAvatarUrl = userAvatar
-    if (userAvatar.includes('/uploads/')) {
-      apiAvatarUrl = userAvatar.replace('/uploads/', '/api/v1/files/')
-    }
+  // 使用工具函数获取头像URL
+  const userAvatarUrl = getUserAvatarUrl(userStore.userInfo)
+  avatarUrl.value = userAvatarUrl
+}
+
+// 初始化用户资料
+const initUserProfile = () => {
+  const userInfo = userStore.userInfo
+  if (userInfo) {
+    // 加载用户信息到表单
+    formData.nickname = userInfo.nickname || ''
+    formData.gender = userInfo.gender || 'male'
+    formData.birthday = userInfo.birthday || ''
+    formData.bio = userInfo.introduction || ''
     
-    // 构建完整的头像URL
-    const fullAvatarUrl = apiAvatarUrl.startsWith('http') 
-      ? apiAvatarUrl 
-      : `${window.location.origin}${apiAvatarUrl}`
-    avatarUrl.value = fullAvatarUrl
+    // 初始化头像
+    initAvatarUrl()
+  } else {
+    // 如果store中没有用户信息，尝试重新获取
+    loadUserInfo()
   }
 }
 
-// 在组件挂载时初始化头像
-initAvatarUrl()
+// 加载用户信息
+const loadUserInfo = async () => {
+  try {
+    await userStore.fetchUserInfo()
+    initUserProfile()
+  } catch (error) {
+    console.error('加载用户信息失败:', error)
+    ElMessage.error('加载用户信息失败，请重新登录')
+    router.push('/login')
+  }
+}
+
+// 组件挂载时初始化
+onMounted(() => {
+  // 延迟初始化，确保路由守卫执行完成
+  setTimeout(() => {
+    initUserProfile()
+  }, 100)
+})
 
 // 头像上传前的验证
 const beforeAvatarUpload = (file) => {
@@ -162,16 +186,6 @@ const beforeAvatarUpload = (file) => {
   return isJPG && isLt5M
 }
 
-// 头像上传成功
-const handleAvatarSuccess = (response) => {
-  if (response.code === 200 && response.data) {
-    avatarUrl.value = response.data.avatarUrl
-    ElMessage.success('头像上传成功')
-  } else {
-    ElMessage.error('头像上传失败')
-  }
-}
-
 // 头像上传处理
 const handleAvatarUpload = async (options) => {
   try {
@@ -184,29 +198,20 @@ const handleAvatarUpload = async (options) => {
     const formData = new FormData()
     formData.append('file', options.file)
     
-    console.log('开始上传头像，用户ID:', userId)
     const response = await userApi.uploadAvatar(userId, formData)
-    console.log('头像上传响应:', response)
     
     if (response.code === 200 && response.data) {
       // 正确获取头像URL
       const avatarUrlFromResponse = response.data.avatarUrl
-      console.log('获取到的头像URL:', avatarUrlFromResponse)
       
       if (avatarUrlFromResponse) {
-        // 使用后端API接口构建头像URL，而不是直接访问静态文件
-        // 从 /uploads/avatars/filename.jpg 转换为 /api/v1/files/avatars/filename.jpg
-        const apiAvatarUrl = avatarUrlFromResponse.replace('/uploads/', '/api/v1/files/')
-        const fullAvatarUrl = apiAvatarUrl.startsWith('http') 
-          ? apiAvatarUrl 
-          : `${window.location.origin}${apiAvatarUrl}`
-        
-        console.log('构建的完整头像URL:', fullAvatarUrl)
+        // 使用工具函数构建完整头像URL
+        const fullAvatarUrl = buildAvatarUrl(avatarUrlFromResponse)
         
         // 更新本地头像URL显示
         avatarUrl.value = fullAvatarUrl
-        // 更新用户store中的头像信息
-        userStore.updateAvatar(fullAvatarUrl)
+        // 更新用户store中的头像信息（保存相对路径）
+        userStore.updateAvatar(avatarUrlFromResponse)
         ElMessage.success('头像上传成功')
       } else {
         ElMessage.error('头像URL获取失败')
@@ -246,7 +251,7 @@ const handleSave = async () => {
     
     if (response.code === 200) {
       // 完成首次登录
-      await userApi.completeFirstLogin()
+      await userApi.completeFirstLogin(userId)
       
       ElMessage.success('个人资料保存成功！')
       
@@ -261,6 +266,20 @@ const handleSave = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 监听用户信息变化
+watch(() => userStore.userInfo, (newValue) => {
+  if (newValue) {
+    initUserProfile()
+  }
+})
+
+// 处理头像错误
+const handleAvatarError = (event) => {
+  const nickname = userStore.userInfo?.nickname || 'User'
+  handleAvatarErrorUtil(event, nickname)
+  ElMessage.error('头像加载失败，已切换到默认头像')
 }
 </script>
 

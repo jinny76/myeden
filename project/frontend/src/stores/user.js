@@ -24,7 +24,7 @@ export const useUserStore = defineStore('user', () => {
   const loading = ref(false)
 
   // 计算属性
-  const userId = computed(() => userInfo.value?.id || '')
+  const userId = computed(() => userInfo.value?.userId || '')
   const nickname = computed(() => userInfo.value?.nickname || '')
   const avatar = computed(() => userInfo.value?.avatar || '')
   const phone = computed(() => userInfo.value?.phone || '')

@@ -16,7 +16,7 @@
         <div class="user-info">
           <el-dropdown @command="handleUserCommand">
             <span class="user-avatar">
-              <el-avatar :src="userStore.userInfo?.avatar || '/default-avatar.png'" />
+              <el-avatar :src="getUserAvatarUrl(userStore.userInfo)" />
               <span class="username">{{ userStore.userInfo?.nickname || '用户' }}</span>
             </span>
             <template #dropdown>
@@ -227,6 +227,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { getUserAvatarUrl } from '@/utils/avatar'
 
 // 响应式数据
 const router = useRouter()
