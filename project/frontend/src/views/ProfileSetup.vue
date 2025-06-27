@@ -19,7 +19,8 @@
               class="avatar-uploader"
               :show-file-list="false"
               :before-upload="beforeAvatarUpload"
-              :on-success="handleAvatarSuccess"
+              :http-request="handleAvatarUpload"
+              accept="image/jpeg,image/png,image/gif"
             >
               <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
               <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
@@ -125,18 +126,40 @@ const profileRules = {
   ]
 }
 
+// 初始化头像URL
+const initAvatarUrl = () => {
+  // 优先使用用户store中的头像
+  if (userStore.userInfo?.avatar) {
+    const userAvatar = userStore.userInfo.avatar
+    // 使用后端API接口构建头像URL
+    let apiAvatarUrl = userAvatar
+    if (userAvatar.includes('/uploads/')) {
+      apiAvatarUrl = userAvatar.replace('/uploads/', '/api/v1/files/')
+    }
+    
+    // 构建完整的头像URL
+    const fullAvatarUrl = apiAvatarUrl.startsWith('http') 
+      ? apiAvatarUrl 
+      : `${window.location.origin}${apiAvatarUrl}`
+    avatarUrl.value = fullAvatarUrl
+  }
+}
+
+// 在组件挂载时初始化头像
+initAvatarUrl()
+
 // 头像上传前的验证
 const beforeAvatarUpload = (file) => {
   const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
+  const isLt5M = file.size / 1024 / 1024 < 5
 
   if (!isJPG) {
     ElMessage.error('头像只能是JPG或PNG格式!')
   }
-  if (!isLt2M) {
-    ElMessage.error('头像大小不能超过2MB!')
+  if (!isLt5M) {
+    ElMessage.error('头像大小不能超过5MB!')
   }
-  return isJPG && isLt2M
+  return isJPG && isLt5M
 }
 
 // 头像上传成功
@@ -146,6 +169,54 @@ const handleAvatarSuccess = (response) => {
     ElMessage.success('头像上传成功')
   } else {
     ElMessage.error('头像上传失败')
+  }
+}
+
+// 头像上传处理
+const handleAvatarUpload = async (options) => {
+  try {
+    const userId = userStore.userInfo?.userId
+    if (!userId) {
+      ElMessage.error('用户信息不存在，请重新登录')
+      return
+    }
+    
+    const formData = new FormData()
+    formData.append('file', options.file)
+    
+    console.log('开始上传头像，用户ID:', userId)
+    const response = await userApi.uploadAvatar(userId, formData)
+    console.log('头像上传响应:', response)
+    
+    if (response.code === 200 && response.data) {
+      // 正确获取头像URL
+      const avatarUrlFromResponse = response.data.avatarUrl
+      console.log('获取到的头像URL:', avatarUrlFromResponse)
+      
+      if (avatarUrlFromResponse) {
+        // 使用后端API接口构建头像URL，而不是直接访问静态文件
+        // 从 /uploads/avatars/filename.jpg 转换为 /api/v1/files/avatars/filename.jpg
+        const apiAvatarUrl = avatarUrlFromResponse.replace('/uploads/', '/api/v1/files/')
+        const fullAvatarUrl = apiAvatarUrl.startsWith('http') 
+          ? apiAvatarUrl 
+          : `${window.location.origin}${apiAvatarUrl}`
+        
+        console.log('构建的完整头像URL:', fullAvatarUrl)
+        
+        // 更新本地头像URL显示
+        avatarUrl.value = fullAvatarUrl
+        // 更新用户store中的头像信息
+        userStore.updateAvatar(fullAvatarUrl)
+        ElMessage.success('头像上传成功')
+      } else {
+        ElMessage.error('头像URL获取失败')
+      }
+    } else {
+      ElMessage.error(response.message || '头像上传失败')
+    }
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    ElMessage.error('头像上传失败，请重试')
   }
 }
 

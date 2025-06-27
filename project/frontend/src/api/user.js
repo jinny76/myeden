@@ -69,12 +69,13 @@ export function updateUserInfo(data) {
 
 /**
  * 上传用户头像
+ * @param {string} userId - 用户ID
  * @param {FormData} formData - 文件数据
  * @returns {Promise} 上传结果
  */
-export function uploadAvatar(formData) {
+export function uploadAvatar(userId, formData) {
   return request({
-    url: '/api/v1/users/avatar',
+    url: `/api/v1/users/${userId}/avatar`,
     method: 'post',
     data: formData,
     headers: {

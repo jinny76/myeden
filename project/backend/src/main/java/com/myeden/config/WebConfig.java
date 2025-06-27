@@ -14,6 +14,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Arrays;
@@ -88,6 +89,25 @@ public class WebConfig implements WebMvcConfigurer {
                 .maxAge(3600);
         
         logger.info("WebMvc CORS跨域配置完成");
+    }
+
+    /**
+     * 配置静态资源访问
+     * 让上传的文件可以通过URL访问
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 获取当前工作目录的绝对路径
+        String currentDir = System.getProperty("user.dir");
+        String uploadPath = currentDir + "/uploads/";
+        
+        // 配置上传文件的静态资源访问
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:" + uploadPath)
+                .setCacheControl(org.springframework.http.CacheControl.noCache());
+        
+        logger.info("静态资源访问配置完成，上传文件可通过 /uploads/** 访问");
+        logger.info("上传文件路径: {}", uploadPath);
     }
 
     /**

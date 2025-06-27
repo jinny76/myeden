@@ -1,5 +1,7 @@
 package com.myeden.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +28,9 @@ import java.util.UUID;
 @Service
 public class FileService {
     
-    @Value("${file.upload.path:/uploads}")
+    private static final Logger logger = LoggerFactory.getLogger(FileService.class);
+    
+    @Value("${file.upload.path:./uploads}")
     private String uploadPath;
     
     @Value("${file.upload.max-size:10485760}")
@@ -46,8 +50,11 @@ public class FileService {
             // 验证文件
             validateFile(file);
             
+            // 获取绝对路径
+            String absoluteUploadPath = getAbsoluteUploadPath();
+            String directory = absoluteUploadPath + "/" + subDirectory;
+            
             // 创建目录
-            String directory = uploadPath + "/" + subDirectory;
             createDirectoryIfNotExists(directory);
             
             // 生成文件名
@@ -59,12 +66,27 @@ public class FileService {
             Path filePath = Paths.get(directory, filename);
             Files.copy(file.getInputStream(), filePath);
             
+            logger.info("文件上传成功: {} -> {}", originalFilename, filePath.toString());
+            
             // 返回文件URL
             return "/uploads/" + subDirectory + "/" + filename;
             
         } catch (IOException e) {
+            logger.error("文件上传失败", e);
             throw new RuntimeException("文件上传失败", e);
         }
+    }
+    
+    /**
+     * 获取绝对上传路径
+     * @return 绝对路径
+     */
+    private String getAbsoluteUploadPath() {
+        if (uploadPath.startsWith("./")) {
+            String currentDir = System.getProperty("user.dir");
+            return currentDir + "/" + uploadPath.substring(2);
+        }
+        return uploadPath;
     }
     
     /**

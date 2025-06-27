@@ -112,7 +112,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ChatDotRound, Compass, User } from '@element-plus/icons-vue'
-import { postApi } from '@/api/post'
+import { getPostList } from '@/api/post'
 
 // 响应式数据
 const router = useRouter()
@@ -174,7 +174,7 @@ const formatTime = (time) => {
 const loadRecentPosts = async () => {
   try {
     // 调用API获取最近动态
-    const response = await postApi.getPostList(1, 5)
+    const response = await getPostList(1, 5)
     if (response.code === 200 && response.data) {
       recentPosts.value = response.data.posts.map(post => ({
         postId: post.postId,

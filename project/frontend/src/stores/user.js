@@ -186,6 +186,17 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
+   * 更新头像URL
+   * @param {string} avatarUrl - 头像URL
+   */
+  const updateAvatar = (avatarUrl) => {
+    if (userInfo.value) {
+      userInfo.value.avatar = avatarUrl
+      console.log('✅ 更新头像URL成功:', avatarUrl)
+    }
+  }
+
+  /**
    * 检查用户认证状态
    */
   const checkAuth = async () => {
@@ -273,6 +284,7 @@ export const useUserStore = defineStore('user', () => {
     fetchUserInfo,
     updateUserInfo,
     uploadAvatar,
+    updateAvatar,
     checkAuth,
     logout,
     updateActiveTime,
