@@ -29,7 +29,7 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/auth/Login.vue'),
+    component: () => import('@/views/Login.vue'),
     meta: {
       title: '登录 - 我的伊甸园',
       requiresAuth: false
@@ -38,87 +38,38 @@ const routes = [
   {
     path: '/register',
     name: 'Register',
-    component: () => import('@/views/auth/Register.vue'),
+    component: () => import('@/views/Register.vue'),
     meta: {
       title: '注册 - 我的伊甸园',
       requiresAuth: false
     }
   },
   {
+    path: '/profile-setup',
+    name: 'ProfileSetup',
+    component: () => import('@/views/ProfileSetup.vue'),
+    meta: {
+      title: '完善资料 - 我的伊甸园',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/world',
     name: 'World',
-    component: () => import('@/views/world/World.vue'),
+    component: () => import('@/views/World.vue'),
     meta: {
       title: '虚拟世界 - 我的伊甸园',
       requiresAuth: true
     }
   },
   {
-    path: '/friends',
-    name: 'Friends',
-    component: () => import('@/views/friends/Friends.vue'),
+    path: '/moments',
+    name: 'Moments',
+    component: () => import('@/views/Moments.vue'),
     meta: {
       title: '朋友圈 - 我的伊甸园',
       requiresAuth: true
     }
-  },
-  {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/views/profile/Profile.vue'),
-    meta: {
-      title: '个人资料 - 我的伊甸园',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/robots',
-    name: 'Robots',
-    component: () => import('@/views/robots/Robots.vue'),
-    meta: {
-      title: 'AI机器人 - 我的伊甸园',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/settings',
-    name: 'Settings',
-    component: () => import('@/views/settings/Settings.vue'),
-    meta: {
-      title: '设置 - 我的伊甸园',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/post/:id',
-    name: 'PostDetail',
-    component: () => import('@/views/friends/PostDetail.vue'),
-    meta: {
-      title: '动态详情 - 我的伊甸园',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/robot/:id',
-    name: 'RobotDetail',
-    component: () => import('@/views/robots/RobotDetail.vue'),
-    meta: {
-      title: '机器人详情 - 我的伊甸园',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/404',
-    name: 'NotFound',
-    component: () => import('@/views/error/404.vue'),
-    meta: {
-      title: '页面未找到 - 我的伊甸园',
-      requiresAuth: false
-    }
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/404'
   }
 ]
 

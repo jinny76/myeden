@@ -9,13 +9,14 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 评论数据访问层
  * 
  * 功能说明：
  * - 提供评论相关的数据库操作
- * - 支持按动态、用户、父评论等字段查询
+ * - 支持按动态、作者等字段查询
  * - 提供评论统计和状态查询
  * - 支持评论数据分页和排序
  * 
@@ -27,337 +28,277 @@ import java.util.List;
 public interface CommentRepository extends MongoRepository<Comment, String> {
     
     /**
+     * 根据评论ID查找评论
+     * @param commentId 评论ID
+     * @return 评论信息
+     */
+    Optional<Comment> findByCommentId(String commentId);
+    
+    /**
      * 根据动态ID查找评论
      * @param postId 动态ID
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * @return 评论列表
      */
-    Page<Comment> findByPostId(String postId, Pageable pageable);
+    List<Comment> findByPostId(String postId);
     
     /**
-     * 根据动态ID查找评论（按创建时间倒序）
-     * @param postId 动态ID
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * 根据作者ID查找评论
+     * @param authorId 作者ID
+     * @return 评论列表
      */
-    @Query(value = "{'postId': ?0}", sort = "{'createTime': -1}")
-    Page<Comment> findByPostIdOrderByCreateTimeDesc(String postId, Pageable pageable);
+    List<Comment> findByAuthorId(String authorId);
     
     /**
-     * 根据用户ID查找评论
-     * @param userId 用户ID
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * 根据作者类型查找评论
+     * @param authorType 作者类型
+     * @return 评论列表
      */
-    Page<Comment> findByUserId(String userId, Pageable pageable);
+    List<Comment> findByAuthorType(String authorType);
     
     /**
-     * 根据用户ID查找评论（按创建时间倒序）
-     * @param userId 用户ID
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * 根据作者ID和作者类型查找评论
+     * @param authorId 作者ID
+     * @param authorType 作者类型
+     * @return 评论列表
      */
-    @Query(value = "{'userId': ?0}", sort = "{'createTime': -1}")
-    Page<Comment> findByUserIdOrderByCreateTimeDesc(String userId, Pageable pageable);
+    List<Comment> findByAuthorIdAndAuthorType(String authorId, String authorType);
     
     /**
      * 根据父评论ID查找回复
      * @param parentId 父评论ID
-     * @param pageable 分页参数
-     * @return 回复分页结果
+     * @return 回复列表
      */
-    Page<Comment> findByParentId(String parentId, Pageable pageable);
+    List<Comment> findByParentId(String parentId);
     
     /**
-     * 根据父评论ID查找回复（按创建时间倒序）
-     * @param parentId 父评论ID
-     * @param pageable 分页参数
-     * @return 回复分页结果
+     * 根据回复目标ID查找回复
+     * @param replyToId 回复目标ID
+     * @return 回复列表
      */
-    @Query(value = "{'parentId': ?0}", sort = "{'createTime': -1}")
-    Page<Comment> findByParentIdOrderByCreateTimeDesc(String parentId, Pageable pageable);
+    List<Comment> findByReplyToId(String replyToId);
     
     /**
-     * 查找顶级评论（没有父评论的评论）
+     * 根据是否删除查找评论
+     * @param isDeleted 是否删除
+     * @return 评论列表
+     */
+    List<Comment> findByIsDeleted(Boolean isDeleted);
+    
+    /**
+     * 根据动态ID和是否删除查找评论
      * @param postId 动态ID
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * @param isDeleted 是否删除
+     * @return 评论列表
      */
-    @Query("{'postId': ?0, 'parentId': {$exists: false}}")
-    Page<Comment> findTopLevelComments(String postId, Pageable pageable);
+    List<Comment> findByPostIdAndIsDeleted(String postId, Boolean isDeleted);
     
     /**
-     * 查找顶级评论（按创建时间倒序）
+     * 根据作者ID和是否删除查找评论
+     * @param authorId 作者ID
+     * @param isDeleted 是否删除
+     * @return 评论列表
+     */
+    List<Comment> findByAuthorIdAndIsDeleted(String authorId, Boolean isDeleted);
+    
+    /**
+     * 根据作者类型和是否删除查找评论
+     * @param authorType 作者类型
+     * @param isDeleted 是否删除
+     * @return 评论列表
+     */
+    List<Comment> findByAuthorTypeAndIsDeleted(String authorType, Boolean isDeleted);
+    
+    /**
+     * 查找指定动态的最近评论
      * @param postId 动态ID
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * @param limit 限制数量
+     * @return 评论列表
      */
-    @Query(value = "{'postId': ?0, 'parentId': {$exists: false}}", sort = "{'createTime': -1}")
-    Page<Comment> findTopLevelCommentsOrderByCreateTimeDesc(String postId, Pageable pageable);
+    @Query(value = "{'postId': ?0}", sort = "{'createdAt': -1}")
+    List<Comment> findRecentCommentsByPost(String postId, int limit);
     
     /**
-     * 根据状态查找评论
-     * @param status 评论状态
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * 查找指定作者的最近评论
+     * @param authorId 作者ID
+     * @param limit 限制数量
+     * @return 评论列表
      */
-    Page<Comment> findByStatus(Integer status, Pageable pageable);
+    @Query(value = "{'authorId': ?0}", sort = "{'createdAt': -1}")
+    List<Comment> findRecentCommentsByAuthor(String authorId, int limit);
     
     /**
-     * 查找机器人评论
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * 查找指定类型的最近评论
+     * @param authorType 作者类型
+     * @param limit 限制数量
+     * @return 评论列表
      */
-    @Query("{'isRobot': true}")
-    Page<Comment> findRobotComments(Pageable pageable);
+    @Query(value = "{'authorType': ?0}", sort = "{'createdAt': -1}")
+    List<Comment> findRecentCommentsByType(String authorType, int limit);
     
     /**
-     * 查找用户评论
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * 根据内容模糊查询评论
+     * @param content 内容关键词
+     * @return 评论列表
      */
-    @Query("{'isRobot': false}")
-    Page<Comment> findUserComments(Pageable pageable);
+    @Query("{'content': {$regex: ?0, $options: 'i'}}")
+    List<Comment> findByContentContaining(String content);
     
     /**
-     * 根据机器人ID查找评论
-     * @param robotId 机器人ID
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * 查找点赞数大于等于指定值的评论
+     * @param likeCount 点赞数
+     * @return 评论列表
      */
-    Page<Comment> findByRobotId(String robotId, Pageable pageable);
+    @Query("{'likeCount': {$gte: ?0}}")
+    List<Comment> findByLikeCountGreaterThanEqual(Integer likeCount);
     
     /**
-     * 根据回复用户ID查找评论
-     * @param replyUserId 回复用户ID
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * 查找回复数大于等于指定值的评论
+     * @param replyCount 回复数
+     * @return 评论列表
      */
-    Page<Comment> findByReplyUserId(String replyUserId, Pageable pageable);
+    @Query("{'replyCount': {$gte: ?0}}")
+    List<Comment> findByReplyCountGreaterThanEqual(Integer replyCount);
     
     /**
      * 查找热门评论（按点赞数排序）
-     * @param postId 动态ID
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * @param limit 限制数量
+     * @return 评论列表
      */
-    @Query(value = "{'postId': ?0}", sort = "{'likeCount': -1}")
-    Page<Comment> findHotComments(String postId, Pageable pageable);
+    @Query(value = "{}", sort = "{'likeCount': -1}")
+    List<Comment> findPopularComments(int limit);
     
     /**
-     * 查找最新评论（按创建时间排序）
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * 查找热门评论（按回复数排序）
+     * @param limit 限制数量
+     * @return 评论列表
      */
-    @Query(value = "{}", sort = "{'createTime': -1}")
-    Page<Comment> findLatestComments(Pageable pageable);
-    
-    /**
-     * 查找指定时间范围内的评论
-     * @param startTime 开始时间
-     * @param endTime 结束时间
-     * @param pageable 分页参数
-     * @return 评论分页结果
-     */
-    @Query("{'createTime': {$gte: ?0, $lte: ?1}}")
-    Page<Comment> findByCreateTimeBetween(LocalDateTime startTime, LocalDateTime endTime, Pageable pageable);
+    @Query(value = "{}", sort = "{'replyCount': -1}")
+    List<Comment> findMostRepliedComments(int limit);
     
     /**
      * 查找今日发布的评论
-     * @param startOfDay 今日开始时间
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * @return 评论列表
      */
-    @Query("{'createTime': {$gte: ?0}}")
-    Page<Comment> findTodayComments(LocalDateTime startOfDay, Pageable pageable);
+    @Query("{'createdAt': {$gte: ?0}}")
+    List<Comment> findTodayComments(java.time.LocalDateTime startOfDay);
     
     /**
-     * 查找本周发布的评论
-     * @param startOfWeek 本周开始时间
-     * @param pageable 分页参数
-     * @return 评论分页结果
-     */
-    @Query("{'createTime': {$gte: ?0}}")
-    Page<Comment> findThisWeekComments(LocalDateTime startOfWeek, Pageable pageable);
-    
-    /**
-     * 查找本月发布的评论
-     * @param startOfMonth 本月开始时间
-     * @param pageable 分页参数
-     * @return 评论分页结果
-     */
-    @Query("{'createTime': {$gte: ?0}}")
-    Page<Comment> findThisMonthComments(LocalDateTime startOfMonth, Pageable pageable);
-    
-    /**
-     * 根据内容关键词查找评论
-     * @param keyword 关键词
-     * @param pageable 分页参数
-     * @return 评论分页结果
-     */
-    @Query("{'content': {$regex: ?0, $options: 'i'}}")
-    Page<Comment> findByContentContaining(String keyword, Pageable pageable);
-    
-    /**
-     * 查找用户点赞的评论
-     * @param userId 用户ID
-     * @param pageable 分页参数
-     * @return 评论分页结果
-     */
-    @Query("{'likedUserIds': ?0}")
-    Page<Comment> findLikedCommentsByUser(String userId, Pageable pageable);
-    
-    /**
-     * 根据动态ID和状态查找评论
+     * 查找指定动态今日发布的评论
      * @param postId 动态ID
-     * @param status 评论状态
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * @return 评论列表
      */
-    Page<Comment> findByPostIdAndStatus(String postId, Integer status, Pageable pageable);
+    @Query("{'postId': ?0, 'createdAt': {$gte: ?1}}")
+    List<Comment> findTodayCommentsByPost(String postId, java.time.LocalDateTime startOfDay);
     
     /**
-     * 根据用户ID和状态查找评论
-     * @param userId 用户ID
-     * @param status 评论状态
-     * @param pageable 分页参数
-     * @return 评论分页结果
+     * 查找指定作者今日发布的评论
+     * @param authorId 作者ID
+     * @return 评论列表
      */
-    Page<Comment> findByUserIdAndStatus(String userId, Integer status, Pageable pageable);
+    @Query("{'authorId': ?0, 'createdAt': {$gte: ?1}}")
+    List<Comment> findTodayCommentsByAuthor(String authorId, java.time.LocalDateTime startOfDay);
     
     /**
-     * 统计动态评论数量
+     * 查找指定类型今日发布的评论
+     * @param authorType 作者类型
+     * @return 评论列表
+     */
+    @Query("{'authorType': ?0, 'createdAt': {$gte: ?1}}")
+    List<Comment> findTodayCommentsByType(String authorType, java.time.LocalDateTime startOfDay);
+    
+    /**
+     * 查找评论数量统计
+     * @return 评论总数
+     */
+    long count();
+    
+    /**
+     * 根据动态ID统计评论数量
      * @param postId 动态ID
      * @return 评论数量
      */
     long countByPostId(String postId);
     
     /**
-     * 统计用户评论数量
-     * @param userId 用户ID
+     * 根据作者ID统计评论数量
+     * @param authorId 作者ID
      * @return 评论数量
      */
-    long countByUserId(String userId);
+    long countByAuthorId(String authorId);
     
     /**
-     * 统计机器人评论数量
-     * @param robotId 机器人ID
+     * 根据作者类型统计评论数量
+     * @param authorType 作者类型
      * @return 评论数量
      */
-    long countByRobotId(String robotId);
+    long countByAuthorType(String authorType);
     
     /**
-     * 统计父评论的回复数量
+     * 根据父评论ID统计回复数量
      * @param parentId 父评论ID
      * @return 回复数量
      */
     long countByParentId(String parentId);
     
     /**
-     * 统计顶级评论数量
+     * 根据是否删除统计评论数量
+     * @param isDeleted 是否删除
+     * @return 评论数量
+     */
+    long countByIsDeleted(Boolean isDeleted);
+    
+    /**
+     * 根据动态ID和是否删除统计评论数量
+     * @param postId 动态ID
+     * @param isDeleted 是否删除
+     * @return 评论数量
+     */
+    long countByPostIdAndIsDeleted(String postId, Boolean isDeleted);
+    
+    /**
+     * 根据作者ID和是否删除统计评论数量
+     * @param authorId 作者ID
+     * @param isDeleted 是否删除
+     * @return 评论数量
+     */
+    long countByAuthorIdAndIsDeleted(String authorId, Boolean isDeleted);
+    
+    /**
+     * 根据作者类型和是否删除统计评论数量
+     * @param authorType 作者类型
+     * @param isDeleted 是否删除
+     * @return 评论数量
+     */
+    long countByAuthorTypeAndIsDeleted(String authorType, Boolean isDeleted);
+    
+    /**
+     * 统计今日发布的评论数量
+     * @return 评论数量
+     */
+    @Query(value = "{'createdAt': {$gte: ?0}}", count = true)
+    long countTodayComments(java.time.LocalDateTime startOfDay);
+    
+    /**
+     * 统计指定动态今日发布的评论数量
      * @param postId 动态ID
      * @return 评论数量
      */
-    @Query(value = "{'postId': ?0, 'parentId': {$exists: false}}", count = true)
-    long countTopLevelComments(String postId);
+    @Query(value = "{'postId': ?0, 'createdAt': {$gte: ?1}}", count = true)
+    long countTodayCommentsByPost(String postId, java.time.LocalDateTime startOfDay);
     
     /**
-     * 统计今日评论数量
-     * @param startOfDay 今日开始时间
+     * 统计指定作者今日发布的评论数量
+     * @param authorId 作者ID
      * @return 评论数量
      */
-    @Query(value = "{'createTime': {$gte: ?0}}", count = true)
-    long countTodayComments(LocalDateTime startOfDay);
+    @Query(value = "{'authorId': ?0, 'createdAt': {$gte: ?1}}", count = true)
+    long countTodayCommentsByAuthor(String authorId, java.time.LocalDateTime startOfDay);
     
     /**
-     * 统计本周评论数量
-     * @param startOfWeek 本周开始时间
+     * 统计指定类型今日发布的评论数量
+     * @param authorType 作者类型
      * @return 评论数量
      */
-    @Query(value = "{'createTime': {$gte: ?0}}", count = true)
-    long countThisWeekComments(LocalDateTime startOfWeek);
-    
-    /**
-     * 统计本月评论数量
-     * @param startOfMonth 本月开始时间
-     * @return 评论数量
-     */
-    @Query(value = "{'createTime': {$gte: ?0}}", count = true)
-    long countThisMonthComments(LocalDateTime startOfMonth);
-    
-    /**
-     * 统计状态为指定值的评论数量
-     * @param status 评论状态
-     * @return 评论数量
-     */
-    long countByStatus(Integer status);
-    
-    /**
-     * 统计机器人评论数量
-     * @return 评论数量
-     */
-    @Query(value = "{'isRobot': true}", count = true)
-    long countRobotComments();
-    
-    /**
-     * 统计用户评论数量
-     * @return 评论数量
-     */
-    @Query(value = "{'isRobot': false}", count = true)
-    long countUserComments();
-    
-    /**
-     * 查找所有评论（不分页）
-     * @return 评论列表
-     */
-    @Query(value = "{}", sort = "{'createTime': -1}")
-    List<Comment> findAllOrderByCreateTimeDesc();
-    
-    /**
-     * 根据动态ID查找所有评论
-     * @param postId 动态ID
-     * @return 评论列表
-     */
-    @Query(value = "{'postId': ?0}", sort = "{'createTime': -1}")
-    List<Comment> findAllByPostIdOrderByCreateTimeDesc(String postId);
-    
-    /**
-     * 根据用户ID查找所有评论
-     * @param userId 用户ID
-     * @return 评论列表
-     */
-    @Query(value = "{'userId': ?0}", sort = "{'createTime': -1}")
-    List<Comment> findAllByUserIdOrderByCreateTimeDesc(String userId);
-    
-    /**
-     * 查找热门评论（不分页）
-     * @param limit 限制数量
-     * @return 评论列表
-     */
-    @Query(value = "{}", sort = "{'likeCount': -1}")
-    List<Comment> findHotComments(int limit);
-    
-    /**
-     * 查找最新评论（不分页）
-     * @param limit 限制数量
-     * @return 评论列表
-     */
-    @Query(value = "{}", sort = "{'createTime': -1}")
-    List<Comment> findLatestComments(int limit);
-    
-    /**
-     * 查找动态的所有顶级评论（不分页）
-     * @param postId 动态ID
-     * @return 评论列表
-     */
-    @Query(value = "{'postId': ?0, 'parentId': {$exists: false}}", sort = "{'createTime': -1}")
-    List<Comment> findAllTopLevelCommentsByPostId(String postId);
-    
-    /**
-     * 查找父评论的所有回复（不分页）
-     * @param parentId 父评论ID
-     * @return 回复列表
-     */
-    @Query(value = "{'parentId': ?0}", sort = "{'createTime': -1}")
-    List<Comment> findAllRepliesByParentId(String parentId);
+    @Query(value = "{'authorType': ?0, 'createdAt': {$gte: ?1}}", count = true)
+    long countTodayCommentsByType(String authorType, java.time.LocalDateTime startOfDay);
 } 

@@ -5,8 +5,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.ArrayList;
 
 /**
  * 评论实体类
@@ -28,52 +26,42 @@ public class Comment {
     private String id;
     
     /**
-     * 评论内容
+     * 评论ID，唯一
      */
-    private String content;
+    @Indexed(unique = true)
+    private String commentId;
     
     /**
-     * 评论者ID
-     */
-    @Indexed
-    private String userId;
-    
-    /**
-     * 评论者昵称
-     */
-    private String userNickname;
-    
-    /**
-     * 评论者头像
-     */
-    private String userAvatar;
-    
-    /**
-     * 所属动态ID
+     * 动态ID
      */
     @Indexed
     private String postId;
     
     /**
-     * 父评论ID（用于回复功能）
+     * 评论者ID
+     */
+    private String authorId;
+    
+    /**
+     * 评论者类型：user/robot
+     */
+    private String authorType;
+    
+    /**
+     * 评论内容
+     */
+    private String content;
+    
+    /**
+     * 父评论ID（用于回复）
      */
     @Indexed
     private String parentId;
     
     /**
-     * 回复的用户ID
+     * 回复目标ID
      */
-    private String replyUserId;
-    
-    /**
-     * 回复的用户昵称
-     */
-    private String replyUserNickname;
-    
-    /**
-     * 子评论列表
-     */
-    private List<Comment> replies = new ArrayList<>();
+    private String replyToId;
     
     /**
      * 点赞数
@@ -81,46 +69,38 @@ public class Comment {
     private Integer likeCount = 0;
     
     /**
-     * 点赞用户ID列表
+     * 回复数
      */
-    private List<String> likedUserIds = new ArrayList<>();
+    private Integer replyCount = 0;
     
     /**
-     * 评论状态：0-正常，1-已删除，2-已隐藏
+     * 是否删除
      */
-    private Integer status = 0;
-    
-    /**
-     * 是否为机器人评论
-     */
-    private Boolean isRobot = false;
-    
-    /**
-     * 机器人ID（如果是机器人评论）
-     */
-    private String robotId;
+    private Boolean isDeleted = false;
     
     /**
      * 创建时间
      */
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
     
     /**
      * 更新时间
      */
-    private LocalDateTime updateTime;
+    private LocalDateTime updatedAt;
     
     // 构造函数
     public Comment() {
-        this.createTime = LocalDateTime.now();
-        this.updateTime = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
     
-    public Comment(String content, String userId, String postId) {
+    public Comment(String commentId, String postId, String authorId, String authorType, String content) {
         this();
-        this.content = content;
-        this.userId = userId;
+        this.commentId = commentId;
         this.postId = postId;
+        this.authorId = authorId;
+        this.authorType = authorType;
+        this.content = content;
     }
     
     // Getter和Setter方法
@@ -132,36 +112,12 @@ public class Comment {
         this.id = id;
     }
     
-    public String getContent() {
-        return content;
+    public String getCommentId() {
+        return commentId;
     }
     
-    public void setContent(String content) {
-        this.content = content;
-    }
-    
-    public String getUserId() {
-        return userId;
-    }
-    
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-    
-    public String getUserNickname() {
-        return userNickname;
-    }
-    
-    public void setUserNickname(String userNickname) {
-        this.userNickname = userNickname;
-    }
-    
-    public String getUserAvatar() {
-        return userAvatar;
-    }
-    
-    public void setUserAvatar(String userAvatar) {
-        this.userAvatar = userAvatar;
+    public void setCommentId(String commentId) {
+        this.commentId = commentId;
     }
     
     public String getPostId() {
@@ -172,6 +128,30 @@ public class Comment {
         this.postId = postId;
     }
     
+    public String getAuthorId() {
+        return authorId;
+    }
+    
+    public void setAuthorId(String authorId) {
+        this.authorId = authorId;
+    }
+    
+    public String getAuthorType() {
+        return authorType;
+    }
+    
+    public void setAuthorType(String authorType) {
+        this.authorType = authorType;
+    }
+    
+    public String getContent() {
+        return content;
+    }
+    
+    public void setContent(String content) {
+        this.content = content;
+    }
+    
     public String getParentId() {
         return parentId;
     }
@@ -180,28 +160,12 @@ public class Comment {
         this.parentId = parentId;
     }
     
-    public String getReplyUserId() {
-        return replyUserId;
+    public String getReplyToId() {
+        return replyToId;
     }
     
-    public void setReplyUserId(String replyUserId) {
-        this.replyUserId = replyUserId;
-    }
-    
-    public String getReplyUserNickname() {
-        return replyUserNickname;
-    }
-    
-    public void setReplyUserNickname(String replyUserNickname) {
-        this.replyUserNickname = replyUserNickname;
-    }
-    
-    public List<Comment> getReplies() {
-        return replies;
-    }
-    
-    public void setReplies(List<Comment> replies) {
-        this.replies = replies;
+    public void setReplyToId(String replyToId) {
+        this.replyToId = replyToId;
     }
     
     public Integer getLikeCount() {
@@ -212,115 +176,133 @@ public class Comment {
         this.likeCount = likeCount;
     }
     
-    public List<String> getLikedUserIds() {
-        return likedUserIds;
+    public Integer getReplyCount() {
+        return replyCount;
     }
     
-    public void setLikedUserIds(List<String> likedUserIds) {
-        this.likedUserIds = likedUserIds;
+    public void setReplyCount(Integer replyCount) {
+        this.replyCount = replyCount;
     }
     
-    public Integer getStatus() {
-        return status;
+    public Boolean getIsDeleted() {
+        return isDeleted;
     }
     
-    public void setStatus(Integer status) {
-        this.status = status;
+    public void setIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
     }
     
-    public Boolean getIsRobot() {
-        return isRobot;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
     
-    public void setIsRobot(Boolean isRobot) {
-        this.isRobot = isRobot;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
     
-    public String getRobotId() {
-        return robotId;
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
     
-    public void setRobotId(String robotId) {
-        this.robotId = robotId;
-    }
-    
-    public LocalDateTime getCreateTime() {
-        return createTime;
-    }
-    
-    public void setCreateTime(LocalDateTime createTime) {
-        this.createTime = createTime;
-    }
-    
-    public LocalDateTime getUpdateTime() {
-        return updateTime;
-    }
-    
-    public void setUpdateTime(LocalDateTime updateTime) {
-        this.updateTime = updateTime;
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
     
     /**
-     * 添加回复
+     * 增加点赞数
      */
-    public void addReply(Comment reply) {
-        this.replies.add(reply);
+    public void incrementLikeCount() {
+        this.likeCount++;
+        this.updatedAt = LocalDateTime.now();
     }
     
     /**
-     * 点赞
+     * 减少点赞数
      */
-    public void like(String userId) {
-        if (!this.likedUserIds.contains(userId)) {
-            this.likedUserIds.add(userId);
-            this.likeCount++;
+    public void decrementLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+            this.updatedAt = LocalDateTime.now();
         }
     }
     
     /**
-     * 取消点赞
+     * 增加回复数
      */
-    public void unlike(String userId) {
-        if (this.likedUserIds.contains(userId)) {
-            this.likedUserIds.remove(userId);
-            this.likeCount = Math.max(0, this.likeCount - 1);
-        }
+    public void incrementReplyCount() {
+        this.replyCount++;
+        this.updatedAt = LocalDateTime.now();
     }
     
     /**
-     * 检查用户是否已点赞
+     * 减少回复数
      */
-    public boolean isLikedBy(String userId) {
-        return this.likedUserIds.contains(userId);
+    public void decrementReplyCount() {
+        if (this.replyCount > 0) {
+            this.replyCount--;
+            this.updatedAt = LocalDateTime.now();
+        }
     }
     
     /**
      * 软删除评论
      */
     public void softDelete() {
-        this.status = 1;
-        this.updateTime = LocalDateTime.now();
+        this.isDeleted = true;
+        this.updatedAt = LocalDateTime.now();
     }
     
     /**
-     * 隐藏评论
+     * 恢复评论
      */
-    public void hide() {
-        this.status = 2;
-        this.updateTime = LocalDateTime.now();
+    public void restore() {
+        this.isDeleted = false;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * 检查是否为机器人评论
+     */
+    public boolean isRobotComment() {
+        return "robot".equals(this.authorType);
+    }
+    
+    /**
+     * 检查是否为用户评论
+     */
+    public boolean isUserComment() {
+        return "user".equals(this.authorType);
+    }
+    
+    /**
+     * 检查是否为回复评论
+     */
+    public boolean isReply() {
+        return this.parentId != null && !this.parentId.isEmpty();
+    }
+    
+    /**
+     * 更新评论内容
+     */
+    public void updateContent(String content) {
+        this.content = content;
+        this.updatedAt = LocalDateTime.now();
     }
     
     @Override
     public String toString() {
         return "Comment{" +
                 "id='" + id + '\'' +
-                ", content='" + content + '\'' +
-                ", userId='" + userId + '\'' +
+                ", commentId='" + commentId + '\'' +
                 ", postId='" + postId + '\'' +
+                ", authorId='" + authorId + '\'' +
+                ", authorType='" + authorType + '\'' +
+                ", content='" + content + '\'' +
+                ", parentId='" + parentId + '\'' +
                 ", likeCount=" + likeCount +
-                ", status=" + status +
-                ", isRobot=" + isRobot +
-                ", createTime=" + createTime +
+                ", replyCount=" + replyCount +
+                ", isDeleted=" + isDeleted +
+                ", createdAt=" + createdAt +
                 '}';
     }
 } 

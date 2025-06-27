@@ -56,18 +56,23 @@ export const useUserStore = defineStore('user', () => {
       loading.value = true
       const response = await userApi.login(loginData)
       
-      const { token: newToken, user } = response.data
-      
-      // 保存token和用户信息
-      token.value = newToken
-      userInfo.value = user
-      isLoggedIn.value = true
-      
-      // 保存到本地存储
-      setToken(newToken)
-      
-      console.log('✅ 用户登录成功:', user.nickname)
-      return response
+      // 适配新的后端响应格式 (EventResponse)
+      if (response.code === 200 && response.data) {
+        const { token: newToken, user } = response.data
+        
+        // 保存token和用户信息
+        token.value = newToken
+        userInfo.value = user
+        isLoggedIn.value = true
+        
+        // 保存到本地存储
+        setToken(newToken)
+        
+        console.log('✅ 用户登录成功:', user.nickname)
+        return response
+      } else {
+        throw new Error(response.message || '登录失败')
+      }
     } catch (error) {
       console.error('❌ 用户登录失败:', error)
       throw error
@@ -88,8 +93,13 @@ export const useUserStore = defineStore('user', () => {
       loading.value = true
       const response = await userApi.register(registerData)
       
-      console.log('✅ 用户注册成功')
-      return response
+      // 适配新的后端响应格式 (EventResponse)
+      if (response.code === 200) {
+        console.log('✅ 用户注册成功')
+        return response
+      } else {
+        throw new Error(response.message || '注册失败')
+      }
     } catch (error) {
       console.error('❌ 用户注册失败:', error)
       throw error
@@ -104,11 +114,17 @@ export const useUserStore = defineStore('user', () => {
   const fetchUserInfo = async () => {
     try {
       const response = await userApi.getUserInfo()
-      userInfo.value = response.data
-      isLoggedIn.value = true
       
-      console.log('✅ 获取用户信息成功:', userInfo.value.nickname)
-      return response
+      // 适配新的后端响应格式 (EventResponse)
+      if (response.code === 200 && response.data) {
+        userInfo.value = response.data
+        isLoggedIn.value = true
+        
+        console.log('✅ 获取用户信息成功:', userInfo.value.nickname)
+        return response
+      } else {
+        throw new Error(response.message || '获取用户信息失败')
+      }
     } catch (error) {
       console.error('❌ 获取用户信息失败:', error)
       throw error
@@ -124,11 +140,16 @@ export const useUserStore = defineStore('user', () => {
       loading.value = true
       const response = await userApi.updateUserInfo(updateData)
       
-      // 更新本地用户信息
-      userInfo.value = { ...userInfo.value, ...response.data }
-      
-      console.log('✅ 更新用户信息成功')
-      return response
+      // 适配新的后端响应格式 (EventResponse)
+      if (response.code === 200 && response.data) {
+        // 更新本地用户信息
+        userInfo.value = { ...userInfo.value, ...response.data }
+        
+        console.log('✅ 更新用户信息成功')
+        return response
+      } else {
+        throw new Error(response.message || '更新用户信息失败')
+      }
     } catch (error) {
       console.error('❌ 更新用户信息失败:', error)
       throw error
@@ -146,11 +167,16 @@ export const useUserStore = defineStore('user', () => {
       loading.value = true
       const response = await userApi.uploadAvatar(file)
       
-      // 更新头像信息
-      userInfo.value.avatar = response.data.avatar
-      
-      console.log('✅ 上传头像成功')
-      return response
+      // 适配新的后端响应格式 (EventResponse)
+      if (response.code === 200 && response.data) {
+        // 更新头像信息
+        userInfo.value.avatar = response.data.avatar
+        
+        console.log('✅ 上传头像成功')
+        return response
+      } else {
+        throw new Error(response.message || '上传头像失败')
+      }
     } catch (error) {
       console.error('❌ 上传头像失败:', error)
       throw error
@@ -207,13 +233,19 @@ export const useUserStore = defineStore('user', () => {
   const refreshToken = async () => {
     try {
       const response = await userApi.refreshToken()
-      const { token: newToken } = response.data
       
-      token.value = newToken
-      setToken(newToken)
-      
-      console.log('✅ Token刷新成功')
-      return response
+      // 适配新的后端响应格式 (EventResponse)
+      if (response.code === 200 && response.data) {
+        const { token: newToken } = response.data
+        
+        token.value = newToken
+        setToken(newToken)
+        
+        console.log('✅ Token刷新成功')
+        return response
+      } else {
+        throw new Error(response.message || 'Token刷新失败')
+      }
     } catch (error) {
       console.error('❌ Token刷新失败:', error)
       logout()

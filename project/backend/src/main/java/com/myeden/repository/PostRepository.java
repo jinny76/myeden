@@ -9,13 +9,14 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 动态数据访问层
  * 
  * 功能说明：
  * - 提供动态相关的数据库操作
- * - 支持按用户、标签、内容等字段查询
+ * - 支持按作者、内容等字段查询
  * - 提供动态统计和状态查询
  * - 支持动态数据分页和排序
  * 
@@ -27,321 +28,223 @@ import java.util.List;
 public interface PostRepository extends MongoRepository<Post, String> {
     
     /**
-     * 根据用户ID查找动态
-     * @param userId 用户ID
-     * @param pageable 分页参数
-     * @return 动态分页结果
+     * 根据动态ID查找动态
+     * @param postId 动态ID
+     * @return 动态信息
      */
-    Page<Post> findByUserId(String userId, Pageable pageable);
+    Optional<Post> findByPostId(String postId);
     
     /**
-     * 根据用户ID查找动态（按创建时间倒序）
-     * @param userId 用户ID
-     * @param pageable 分页参数
-     * @return 动态分页结果
+     * 根据作者ID查找动态
+     * @param authorId 作者ID
+     * @return 动态列表
      */
-    @Query(value = "{'userId': ?0}", sort = "{'createTime': -1}")
-    Page<Post> findByUserIdOrderByCreateTimeDesc(String userId, Pageable pageable);
+    List<Post> findByAuthorId(String authorId);
     
     /**
-     * 根据状态查找动态
-     * @param status 动态状态
-     * @param pageable 分页参数
-     * @return 动态分页结果
+     * 根据作者类型查找动态
+     * @param authorType 作者类型
+     * @return 动态列表
      */
-    Page<Post> findByStatus(Integer status, Pageable pageable);
+    List<Post> findByAuthorType(String authorType);
     
     /**
-     * 根据标签查找动态
-     * @param tag 标签
-     * @param pageable 分页参数
-     * @return 动态分页结果
+     * 根据作者ID和作者类型查找动态
+     * @param authorId 作者ID
+     * @param authorType 作者类型
+     * @return 动态列表
      */
-    @Query("{'tags': ?0}")
-    Page<Post> findByTag(String tag, Pageable pageable);
+    List<Post> findByAuthorIdAndAuthorType(String authorId, String authorType);
     
     /**
-     * 根据多个标签查找动态
-     * @param tags 标签列表
-     * @param pageable 分页参数
-     * @return 动态分页结果
+     * 根据是否删除查找动态
+     * @param isDeleted 是否删除
+     * @return 动态列表
      */
-    @Query("{'tags': {$in: ?0}}")
-    Page<Post> findByTags(List<String> tags, Pageable pageable);
+    List<Post> findByIsDeleted(Boolean isDeleted);
     
     /**
-     * 根据内容关键词查找动态
-     * @param keyword 关键词
-     * @param pageable 分页参数
-     * @return 动态分页结果
+     * 根据作者ID和是否删除查找动态
+     * @param authorId 作者ID
+     * @param isDeleted 是否删除
+     * @return 动态列表
+     */
+    List<Post> findByAuthorIdAndIsDeleted(String authorId, Boolean isDeleted);
+    
+    /**
+     * 根据作者类型和是否删除查找动态
+     * @param authorType 作者类型
+     * @param isDeleted 是否删除
+     * @return 动态列表
+     */
+    List<Post> findByAuthorTypeAndIsDeleted(String authorType, Boolean isDeleted);
+    
+    /**
+     * 查找最近发布的动态
+     * @param limit 限制数量
+     * @return 动态列表
+     */
+    @Query(value = "{}", sort = "{'createdAt': -1}")
+    List<Post> findRecentPosts(int limit);
+    
+    /**
+     * 查找指定作者的最近动态
+     * @param authorId 作者ID
+     * @param limit 限制数量
+     * @return 动态列表
+     */
+    @Query(value = "{'authorId': ?0}", sort = "{'createdAt': -1}")
+    List<Post> findRecentPostsByAuthor(String authorId, int limit);
+    
+    /**
+     * 查找指定类型的最近动态
+     * @param authorType 作者类型
+     * @param limit 限制数量
+     * @return 动态列表
+     */
+    @Query(value = "{'authorType': ?0}", sort = "{'createdAt': -1}")
+    List<Post> findRecentPostsByType(String authorType, int limit);
+    
+    /**
+     * 根据内容模糊查询动态
+     * @param content 内容关键词
+     * @return 动态列表
      */
     @Query("{'content': {$regex: ?0, $options: 'i'}}")
-    Page<Post> findByContentContaining(String keyword, Pageable pageable);
-    
-    /**
-     * 查找热门动态（按点赞数排序）
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query(value = "{}", sort = "{'likeCount': -1}")
-    Page<Post> findHotPosts(Pageable pageable);
-    
-    /**
-     * 查找最新动态（按创建时间排序）
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query(value = "{}", sort = "{'createTime': -1}")
-    Page<Post> findLatestPosts(Pageable pageable);
-    
-    /**
-     * 查找评论数最多的动态
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query(value = "{}", sort = "{'commentCount': -1}")
-    Page<Post> findMostCommentedPosts(Pageable pageable);
-    
-    /**
-     * 查找机器人发布的动态
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'isRobot': true}")
-    Page<Post> findRobotPosts(Pageable pageable);
-    
-    /**
-     * 查找用户发布的动态
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'isRobot': false}")
-    Page<Post> findUserPosts(Pageable pageable);
-    
-    /**
-     * 根据机器人ID查找动态
-     * @param robotId 机器人ID
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    Page<Post> findByRobotId(String robotId, Pageable pageable);
-    
-    /**
-     * 查找指定时间范围内的动态
-     * @param startTime 开始时间
-     * @param endTime 结束时间
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'createTime': {$gte: ?0, $lte: ?1}}")
-    Page<Post> findByCreateTimeBetween(LocalDateTime startTime, LocalDateTime endTime, Pageable pageable);
-    
-    /**
-     * 查找今日发布的动态
-     * @param startOfDay 今日开始时间
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'createTime': {$gte: ?0}}")
-    Page<Post> findTodayPosts(LocalDateTime startOfDay, Pageable pageable);
-    
-    /**
-     * 查找本周发布的动态
-     * @param startOfWeek 本周开始时间
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'createTime': {$gte: ?0}}")
-    Page<Post> findThisWeekPosts(LocalDateTime startOfWeek, Pageable pageable);
-    
-    /**
-     * 查找本月发布的动态
-     * @param startOfMonth 本月开始时间
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'createTime': {$gte: ?0}}")
-    Page<Post> findThisMonthPosts(LocalDateTime startOfMonth, Pageable pageable);
+    List<Post> findByContentContaining(String content);
     
     /**
      * 查找有图片的动态
-     * @param pageable 分页参数
-     * @return 动态分页结果
+     * @return 动态列表
      */
     @Query("{'images': {$exists: true, $ne: []}}")
-    Page<Post> findPostsWithImages(Pageable pageable);
+    List<Post> findPostsWithImages();
     
     /**
-     * 查找有视频的动态
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'videos': {$exists: true, $ne: []}}")
-    Page<Post> findPostsWithVideos(Pageable pageable);
-    
-    /**
-     * 查找置顶动态
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'isPinned': true}")
-    Page<Post> findPinnedPosts(Pageable pageable);
-    
-    /**
-     * 查找精华动态
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'isFeatured': true}")
-    Page<Post> findFeaturedPosts(Pageable pageable);
-    
-    /**
-     * 查找公开动态
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'visibility': 'public'}")
-    Page<Post> findPublicPosts(Pageable pageable);
-    
-    /**
-     * 查找好友可见动态
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'visibility': 'friends'}")
-    Page<Post> findFriendsPosts(Pageable pageable);
-    
-    /**
-     * 查找私密动态
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'visibility': 'private'}")
-    Page<Post> findPrivatePosts(Pageable pageable);
-    
-    /**
-     * 根据用户ID和状态查找动态
-     * @param userId 用户ID
-     * @param status 动态状态
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    Page<Post> findByUserIdAndStatus(String userId, Integer status, Pageable pageable);
-    
-    /**
-     * 根据用户ID和可见性查找动态
-     * @param userId 用户ID
-     * @param visibility 可见性
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    Page<Post> findByUserIdAndVisibility(String userId, String visibility, Pageable pageable);
-    
-    /**
-     * 查找用户点赞的动态
-     * @param userId 用户ID
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'likedUserIds': ?0}")
-    Page<Post> findLikedPostsByUser(String userId, Pageable pageable);
-    
-    /**
-     * 查找用户收藏的动态
-     * @param userId 用户ID
-     * @param pageable 分页参数
-     * @return 动态分页结果
-     */
-    @Query("{'favoritedUserIds': ?0}")
-    Page<Post> findFavoritedPostsByUser(String userId, Pageable pageable);
-    
-    /**
-     * 统计用户动态数量
-     * @param userId 用户ID
-     * @return 动态数量
-     */
-    long countByUserId(String userId);
-    
-    /**
-     * 统计机器人动态数量
-     * @param robotId 机器人ID
-     * @return 动态数量
-     */
-    long countByRobotId(String robotId);
-    
-    /**
-     * 统计今日动态数量
-     * @param startOfDay 今日开始时间
-     * @return 动态数量
-     */
-    @Query(value = "{'createTime': {$gte: ?0}}", count = true)
-    long countTodayPosts(LocalDateTime startOfDay);
-    
-    /**
-     * 统计本周动态数量
-     * @param startOfWeek 本周开始时间
-     * @return 动态数量
-     */
-    @Query(value = "{'createTime': {$gte: ?0}}", count = true)
-    long countThisWeekPosts(LocalDateTime startOfWeek);
-    
-    /**
-     * 统计本月动态数量
-     * @param startOfMonth 本月开始时间
-     * @return 动态数量
-     */
-    @Query(value = "{'createTime': {$gte: ?0}}", count = true)
-    long countThisMonthPosts(LocalDateTime startOfMonth);
-    
-    /**
-     * 统计状态为指定值的动态数量
-     * @param status 动态状态
-     * @return 动态数量
-     */
-    long countByStatus(Integer status);
-    
-    /**
-     * 统计机器人动态数量
-     * @return 动态数量
-     */
-    @Query(value = "{'isRobot': true}", count = true)
-    long countRobotPosts();
-    
-    /**
-     * 统计用户动态数量
-     * @return 动态数量
-     */
-    @Query(value = "{'isRobot': false}", count = true)
-    long countUserPosts();
-    
-    /**
-     * 查找所有动态（不分页）
+     * 查找没有图片的动态
      * @return 动态列表
      */
-    @Query(value = "{}", sort = "{'createTime': -1}")
-    List<Post> findAllOrderByCreateTimeDesc();
+    @Query("{$or: [{'images': {$exists: false}}, {'images': []}]}")
+    List<Post> findPostsWithoutImages();
     
     /**
-     * 根据用户ID查找所有动态
-     * @param userId 用户ID
+     * 查找点赞数大于等于指定值的动态
+     * @param likeCount 点赞数
      * @return 动态列表
      */
-    @Query(value = "{'userId': ?0}", sort = "{'createTime': -1}")
-    List<Post> findAllByUserIdOrderByCreateTimeDesc(String userId);
+    @Query("{'likeCount': {$gte: ?0}}")
+    List<Post> findByLikeCountGreaterThanEqual(Integer likeCount);
     
     /**
-     * 查找热门动态（不分页）
+     * 查找评论数大于等于指定值的动态
+     * @param commentCount 评论数
+     * @return 动态列表
+     */
+    @Query("{'commentCount': {$gte: ?0}}")
+    List<Post> findByCommentCountGreaterThanEqual(Integer commentCount);
+    
+    /**
+     * 查找热门动态（按点赞数排序）
      * @param limit 限制数量
      * @return 动态列表
      */
     @Query(value = "{}", sort = "{'likeCount': -1}")
-    List<Post> findHotPosts(int limit);
+    List<Post> findPopularPosts(int limit);
     
     /**
-     * 查找最新动态（不分页）
+     * 查找热门动态（按评论数排序）
      * @param limit 限制数量
      * @return 动态列表
      */
-    @Query(value = "{}", sort = "{'createTime': -1}")
-    List<Post> findLatestPosts(int limit);
+    @Query(value = "{}", sort = "{'commentCount': -1}")
+    List<Post> findMostCommentedPosts(int limit);
+    
+    /**
+     * 查找今日发布的动态
+     * @return 动态列表
+     */
+    @Query("{'createdAt': {$gte: ?0}}")
+    List<Post> findTodayPosts(java.time.LocalDateTime startOfDay);
+    
+    /**
+     * 查找指定作者今日发布的动态
+     * @param authorId 作者ID
+     * @return 动态列表
+     */
+    @Query("{'authorId': ?0, 'createdAt': {$gte: ?1}}")
+    List<Post> findTodayPostsByAuthor(String authorId, java.time.LocalDateTime startOfDay);
+    
+    /**
+     * 查找指定类型今日发布的动态
+     * @param authorType 作者类型
+     * @return 动态列表
+     */
+    @Query("{'authorType': ?0, 'createdAt': {$gte: ?1}}")
+    List<Post> findTodayPostsByType(String authorType, java.time.LocalDateTime startOfDay);
+    
+    /**
+     * 查找动态数量统计
+     * @return 动态总数
+     */
+    long count();
+    
+    /**
+     * 根据作者ID统计动态数量
+     * @param authorId 作者ID
+     * @return 动态数量
+     */
+    long countByAuthorId(String authorId);
+    
+    /**
+     * 根据作者类型统计动态数量
+     * @param authorType 作者类型
+     * @return 动态数量
+     */
+    long countByAuthorType(String authorType);
+    
+    /**
+     * 根据是否删除统计动态数量
+     * @param isDeleted 是否删除
+     * @return 动态数量
+     */
+    long countByIsDeleted(Boolean isDeleted);
+    
+    /**
+     * 根据作者ID和是否删除统计动态数量
+     * @param authorId 作者ID
+     * @param isDeleted 是否删除
+     * @return 动态数量
+     */
+    long countByAuthorIdAndIsDeleted(String authorId, Boolean isDeleted);
+    
+    /**
+     * 根据作者类型和是否删除统计动态数量
+     * @param authorType 作者类型
+     * @param isDeleted 是否删除
+     * @return 动态数量
+     */
+    long countByAuthorTypeAndIsDeleted(String authorType, Boolean isDeleted);
+    
+    /**
+     * 统计今日发布的动态数量
+     * @return 动态数量
+     */
+    @Query(value = "{'createdAt': {$gte: ?0}}", count = true)
+    long countTodayPosts(java.time.LocalDateTime startOfDay);
+    
+    /**
+     * 统计指定作者今日发布的动态数量
+     * @param authorId 作者ID
+     * @return 动态数量
+     */
+    @Query(value = "{'authorId': ?0, 'createdAt': {$gte: ?1}}", count = true)
+    long countTodayPostsByAuthor(String authorId, java.time.LocalDateTime startOfDay);
+    
+    /**
+     * 统计指定类型今日发布的动态数量
+     * @param authorType 作者类型
+     * @return 动态数量
+     */
+    @Query(value = "{'authorType': ?0, 'createdAt': {$gte: ?1}}", count = true)
+    long countTodayPostsByType(String authorType, java.time.LocalDateTime startOfDay);
 } 

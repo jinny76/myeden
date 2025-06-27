@@ -50,7 +50,7 @@ export default defineConfig({
   
   server: {
     host: '0.0.0.0',
-    port: 5173,
+    port: 35000,
     open: true,
     cors: true,
     proxy: {
@@ -64,7 +64,8 @@ export default defineConfig({
         ws: true,
         changeOrigin: true
       }
-    }
+    },
+    allowedHosts: ['localhost', '127.0.0.1', '0.0.0.0', 'myeden.kingfisher.live']
   },
   
   build: {

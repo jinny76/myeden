@@ -13,7 +13,7 @@ import java.util.Optional;
  * 
  * 功能说明：
  * - 提供用户相关的数据库操作
- * - 支持按手机号、昵称等字段查询
+ * - 支持按手机号、用户ID等字段查询
  * - 提供用户统计和状态查询
  * - 支持用户数据分页和排序
  * 
@@ -23,6 +23,13 @@ import java.util.Optional;
  */
 @Repository
 public interface UserRepository extends MongoRepository<User, String> {
+    
+    /**
+     * 根据用户ID查找用户
+     * @param userId 用户ID
+     * @return 用户信息
+     */
+    Optional<User> findByUserId(String userId);
     
     /**
      * 根据手机号查找用户
@@ -39,11 +46,11 @@ public interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findByNickname(String nickname);
     
     /**
-     * 根据邮箱查找用户
-     * @param email 邮箱
-     * @return 用户信息
+     * 检查用户ID是否存在
+     * @param userId 用户ID
+     * @return 是否存在
      */
-    Optional<User> findByEmail(String email);
+    boolean existsByUserId(String userId);
     
     /**
      * 检查手机号是否存在
@@ -60,98 +67,49 @@ public interface UserRepository extends MongoRepository<User, String> {
     boolean existsByNickname(String nickname);
     
     /**
-     * 检查邮箱是否存在
-     * @param email 邮箱
-     * @return 是否存在
-     */
-    boolean existsByEmail(String email);
-    
-    /**
-     * 根据状态查找用户
-     * @param status 用户状态
+     * 根据性别查找用户
+     * @param gender 性别
      * @return 用户列表
      */
-    List<User> findByStatus(Integer status);
+    List<User> findByGender(String gender);
     
     /**
-     * 根据用户类型查找用户
-     * @param userType 用户类型
+     * 根据年龄范围查找用户
+     * @param minAge 最小年龄
+     * @param maxAge 最大年龄
      * @return 用户列表
      */
-    List<User> findByUserType(Integer userType);
+    @Query("{'age': {$gte: ?0, $lte: ?1}}")
+    List<User> findByAgeBetween(Integer minAge, Integer maxAge);
     
     /**
-     * 查找在线用户
-     * @return 在线用户列表
+     * 根据MBTI查找用户
+     * @param mbti MBTI类型
+     * @return 用户列表
      */
-    @Query("{'status': 1}")
-    List<User> findOnlineUsers();
+    List<User> findByMbti(String mbti);
+    
+    /**
+     * 根据血型查找用户
+     * @param bloodType 血型
+     * @return 用户列表
+     */
+    List<User> findByBloodType(String bloodType);
+    
+    /**
+     * 根据是否首次登录查找用户
+     * @param isFirstLogin 是否首次登录
+     * @return 用户列表
+     */
+    List<User> findByIsFirstLogin(Boolean isFirstLogin);
     
     /**
      * 查找最近注册的用户
      * @param limit 限制数量
      * @return 用户列表
      */
-    @Query(value = "{}", sort = "{'createTime': -1}")
+    @Query(value = "{}", sort = "{'createdAt': -1}")
     List<User> findRecentUsers(int limit);
-    
-    /**
-     * 查找活跃用户（按最后登录时间排序）
-     * @param limit 限制数量
-     * @return 用户列表
-     */
-    @Query(value = "{}", sort = "{'lastLoginTime': -1}")
-    List<User> findActiveUsers(int limit);
-    
-    /**
-     * 根据标签查找用户
-     * @param tag 标签
-     * @return 用户列表
-     */
-    @Query("{'tags': ?0}")
-    List<User> findByTag(String tag);
-    
-    /**
-     * 根据兴趣领域查找用户
-     * @param interest 兴趣领域
-     * @return 用户列表
-     */
-    @Query("{'interests': ?0}")
-    List<User> findByInterest(String interest);
-    
-    /**
-     * 查找用户数量统计
-     * @return 用户总数
-     */
-    long count();
-    
-    /**
-     * 根据状态统计用户数量
-     * @param status 用户状态
-     * @return 用户数量
-     */
-    long countByStatus(Integer status);
-    
-    /**
-     * 根据用户类型统计用户数量
-     * @param userType 用户类型
-     * @return 用户数量
-     */
-    long countByUserType(Integer userType);
-    
-    /**
-     * 查找今日注册的用户
-     * @return 用户列表
-     */
-    @Query("{'createTime': {$gte: ?0}}")
-    List<User> findTodayRegisteredUsers(java.time.LocalDateTime startOfDay);
-    
-    /**
-     * 查找今日登录的用户
-     * @return 用户列表
-     */
-    @Query("{'lastLoginTime': {$gte: ?0}}")
-    List<User> findTodayLoginUsers(java.time.LocalDateTime startOfDay);
     
     /**
      * 根据昵称模糊查询用户
@@ -162,129 +120,98 @@ public interface UserRepository extends MongoRepository<User, String> {
     List<User> findByNicknameContaining(String nickname);
     
     /**
-     * 根据个人简介模糊查询用户
-     * @param bio 个人简介关键词
+     * 根据介绍模糊查询用户
+     * @param introduction 介绍关键词
      * @return 用户列表
      */
-    @Query("{'bio': {$regex: ?0, $options: 'i'}}")
-    List<User> findByBioContaining(String bio);
+    @Query("{'introduction': {$regex: ?0, $options: 'i'}}")
+    List<User> findByIntroductionContaining(String introduction);
     
     /**
-     * 查找指定等级的用户
-     * @param level 用户等级
+     * 根据背景模糊查询用户
+     * @param background 背景关键词
      * @return 用户列表
      */
-    List<User> findByLevel(Integer level);
+    @Query("{'background': {$regex: ?0, $options: 'i'}}")
+    List<User> findByBackgroundContaining(String background);
     
     /**
-     * 查找等级大于等于指定值的用户
-     * @param level 用户等级
+     * 根据喜欢的东西查找用户
+     * @param like 喜欢的东西
      * @return 用户列表
      */
-    @Query("{'level': {$gte: ?0}}")
-    List<User> findByLevelGreaterThanEqual(Integer level);
+    @Query("{'likes': ?0}")
+    List<User> findByLikesContaining(String like);
     
     /**
-     * 查找经验值大于等于指定值的用户
-     * @param experience 经验值
+     * 根据不喜欢的东西查找用户
+     * @param dislike 不喜欢的东西
      * @return 用户列表
      */
-    @Query("{'experience': {$gte: ?0}}")
-    List<User> findByExperienceGreaterThanEqual(Integer experience);
+    @Query("{'dislikes': ?0}")
+    List<User> findByDislikesContaining(String dislike);
     
     /**
-     * 查找活跃度大于等于指定值的用户
-     * @param activityLevel 活跃度
-     * @return 用户列表
+     * 查找用户数量统计
+     * @return 用户总数
      */
-    @Query("{'activityLevel': {$gte: ?0}}")
-    List<User> findByActivityLevelGreaterThanEqual(Integer activityLevel);
+    long count();
     
     /**
-     * 查找友好度大于等于指定值的用户
-     * @param friendliness 友好度
-     * @return 用户列表
+     * 根据性别统计用户数量
+     * @param gender 性别
+     * @return 用户数量
      */
-    @Query("{'friendliness': {$gte: ?0}}")
-    List<User> findByFriendlinessGreaterThanEqual(Integer friendliness);
+    long countByGender(String gender);
     
     /**
-     * 查找创造力大于等于指定值的用户
-     * @param creativity 创造力
-     * @return 用户列表
+     * 根据MBTI统计用户数量
+     * @param mbti MBTI类型
+     * @return 用户数量
      */
-    @Query("{'creativity': {$gte: ?0}}")
-    List<User> findByCreativityGreaterThanEqual(Integer creativity);
+    long countByMbti(String mbti);
     
     /**
-     * 查找幽默感大于等于指定值的用户
-     * @param humor 幽默感
-     * @return 用户列表
+     * 根据血型统计用户数量
+     * @param bloodType 血型
+     * @return 用户数量
      */
-    @Query("{'humor': {$gte: ?0}}")
-    List<User> findByHumorGreaterThanEqual(Integer humor);
+    long countByBloodType(String bloodType);
     
     /**
-     * 查找知识面大于等于指定值的用户
-     * @param knowledge 知识面
-     * @return 用户列表
+     * 根据是否首次登录统计用户数量
+     * @param isFirstLogin 是否首次登录
+     * @return 用户数量
      */
-    @Query("{'knowledge': {$gte: ?0}}")
-    List<User> findByKnowledgeGreaterThanEqual(Integer knowledge);
+    long countByIsFirstLogin(Boolean isFirstLogin);
     
     /**
-     * 查找被禁用的用户
+     * 查找今日注册的用户
      * @return 用户列表
      */
-    @Query("{'enabled': false}")
-    List<User> findDisabledUsers();
+    @Query("{'createdAt': {$gte: ?0}}")
+    List<User> findTodayRegisteredUsers(java.time.LocalDateTime startOfDay);
     
     /**
-     * 查找启用的用户
+     * 查找指定年龄的用户
+     * @param age 年龄
      * @return 用户列表
      */
-    @Query("{'enabled': true}")
-    List<User> findEnabledUsers();
+    List<User> findByAge(Integer age);
     
     /**
-     * 查找VIP用户
+     * 查找年龄大于等于指定值的用户
+     * @param age 年龄
      * @return 用户列表
      */
-    @Query("{'isVip': true}")
-    List<User> findVipUsers();
+    @Query("{'age': {$gte: ?0}}")
+    List<User> findByAgeGreaterThanEqual(Integer age);
     
     /**
-     * 查找非VIP用户
+     * 查找年龄小于等于指定值的用户
+     * @param age 年龄
      * @return 用户列表
      */
-    @Query("{'isVip': false}")
-    List<User> findNonVipUsers();
-    
-    /**
-     * 查找已验证邮箱的用户
-     * @return 用户列表
-     */
-    @Query("{'emailVerified': true}")
-    List<User> findEmailVerifiedUsers();
-    
-    /**
-     * 查找未验证邮箱的用户
-     * @return 用户列表
-     */
-    @Query("{'emailVerified': false}")
-    List<User> findEmailUnverifiedUsers();
-    
-    /**
-     * 查找已验证手机的用户
-     * @return 用户列表
-     */
-    @Query("{'phoneVerified': true}")
-    List<User> findPhoneVerifiedUsers();
-    
-    /**
-     * 查找未验证手机的用户
-     * @return 用户列表
-     */
-    @Query("{'phoneVerified': false}")
-    List<User> findPhoneUnverifiedUsers();
+    @Query("{'age': {$lte: ?0}}")
+    List<User> findByAgeLessThanEqual(Integer age);
 } 

@@ -1,198 +1,174 @@
 import request from '@/utils/request'
 
 /**
- * 用户相关API接口
+ * 用户管理API
  * 
  * 功能说明：
- * - 用户注册、登录、登出
- * - 用户信息获取和更新
- * - 头像上传
- * - Token刷新
+ * - 提供用户注册、登录、信息管理等API接口
+ * - 支持用户头像上传和个人资料更新
+ * - 提供用户查询和统计功能
  * 
  * @author MyEden Team
  * @version 1.0.0
  * @since 2024-01-01
  */
 
+/**
+ * 用户注册
+ * @param {Object} data - 注册数据
+ * @param {string} data.phone - 手机号
+ * @param {string} data.password - 密码
+ * @returns {Promise} 注册结果
+ */
+export function register(data) {
+  return request({
+    url: '/api/v1/users/register',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 用户登录
+ * @param {Object} data - 登录数据
+ * @param {string} data.phone - 手机号
+ * @param {string} data.password - 密码
+ * @returns {Promise} 登录结果
+ */
+export function login(data) {
+  return request({
+    url: '/api/v1/users/login',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 获取用户信息
+ * @returns {Promise} 用户信息
+ */
+export function getUserInfo() {
+  return request({
+    url: '/api/v1/users/me',
+    method: 'get'
+  })
+}
+
+/**
+ * 更新用户信息
+ * @param {Object} data - 用户信息
+ * @returns {Promise} 更新结果
+ */
+export function updateUserInfo(data) {
+  return request({
+    url: '/api/v1/users/profile',
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 上传用户头像
+ * @param {FormData} formData - 文件数据
+ * @returns {Promise} 上传结果
+ */
+export function uploadAvatar(formData) {
+  return request({
+    url: '/api/v1/users/avatar',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+/**
+ * 完成首次登录
+ * @returns {Promise} 操作结果
+ */
+export function completeFirstLogin() {
+  return request({
+    url: '/api/v1/users/complete-first-login',
+    method: 'post'
+  })
+}
+
+/**
+ * 检查手机号是否存在
+ * @param {string} phone - 手机号
+ * @returns {Promise} 检查结果
+ */
+export function checkPhone(phone) {
+  return request({
+    url: '/api/v1/users/check-phone',
+    method: 'get',
+    params: { phone }
+  })
+}
+
+/**
+ * 检查昵称是否存在
+ * @param {string} nickname - 昵称
+ * @returns {Promise} 检查结果
+ */
+export function checkNickname(nickname) {
+  return request({
+    url: '/api/v1/users/check-nickname',
+    method: 'get',
+    params: { nickname }
+  })
+}
+
+/**
+ * 搜索用户
+ * @param {string} nickname - 昵称关键词
+ * @param {number} limit - 限制数量
+ * @returns {Promise} 搜索结果
+ */
+export function searchUsers(nickname, limit = 10) {
+  return request({
+    url: '/api/v1/users/search',
+    method: 'get',
+    params: { nickname, limit }
+  })
+}
+
+/**
+ * 获取最近注册的用户
+ * @param {number} limit - 限制数量
+ * @returns {Promise} 用户列表
+ */
+export function getRecentUsers(limit = 10) {
+  return request({
+    url: '/api/v1/users/recent',
+    method: 'get',
+    params: { limit }
+  })
+}
+
+/**
+ * 获取用户统计信息
+ * @returns {Promise} 统计信息
+ */
+export function getUserStatistics() {
+  return request({
+    url: '/api/v1/users/statistics',
+    method: 'get'
+  })
+}
+
+// 导出所有API方法
 export const userApi = {
-  /**
-   * 用户注册
-   * @param {Object} data - 注册数据
-   * @param {string} data.phone - 手机号
-   * @param {string} data.password - 密码
-   * @param {string} data.nickname - 昵称
-   * @returns {Promise} API响应
-   */
-  register(data) {
-    return request({
-      url: '/auth/register',
-      method: 'post',
-      data
-    })
-  },
-
-  /**
-   * 用户登录
-   * @param {Object} data - 登录数据
-   * @param {string} data.phone - 手机号
-   * @param {string} data.password - 密码
-   * @returns {Promise} API响应
-   */
-  login(data) {
-    return request({
-      url: '/auth/login',
-      method: 'post',
-      data
-    })
-  },
-
-  /**
-   * 用户登出
-   * @returns {Promise} API响应
-   */
-  logout() {
-    return request({
-      url: '/auth/logout',
-      method: 'post'
-    })
-  },
-
-  /**
-   * 获取用户信息
-   * @returns {Promise} API响应
-   */
-  getUserInfo() {
-    return request({
-      url: '/user/info',
-      method: 'get'
-    })
-  },
-
-  /**
-   * 更新用户信息
-   * @param {Object} data - 更新的用户信息
-   * @returns {Promise} API响应
-   */
-  updateUserInfo(data) {
-    return request({
-      url: '/user/info',
-      method: 'put',
-      data
-    })
-  },
-
-  /**
-   * 上传头像
-   * @param {File} file - 头像文件
-   * @returns {Promise} API响应
-   */
-  uploadAvatar(file) {
-    const formData = new FormData()
-    formData.append('avatar', file)
-    
-    return request({
-      url: '/user/avatar',
-      method: 'post',
-      data: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-  },
-
-  /**
-   * 刷新Token
-   * @returns {Promise} API响应
-   */
-  refreshToken() {
-    return request({
-      url: '/auth/refresh',
-      method: 'post'
-    })
-  },
-
-  /**
-   * 修改密码
-   * @param {Object} data - 密码数据
-   * @param {string} data.oldPassword - 旧密码
-   * @param {string} data.newPassword - 新密码
-   * @returns {Promise} API响应
-   */
-  changePassword(data) {
-    return request({
-      url: '/user/password',
-      method: 'put',
-      data
-    })
-  },
-
-  /**
-   * 获取用户统计信息
-   * @returns {Promise} API响应
-   */
-  getUserStats() {
-    return request({
-      url: '/user/stats',
-      method: 'get'
-    })
-  },
-
-  /**
-   * 获取用户动态列表
-   * @param {Object} params - 查询参数
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
-   * @returns {Promise} API响应
-   */
-  getUserPosts(params) {
-    return request({
-      url: '/user/posts',
-      method: 'get',
-      params
-    })
-  },
-
-  /**
-   * 获取用户评论列表
-   * @param {Object} params - 查询参数
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
-   * @returns {Promise} API响应
-   */
-  getUserComments(params) {
-    return request({
-      url: '/user/comments',
-      method: 'get',
-      params
-    })
-  },
-
-  /**
-   * 获取用户点赞列表
-   * @param {Object} params - 查询参数
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
-   * @returns {Promise} API响应
-   */
-  getUserLikes(params) {
-    return request({
-      url: '/user/likes',
-      method: 'get',
-      params
-    })
-  },
-
-  /**
-   * 删除用户账号
-   * @param {Object} data - 删除确认数据
-   * @param {string} data.password - 密码确认
-   * @returns {Promise} API响应
-   */
-  deleteAccount(data) {
-    return request({
-      url: '/user/account',
-      method: 'delete',
-      data
-    })
-  }
+  register,
+  login,
+  getUserInfo,
+  updateUserInfo,
+  uploadAvatar,
+  completeFirstLogin,
+  checkPhone,
+  checkNickname,
+  searchUsers,
+  getRecentUsers,
+  getUserStatistics
 } 

@@ -9,14 +9,15 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 机器人数据访问层
  * 
  * 功能说明：
  * - 提供机器人相关的数据库操作
- * - 支持按状态、等级、兴趣等字段查询
- * - 提供机器人统计和行为查询
+ * - 支持按机器人ID、名称等字段查询
+ * - 提供机器人统计和状态查询
  * - 支持机器人数据分页和排序
  * 
  * @author MyEden Team
@@ -27,431 +28,250 @@ import java.util.List;
 public interface RobotRepository extends MongoRepository<Robot, String> {
     
     /**
-     * 根据名称查找机器人
+     * 根据机器人ID查找机器人
+     * @param robotId 机器人ID
+     * @return 机器人信息
+     */
+    Optional<Robot> findByRobotId(String robotId);
+    
+    /**
+     * 根据机器人名称查找机器人
      * @param name 机器人名称
      * @return 机器人信息
      */
-    Robot findByName(String name);
+    Optional<Robot> findByName(String name);
     
     /**
-     * 根据昵称查找机器人
-     * @param nickname 机器人昵称
-     * @return 机器人信息
+     * 检查机器人ID是否存在
+     * @param robotId 机器人ID
+     * @return 是否存在
      */
-    Robot findByNickname(String nickname);
+    boolean existsByRobotId(String robotId);
     
     /**
-     * 检查名称是否存在
+     * 检查机器人名称是否存在
      * @param name 机器人名称
      * @return 是否存在
      */
     boolean existsByName(String name);
     
     /**
-     * 检查昵称是否存在
-     * @param nickname 机器人昵称
-     * @return 是否存在
+     * 根据性别查找机器人
+     * @param gender 性别
+     * @return 机器人列表
      */
-    boolean existsByNickname(String nickname);
+    List<Robot> findByGender(String gender);
     
     /**
-     * 根据状态查找机器人
-     * @param status 机器人状态
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 根据职业查找机器人
+     * @param profession 职业
+     * @return 机器人列表
      */
-    Page<Robot> findByStatus(Integer status, Pageable pageable);
+    List<Robot> findByProfession(String profession);
     
     /**
-     * 查找在线机器人
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 根据MBTI查找机器人
+     * @param mbti MBTI类型
+     * @return 机器人列表
      */
-    @Query("{'status': 1}")
-    Page<Robot> findOnlineRobots(Pageable pageable);
+    List<Robot> findByMbti(String mbti);
     
     /**
-     * 查找启用的机器人
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 根据是否激活查找机器人
+     * @param isActive 是否激活
+     * @return 机器人列表
      */
-    @Query("{'enabled': true}")
-    Page<Robot> findEnabledRobots(Pageable pageable);
+    List<Robot> findByIsActive(Boolean isActive);
     
     /**
-     * 查找禁用的机器人
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 查找激活的机器人
+     * @return 机器人列表
      */
-    @Query("{'enabled': false}")
-    Page<Robot> findDisabledRobots(Pageable pageable);
+    List<Robot> findByIsActiveTrue();
     
     /**
-     * 根据等级查找机器人
-     * @param level 机器人等级
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 查找未激活的机器人
+     * @return 机器人列表
      */
-    Page<Robot> findByLevel(Integer level, Pageable pageable);
+    List<Robot> findByIsActiveFalse();
     
     /**
-     * 查找高等级机器人
-     * @param minLevel 最小等级
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 根据回复速度范围查找机器人
+     * @param minSpeed 最小回复速度
+     * @param maxSpeed 最大回复速度
+     * @return 机器人列表
      */
-    @Query("{'level': {$gte: ?0}}")
-    Page<Robot> findByLevelGreaterThanEqual(Integer minLevel, Pageable pageable);
+    @Query("{'replySpeed': {$gte: ?0, $lte: ?1}}")
+    List<Robot> findByReplySpeedBetween(Integer minSpeed, Integer maxSpeed);
     
     /**
-     * 根据活跃度查找机器人
-     * @param minActivityLevel 最小活跃度
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 根据回复频度范围查找机器人
+     * @param minFrequency 最小回复频度
+     * @param maxFrequency 最大回复频度
+     * @return 机器人列表
      */
-    @Query("{'activityLevel': {$gte: ?0}}")
-    Page<Robot> findByActivityLevelGreaterThanEqual(Integer minActivityLevel, Pageable pageable);
+    @Query("{'replyFrequency': {$gte: ?0, $lte: ?1}}")
+    List<Robot> findByReplyFrequencyBetween(Integer minFrequency, Integer maxFrequency);
     
     /**
-     * 根据友好度查找机器人
-     * @param minFriendliness 最小友好度
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 根据分享频度范围查找机器人
+     * @param minFrequency 最小分享频度
+     * @param maxFrequency 最大分享频度
+     * @return 机器人列表
      */
-    @Query("{'friendliness': {$gte: ?0}}")
-    Page<Robot> findByFriendlinessGreaterThanEqual(Integer minFriendliness, Pageable pageable);
+    @Query("{'shareFrequency': {$gte: ?0, $lte: ?1}}")
+    List<Robot> findByShareFrequencyBetween(Integer minFrequency, Integer maxFrequency);
     
     /**
-     * 根据创造力查找机器人
-     * @param minCreativity 最小创造力
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 查找最近创建的机器人
+     * @param limit 限制数量
+     * @return 机器人列表
      */
-    @Query("{'creativity': {$gte: ?0}}")
-    Page<Robot> findByCreativityGreaterThanEqual(Integer minCreativity, Pageable pageable);
+    @Query(value = "{}", sort = "{'createdAt': -1}")
+    List<Robot> findRecentRobots(int limit);
     
     /**
-     * 根据幽默感查找机器人
-     * @param minHumor 最小幽默感
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 根据名称模糊查询机器人
+     * @param name 名称关键词
+     * @return 机器人列表
      */
-    @Query("{'humor': {$gte: ?0}}")
-    Page<Robot> findByHumorGreaterThanEqual(Integer minHumor, Pageable pageable);
+    @Query("{'name': {$regex: ?0, $options: 'i'}}")
+    List<Robot> findByNameContaining(String name);
     
     /**
-     * 根据知识面查找机器人
-     * @param minKnowledge 最小知识面
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 根据介绍模糊查询机器人
+     * @param introduction 介绍关键词
+     * @return 机器人列表
      */
-    @Query("{'knowledge': {$gte: ?0}}")
-    Page<Robot> findByKnowledgeGreaterThanEqual(Integer minKnowledge, Pageable pageable);
+    @Query("{'introduction': {$regex: ?0, $options: 'i'}}")
+    List<Robot> findByIntroductionContaining(String introduction);
     
     /**
-     * 根据标签查找机器人
-     * @param tag 标签
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query("{'tags': ?0}")
-    Page<Robot> findByTag(String tag, Pageable pageable);
-    
-    /**
-     * 根据多个标签查找机器人
-     * @param tags 标签列表
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query("{'tags': {$in: ?0}}")
-    Page<Robot> findByTags(List<String> tags, Pageable pageable);
-    
-    /**
-     * 根据兴趣领域查找机器人
-     * @param interest 兴趣领域
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query("{'interests': ?0}")
-    Page<Robot> findByInterest(String interest, Pageable pageable);
-    
-    /**
-     * 根据技能查找机器人
-     * @param skill 技能
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query("{'skills': ?0}")
-    Page<Robot> findBySkill(String skill, Pageable pageable);
-    
-    /**
-     * 查找活跃机器人（按最后活跃时间排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'lastActiveTime': -1}")
-    Page<Robot> findActiveRobots(Pageable pageable);
-    
-    /**
-     * 查找高等级机器人（按等级排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'level': -1}")
-    Page<Robot> findHighLevelRobots(Pageable pageable);
-    
-    /**
-     * 查找高活跃度机器人（按活跃度排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'activityLevel': -1}")
-    Page<Robot> findHighActivityRobots(Pageable pageable);
-    
-    /**
-     * 查找高友好度机器人（按友好度排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'friendliness': -1}")
-    Page<Robot> findHighFriendlinessRobots(Pageable pageable);
-    
-    /**
-     * 查找高创造力机器人（按创造力排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'creativity': -1}")
-    Page<Robot> findHighCreativityRobots(Pageable pageable);
-    
-    /**
-     * 查找高幽默感机器人（按幽默感排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'humor': -1}")
-    Page<Robot> findHighHumorRobots(Pageable pageable);
-    
-    /**
-     * 查找高知识面机器人（按知识面排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'knowledge': -1}")
-    Page<Robot> findHighKnowledgeRobots(Pageable pageable);
-    
-    /**
-     * 查找高优先级机器人（按优先级排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'priority': -1}")
-    Page<Robot> findHighPriorityRobots(Pageable pageable);
-    
-    /**
-     * 查找高互动次数机器人（按总互动次数排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'totalInteractions': -1}")
-    Page<Robot> findHighInteractionRobots(Pageable pageable);
-    
-    /**
-     * 查找高发布动态数机器人（按总发布动态数排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'totalPosts': -1}")
-    Page<Robot> findHighPostRobots(Pageable pageable);
-    
-    /**
-     * 查找高评论数机器人（按总评论数排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'totalComments': -1}")
-    Page<Robot> findHighCommentRobots(Pageable pageable);
-    
-    /**
-     * 查找高回复数机器人（按总回复数排序）
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query(value = "{}", sort = "{'totalReplies': -1}")
-    Page<Robot> findHighReplyRobots(Pageable pageable);
-    
-    /**
-     * 根据名称或昵称模糊查询机器人
-     * @param keyword 关键词
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query("{'$or': [{'name': {$regex: ?0, $options: 'i'}}, {'nickname': {$regex: ?0, $options: 'i'}}]}")
-    Page<Robot> findByNameOrNicknameContaining(String keyword, Pageable pageable);
-    
-    /**
-     * 根据描述模糊查询机器人
-     * @param keyword 关键词
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query("{'description': {$regex: ?0, $options: 'i'}}")
-    Page<Robot> findByDescriptionContaining(String keyword, Pageable pageable);
-    
-    /**
-     * 根据性格设定模糊查询机器人
-     * @param keyword 关键词
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 根据性格模糊查询机器人
+     * @param personality 性格关键词
+     * @return 机器人列表
      */
     @Query("{'personality': {$regex: ?0, $options: 'i'}}")
-    Page<Robot> findByPersonalityContaining(String keyword, Pageable pageable);
+    List<Robot> findByPersonalityContaining(String personality);
     
     /**
-     * 根据背景故事模糊查询机器人
-     * @param keyword 关键词
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 查找回复速度大于等于指定值的机器人
+     * @param replySpeed 回复速度
+     * @return 机器人列表
      */
-    @Query("{'background': {$regex: ?0, $options: 'i'}}")
-    Page<Robot> findByBackgroundContaining(String keyword, Pageable pageable);
+    @Query("{'replySpeed': {$gte: ?0}}")
+    List<Robot> findByReplySpeedGreaterThanEqual(Integer replySpeed);
     
     /**
-     * 查找指定时间范围内创建的机器人
-     * @param startTime 开始时间
-     * @param endTime 结束时间
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * 查找回复频度大于等于指定值的机器人
+     * @param replyFrequency 回复频度
+     * @return 机器人列表
      */
-    @Query("{'createTime': {$gte: ?0, $lte: ?1}}")
-    Page<Robot> findByCreateTimeBetween(LocalDateTime startTime, LocalDateTime endTime, Pageable pageable);
+    @Query("{'replyFrequency': {$gte: ?0}}")
+    List<Robot> findByReplyFrequencyGreaterThanEqual(Integer replyFrequency);
+    
+    /**
+     * 查找分享频度大于等于指定值的机器人
+     * @param shareFrequency 分享频度
+     * @return 机器人列表
+     */
+    @Query("{'shareFrequency': {$gte: ?0}}")
+    List<Robot> findByShareFrequencyGreaterThanEqual(Integer shareFrequency);
+    
+    /**
+     * 查找高活跃度机器人（按回复频度排序）
+     * @param limit 限制数量
+     * @return 机器人列表
+     */
+    @Query(value = "{}", sort = "{'replyFrequency': -1}")
+    List<Robot> findHighActivityRobots(int limit);
+    
+    /**
+     * 查找高分享度机器人（按分享频度排序）
+     * @param limit 限制数量
+     * @return 机器人列表
+     */
+    @Query(value = "{}", sort = "{'shareFrequency': -1}")
+    List<Robot> findHighShareRobots(int limit);
     
     /**
      * 查找今日创建的机器人
-     * @param startOfDay 今日开始时间
-     * @param pageable 分页参数
-     * @return 机器人分页结果
+     * @return 机器人列表
      */
-    @Query("{'createTime': {$gte: ?0}}")
-    Page<Robot> findTodayCreatedRobots(LocalDateTime startOfDay, Pageable pageable);
+    @Query("{'createdAt': {$gte: ?0}}")
+    List<Robot> findTodayRobots(java.time.LocalDateTime startOfDay);
     
     /**
-     * 查找今日活跃的机器人
-     * @param startOfDay 今日开始时间
-     * @param pageable 分页参数
-     * @return 机器人分页结果
-     */
-    @Query("{'lastActiveTime': {$gte: ?0}}")
-    Page<Robot> findTodayActiveRobots(LocalDateTime startOfDay, Pageable pageable);
-    
-    /**
-     * 统计机器人总数
+     * 查找机器人数量统计
      * @return 机器人总数
      */
     long count();
     
     /**
-     * 统计在线机器人数量
+     * 根据性别统计机器人数量
+     * @param gender 性别
      * @return 机器人数量
      */
-    @Query(value = "{'status': 1}", count = true)
-    long countOnlineRobots();
+    long countByGender(String gender);
     
     /**
-     * 统计启用的机器人数量
+     * 根据职业统计机器人数量
+     * @param profession 职业
      * @return 机器人数量
      */
-    @Query(value = "{'enabled': true}", count = true)
-    long countEnabledRobots();
+    long countByProfession(String profession);
     
     /**
-     * 统计禁用的机器人数量
+     * 根据MBTI统计机器人数量
+     * @param mbti MBTI类型
      * @return 机器人数量
      */
-    @Query(value = "{'enabled': false}", count = true)
-    long countDisabledRobots();
+    long countByMbti(String mbti);
     
     /**
-     * 统计指定等级的机器人数量
-     * @param level 机器人等级
+     * 根据是否激活统计机器人数量
+     * @param isActive 是否激活
      * @return 机器人数量
      */
-    long countByLevel(Integer level);
+    long countByIsActive(Boolean isActive);
     
     /**
-     * 统计高等级机器人数量
-     * @param minLevel 最小等级
+     * 统计激活的机器人数量
      * @return 机器人数量
      */
-    @Query(value = "{'level': {$gte: ?0}}", count = true)
-    long countByLevelGreaterThanEqual(Integer minLevel);
+    long countByIsActiveTrue();
+    
+    /**
+     * 统计未激活的机器人数量
+     * @return 机器人数量
+     */
+    long countByIsActiveFalse();
     
     /**
      * 统计今日创建的机器人数量
-     * @param startOfDay 今日开始时间
      * @return 机器人数量
      */
-    @Query(value = "{'createTime': {$gte: ?0}}", count = true)
-    long countTodayCreatedRobots(LocalDateTime startOfDay);
+    @Query(value = "{'createdAt': {$gte: ?0}}", count = true)
+    long countTodayRobots(java.time.LocalDateTime startOfDay);
     
     /**
-     * 统计今日活跃的机器人数量
-     * @param startOfDay 今日开始时间
-     * @return 机器人数量
-     */
-    @Query(value = "{'lastActiveTime': {$gte: ?0}}", count = true)
-    long countTodayActiveRobots(LocalDateTime startOfDay);
-    
-    /**
-     * 查找所有机器人（不分页）
+     * 查找指定回复速度的机器人
+     * @param replySpeed 回复速度
      * @return 机器人列表
      */
-    @Query(value = "{}", sort = "{'createTime': -1}")
-    List<Robot> findAllOrderByCreateTimeDesc();
+    List<Robot> findByReplySpeed(Integer replySpeed);
     
     /**
-     * 查找所有启用的机器人（不分页）
+     * 查找指定回复频度的机器人
+     * @param replyFrequency 回复频度
      * @return 机器人列表
      */
-    @Query(value = "{'enabled': true}", sort = "{'priority': -1}")
-    List<Robot> findAllEnabledRobotsOrderByPriority();
+    List<Robot> findByReplyFrequency(Integer replyFrequency);
     
     /**
-     * 查找所有在线机器人（不分页）
+     * 查找指定分享频度的机器人
+     * @param shareFrequency 分享频度
      * @return 机器人列表
      */
-    @Query(value = "{'status': 1}", sort = "{'lastActiveTime': -1}")
-    List<Robot> findAllOnlineRobotsOrderByLastActiveTime();
-    
-    /**
-     * 查找高等级机器人（不分页）
-     * @param limit 限制数量
-     * @return 机器人列表
-     */
-    @Query(value = "{}", sort = "{'level': -1}")
-    List<Robot> findHighLevelRobots(int limit);
-    
-    /**
-     * 查找高活跃度机器人（不分页）
-     * @param limit 限制数量
-     * @return 机器人列表
-     */
-    @Query(value = "{}", sort = "{'activityLevel': -1}")
-    List<Robot> findHighActivityRobots(int limit);
-    
-    /**
-     * 查找高优先级机器人（不分页）
-     * @param limit 限制数量
-     * @return 机器人列表
-     */
-    @Query(value = "{}", sort = "{'priority': -1}")
-    List<Robot> findHighPriorityRobots(int limit);
-    
-    /**
-     * 查找高互动次数机器人（不分页）
-     * @param limit 限制数量
-     * @return 机器人列表
-     */
-    @Query(value = "{}", sort = "{'totalInteractions': -1}")
-    List<Robot> findHighInteractionRobots(int limit);
+    List<Robot> findByShareFrequency(Integer shareFrequency);
 } 
