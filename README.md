@@ -16,7 +16,7 @@
 
 <p align="center">
   <a href="https://github.com/jinny76/myeden/">
-    <img src="resources/icon.png" alt="Logo" width="80" height="80">
+    <img src="resources/icon.png" alt="Logo">
   </a>
 
 <h3 align="center">我的伊甸园</h3>
