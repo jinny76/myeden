@@ -1,0 +1,352 @@
+package com.myeden.service.impl;
+
+import com.myeden.entity.Robot;
+import com.myeden.repository.RobotRepository;
+import com.myeden.service.DifyService;
+import com.myeden.service.PostService;
+import com.myeden.service.CommentService;
+import com.myeden.service.RobotBehaviorService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * 机器人行为管理服务实现类
+ * 实现AI机器人的行为触发、时机控制和状态管理
+ * 
+ * @author MyEden Team
+ * @version 1.0.0
+ */
+@Service
+public class RobotBehaviorServiceImpl implements RobotBehaviorService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(RobotBehaviorServiceImpl.class);
+    
+    @Autowired
+    private RobotRepository robotRepository;
+    
+    @Autowired
+    private DifyService difyService;
+    
+    @Autowired
+    private PostService postService;
+    
+    @Autowired
+    private CommentService commentService;
+    
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+    
+    private final Random random = new Random();
+    private final ConcurrentHashMap<String, RobotDailyStats> dailyStats = new ConcurrentHashMap<>();
+    
+    /**
+     * 机器人每日行为统计内部类
+     */
+    private static class RobotDailyStats {
+        private int postCount = 0;
+        private int commentCount = 0;
+        private int replyCount = 0;
+        private LocalDateTime lastReset = LocalDateTime.now();
+        
+        public void incrementPost() { postCount++; }
+        public void incrementComment() { commentCount++; }
+        public void incrementReply() { replyCount++; }
+        
+        public int getPostCount() { return postCount; }
+        public int getCommentCount() { return commentCount; }
+        public int getReplyCount() { return replyCount; }
+        public LocalDateTime getLastReset() { return lastReset; }
+        
+        public void reset() {
+            postCount = 0;
+            commentCount = 0;
+            replyCount = 0;
+            lastReset = LocalDateTime.now();
+        }
+    }
+    
+    @Override
+    public boolean triggerRobotPost(String robotId) {
+        try {
+            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
+            if (robot == null || !robot.getIsActive()) {
+                logger.warn("机器人不存在或未激活: {}", robotId);
+                return false;
+            }
+            
+            // 检查是否在活跃时间段
+            if (!isRobotActive(robot)) {
+                logger.info("机器人不在活跃时间段: {}", robotId);
+                return false;
+            }
+            
+            // 检查今日发布数量限制
+            RobotDailyStats stats = getDailyStats(robotId);
+            if (stats.getPostCount() >= 10) { // 每日最多10条动态
+                logger.info("机器人今日发布数量已达上限: {}", robotId);
+                return false;
+            }
+            
+            // 计算触发概率
+            double probability = calculateBehaviorProbability(robot, "post", "自动发布动态");
+            if (random.nextDouble() > probability) {
+                logger.info("机器人发布动态概率未触发: {}, 概率: {}", robotId, probability);
+                return false;
+            }
+            
+            // 生成动态内容
+            String context = buildPostContext();
+            String content = difyService.generatePostContent(robot, context);
+            
+            // 发布动态
+            PostService.PostResult postResult = postService.createPost(robotId, "robot", content, null);
+            if (postResult != null) {
+                stats.incrementPost();
+                logger.info("机器人成功发布动态: {}, 内容: {}", robotId, content);
+                return true;
+            }
+            
+            return false;
+        } catch (Exception e) {
+            logger.error("触发机器人发布动态失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean triggerRobotComment(String robotId, String postId) {
+        try {
+            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
+            if (robot == null || !robot.getIsActive()) {
+                return false;
+            }
+            
+            // 检查是否在活跃时间段
+            if (!isRobotActive(robot)) {
+                return false;
+            }
+            
+            // 检查今日评论数量限制
+            RobotDailyStats stats = getDailyStats(robotId);
+            if (stats.getCommentCount() >= 20) { // 每日最多20条评论
+                return false;
+            }
+            
+            // 计算触发概率
+            double probability = calculateBehaviorProbability(robot, "comment", "对动态发表评论");
+            if (random.nextDouble() > probability) {
+                return false;
+            }
+            
+            // 获取动态内容
+            PostService.PostDetail postDetail = postService.getPostDetail(postId);
+            String postContent = postDetail.getContent();
+            String context = buildCommentContext(postContent);
+            String content = difyService.generateCommentContent(robot, postContent, context);
+            
+            // 发表评论
+            CommentService.CommentResult commentResult = commentService.createComment(postId, robotId, "robot", content);
+            if (commentResult != null) {
+                stats.incrementComment();
+                logger.info("机器人成功发表评论: {}, 内容: {}", robotId, content);
+                return true;
+            }
+            
+            return false;
+        } catch (Exception e) {
+            logger.error("触发机器人发表评论失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean triggerRobotReply(String robotId, String commentId) {
+        try {
+            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
+            if (robot == null || !robot.getIsActive()) {
+                return false;
+            }
+            
+            // 检查是否在活跃时间段
+            if (!isRobotActive(robot)) {
+                return false;
+            }
+            
+            // 检查今日回复数量限制
+            RobotDailyStats stats = getDailyStats(robotId);
+            if (stats.getReplyCount() >= 15) { // 每日最多15条回复
+                return false;
+            }
+            
+            // 计算触发概率
+            double probability = calculateBehaviorProbability(robot, "reply", "回复评论");
+            if (random.nextDouble() > probability) {
+                return false;
+            }
+            
+            // 获取评论内容
+            CommentService.CommentDetail commentDetail = commentService.getCommentDetail(commentId);
+            String commentContent = commentDetail.getContent();
+            String context = buildReplyContext(commentContent);
+            String content = difyService.generateReplyContent(robot, commentContent, context);
+            
+            // 生成内心活动
+            String innerThoughts = difyService.generateInnerThoughts(robot, "回复评论: " + commentContent);
+            
+            // 发表回复
+            CommentService.CommentResult replyResult = commentService.replyComment(commentId, robotId, "robot", content);
+            if (replyResult != null) {
+                stats.incrementReply();
+                logger.info("机器人成功发表回复: {}, 内容: {}", robotId, content);
+                return true;
+            }
+            
+            return false;
+        } catch (Exception e) {
+            logger.error("触发机器人回复评论失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean isRobotActive(Robot robot) {
+        if (robot == null || !robot.getIsActive()) {
+            return false;
+        }
+        
+        LocalTime currentTime = LocalTime.now();
+        LocalTime startTime = LocalTime.parse("08:00");
+        LocalTime endTime = LocalTime.parse("22:00");
+        
+        // 简单的活跃时间段判断（8:00-22:00）
+        return currentTime.isAfter(startTime) && currentTime.isBefore(endTime);
+    }
+    
+    @Override
+    public double calculateBehaviorProbability(Robot robot, String behaviorType, String context) {
+        double baseProbability = 0.3; // 基础概率
+        
+        // 根据行为类型调整概率
+        switch (behaviorType) {
+            case "post":
+                baseProbability = 0.2; // 发布动态概率较低
+                break;
+            case "comment":
+                baseProbability = 0.4; // 评论概率中等
+                break;
+            case "reply":
+                baseProbability = 0.5; // 回复概率较高
+                break;
+        }
+        
+        // 根据时间调整概率
+        LocalTime currentTime = LocalTime.now();
+        if (currentTime.getHour() >= 9 && currentTime.getHour() <= 18) {
+            baseProbability *= 1.5; // 工作时间概率提高
+        } else if (currentTime.getHour() >= 19 && currentTime.getHour() <= 21) {
+            baseProbability *= 1.2; // 晚上时间概率稍高
+        } else {
+            baseProbability *= 0.5; // 其他时间概率降低
+        }
+        
+        // 根据机器人性格调整概率
+        if (robot.getPersonality().contains("活泼") || robot.getPersonality().contains("开朗")) {
+            baseProbability *= 1.3;
+        } else if (robot.getPersonality().contains("安静") || robot.getPersonality().contains("内敛")) {
+            baseProbability *= 0.7;
+        }
+        
+        return Math.min(baseProbability, 1.0); // 确保概率不超过1
+    }
+    
+    @Override
+    public String getRobotDailyStats(String robotId) {
+        RobotDailyStats stats = getDailyStats(robotId);
+        return String.format("机器人%s今日统计 - 动态: %d, 评论: %d, 回复: %d", 
+                           robotId, stats.getPostCount(), stats.getCommentCount(), stats.getReplyCount());
+    }
+    
+    @Override
+    public void resetRobotDailyStats(String robotId) {
+        RobotDailyStats stats = getDailyStats(robotId);
+        stats.reset();
+        logger.info("重置机器人每日统计: {}", robotId);
+    }
+    
+    @Override
+    public void startBehaviorScheduler() {
+        logger.info("启动机器人行为调度器");
+    }
+    
+    @Override
+    public void stopBehaviorScheduler() {
+        logger.info("停止机器人行为调度器");
+    }
+    
+    /**
+     * 定时触发机器人行为（每30分钟执行一次）
+     */
+    @Scheduled(fixedRate = 1800000) // 30分钟
+    public void scheduledRobotBehavior() {
+        try {
+            List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
+            for (Robot robot : activeRobots) {
+                if (isRobotActive(robot)) {
+                    // 随机触发机器人行为
+                    double randomValue = random.nextDouble();
+                    if (randomValue < 0.3) {
+                        triggerRobotPost(robot.getRobotId());
+                    } else if (randomValue < 0.6) {
+                        // 随机选择一个动态进行评论
+                        // 这里需要实现动态选择逻辑
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("定时机器人行为执行失败: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 每日重置机器人统计（每天0点执行）
+     */
+    @Scheduled(cron = "0 0 0 * * ?")
+    public void resetDailyStats() {
+        try {
+            dailyStats.clear();
+            logger.info("重置所有机器人每日统计");
+        } catch (Exception e) {
+            logger.error("重置每日统计失败: {}", e.getMessage(), e);
+        }
+    }
+    
+    // 辅助方法
+    private RobotDailyStats getDailyStats(String robotId) {
+        return dailyStats.computeIfAbsent(robotId, k -> new RobotDailyStats());
+    }
+    
+    private String buildPostContext() {
+        LocalDateTime now = LocalDateTime.now();
+        return String.format("当前时间: %s, 天气: 晴朗, 心情: 愉快", 
+                           now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+    }
+    
+    private String buildCommentContext(String postContent) {
+        return String.format("对动态内容进行评论: %s", postContent);
+    }
+    
+    private String buildReplyContext(String commentContent) {
+        return String.format("对评论内容进行回复: %s", commentContent);
+    }
+} 

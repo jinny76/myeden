@@ -76,9 +76,13 @@ file:
 # Dify API配置
 dify:
   api:
-    base-url: http://rag.kingfisher.live/v1
-    api-key: app-ubH4cOXoYkDZDzr96AHl1OHU
+    url: http://rag.kingfisher.live/v1
+    key: app-ubH4cOXoYkDZDzr96AHl1OHU
     timeout: 30000  # 30秒
+    max-retries: 3
+    retry-interval: 1000  # 1秒
+    enabled: true
+    daily-limit: 1000
     retry:
       max-attempts: 3
       delay: 1000  # 1秒
