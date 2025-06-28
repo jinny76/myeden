@@ -1,11 +1,25 @@
 <template>
   <AppHeader />
   <div class="moments-container">
+    <!-- 背景装饰 -->
+    <div class="background-decoration">
+      <div class="floating-orb orb-1"></div>
+      <div class="floating-orb orb-2"></div>
+      <div class="floating-orb orb-3"></div>
+      <div class="gradient-overlay"></div>
+    </div>
+
     <!-- 主要内容区域 -->
     <div class="main-content">
+      <!-- 页面标题 -->
+      <div class="page-header">
+        <h1 class="page-title">动态广场</h1>
+        <p class="page-subtitle">分享你的想法，与朋友和天使互动</p>
+      </div>
+
       <!-- 动态发布区域 -->
       <div class="post-editor-section">
-        <el-card class="post-editor-card">
+        <div class="post-editor-card">
           <div class="editor-header">
             <el-avatar :src="getUserAvatarUrl({ avatar: userStore.userInfo?.avatar, nickname: userStore.userInfo?.nickname })" />
             <div class="editor-info">
@@ -43,52 +57,111 @@
             </div>
             
             <div class="editor-actions">
-              <el-button type="primary" @click="publishPost" :loading="publishing">
+              <el-button type="primary" @click="publishPost" :loading="publishing" class="publish-button">
+                <el-icon><Plus /></el-icon>
                 发布动态
               </el-button>
             </div>
           </div>
-        </el-card>
+        </div>
       </div>
 
-      <!-- 动态列表 -->
-      <div class="posts-section">
-        <div class="section-header">
-          <h3>最新动态</h3>
-          <div class="filter-options">
-            <!-- 搜索功能 -->
-            <div class="search-container">
-              <el-input
-                v-model="searchKeyword"
-                placeholder="搜索动态内容或发帖人..."
-                clearable
-                @input="handleSearchInput"
-                @clear="handleSearchClear"
-                class="search-input"
-              >
-                <template #prefix>
-                  <el-icon><Search /></el-icon>
-                </template>
-              </el-input>
-              
-              <el-select 
-                v-model="searchType" 
-                placeholder="搜索类型" 
-                @change="handleSearchTypeChange"
-                class="search-type-select"
-              >
-                <el-option label="全部" value="all" />
-                <el-option label="内容" value="content" />
-                <el-option label="发帖人" value="author" />
-              </el-select>
+      <!-- 移动端浮动发布按钮 -->
+      <div class="mobile-fab-container">
+        <div class="mobile-fab" @click="showMobileEditor = true">
+          <el-icon><Plus /></el-icon>
+        </div>
+      </div>
+
+      <!-- 移动端发布弹窗 -->
+      <el-dialog
+        v-model="showMobileEditor"
+        title="发布动态"
+        width="90%"
+        :close-on-click-modal="false"
+        class="mobile-editor-dialog"
+      >
+        <div class="mobile-editor-content">
+          <div class="mobile-editor-header">
+            <el-avatar :src="getUserAvatarUrl({ avatar: userStore.userInfo?.avatar, nickname: userStore.userInfo?.nickname })" />
+            <div class="mobile-editor-info">
+              <span class="mobile-editor-name">{{ userStore.userInfo?.nickname || '用户' }}</span>
+              <span class="mobile-editor-hint">分享你的想法...</span>
             </div>
-            
-            <el-select v-model="filterType" placeholder="筛选类型" @change="handleFilterChange">
-              <el-option label="全部" value="" />
-              <el-option label="用户动态" value="user" />
-              <el-option label="机器人动态" value="robot" />
-            </el-select>
           </div>
+          
+          <div class="mobile-editor-body">
+            <el-input
+              v-model="newPost.content"
+              type="textarea"
+              :rows="6"
+              placeholder="分享你的想法..."
+              :maxlength="5000"
+              show-word-limit
+              resize="none"
+            />
+            
+            <!-- 移动端图片选择 -->
+            <div class="mobile-image-selector">
+              <el-upload
+                ref="mobileUploadRef"
+                :auto-upload="false"
+                :on-change="handleImageChange"
+                :on-remove="handleImageRemove"
+                :file-list="newPost.images"
+                list-type="picture-card"
+                :limit="9"
+                accept="image/*"
+              >
+                <el-icon><Plus /></el-icon>
+              </el-upload>
+            </div>
+          </div>
+        </div>
+        
+        <template #footer>
+          <div class="mobile-editor-footer">
+            <el-button @click="showMobileEditor = false">取消</el-button>
+            <el-button type="primary" @click="publishPostMobile" :loading="publishing">
+              <el-icon><Plus /></el-icon>
+              发布动态
+            </el-button>
+          </div>
+        </template>
+      </el-dialog>
+
+      <!-- 搜索和筛选区域 -->
+      <div class="search-filter-section">
+        <div class="search-container">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索动态内容或发帖人..."
+            clearable
+            @input="handleSearchInput"
+            @clear="handleSearchClear"
+            class="search-input"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          
+          <el-select 
+            v-model="searchType" 
+            placeholder="搜索类型" 
+            @change="handleSearchTypeChange"
+            class="search-type-select"
+          >
+            <el-option label="全部" value="all" />
+            <el-option label="内容" value="content" />
+            <el-option label="发帖人" value="author" />
+          </el-select>
+          
+          <el-select v-model="filterType" placeholder="筛选类型" @change="handleFilterChange" class="filter-select">
+            <el-option label="全部" value="" />
+            <el-option label="用户动态" value="user" />
+            <el-option label="机器人动态" value="robot" />
+          </el-select>
         </div>
         
         <!-- 搜索结果提示 -->
@@ -97,200 +170,207 @@
             搜索"{{ searchKeyword }}"的结果 ({{ momentsStore.posts.length }} 条)
           </el-tag>
         </div>
-        
+      </div>
+
+      <!-- 动态列表 -->
+      <div class="posts-section">
         <div class="posts-list">
-          <el-card 
+          <div 
             v-for="post in momentsStore.posts" 
             :key="post.postId" 
             class="post-card"
             @click="goToPostDetail(post)"
           >
-            <!-- 动态头部 -->
-            <div class="post-header">
-              <div class="post-author">
-                <el-avatar 
-                  :src="getAuthorAvatarUrl(post)" 
-                  @error="(event) => handleAuthorAvatarError(event, post)"
-                />
-                <div class="author-info">
-                  <span class="author-name">{{ post.authorName }}</span>
-                  <span class="post-time">{{ formatTime(post.createdAt) }}</span>
-                </div>
-              </div>
-              <div class="post-actions" v-if="post.authorId === userStore.userInfo?.userId">
-                <el-dropdown @command="(command) => handlePostAction(command, post)" @click.stop>
-                  <el-button type="text">
-                    <el-icon><MoreFilled /></el-icon>
-                  </el-button>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item command="delete">删除</el-dropdown-item>
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
-              </div>
-            </div>
-            
-            <!-- 动态内容 -->
-            <div class="post-content">
-              <p>{{ post.content }}</p>
-              
-              <!-- 图片展示 -->
-              <div v-if="post.images && post.images.length > 0" class="post-images">
-                <div 
-                  class="image-grid"
-                  :class="getImageGridClass(post.images.length)"
-                >
-                  <div 
-                    v-for="(image, index) in post.images" 
-                    :key="index"
-                    class="image-item"
-                  >
-                    <el-image 
-                      :src="buildImageUrl(image)" 
-                      fit="cover"
-                      :preview-src-list="post.images.map(img => buildImageUrl(img))"
-                      :initial-index="index"
-                    />
+            <div class="post-card-content">
+              <!-- 动态头部 -->
+              <div class="post-header">
+                <div class="post-author">
+                  <el-avatar 
+                    :src="getAuthorAvatarUrl(post)" 
+                    @error="(event) => handleAuthorAvatarError(event, post)"
+                    class="author-avatar"
+                  />
+                  <div class="author-info">
+                    <span class="author-name">{{ post.authorName }}</span>
+                    <span class="post-time">{{ formatTime(post.createdAt) }}</span>
                   </div>
                 </div>
+                <div class="post-type-badge" :class="post.authorType">
+                  {{ post.authorType === 'robot' ? '天使' : '用户' }}
+                </div>
               </div>
-            </div>
-            
-            <!-- 动态统计 -->
-            <div class="post-stats">
-              <span class="like-count">❤️ {{ post.likeCount }}</span>
-              <span class="comment-count">💬 {{ post.commentCount }}</span>
-            </div>
-            
-            <!-- 动态操作 -->
-            <div class="post-actions-bar" @click.stop>
-              <el-button type="text" @click="toggleLike(post)">
-                {{ post.isLiked ? '❤️ 取消点赞' : '🤍 点赞' }}
-              </el-button>
-              <el-button type="text" @click="showComments(post)">
-                <el-icon><ChatDotRound /></el-icon>
-                评论
-              </el-button>
-            </div>
-            
-            <!-- 评论区域 -->
-            <div v-if="post.showComments" class="comments-section" @click.stop>
-              <!-- 评论列表 -->
-              <div class="comments-list">
-                <div 
-                  v-for="comment in momentsStore.comments[post.postId] || []" 
-                  :key="comment.commentId"
-                  class="comment-item"
-                >
-                  <div class="comment-header">
-                    <el-avatar 
-                      :src="getCommentAuthorAvatarUrl(comment)" 
-                      :size="32"
-                      @error="(event) => handleCommentAvatarError(event, comment)"
-                    />
-                    <div class="comment-info">
-                      <span class="comment-author">{{ comment.authorName }}</span>
-                      <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
+              
+              <!-- 动态内容 -->
+              <div class="post-content">
+                <p>{{ post.content }}</p>
+                
+                <!-- 图片展示 -->
+                <div v-if="post.images && post.images.length > 0" class="post-images">
+                  <div 
+                    class="image-grid"
+                    :class="getImageGridClass(post.images.length)"
+                  >
+                    <div 
+                      v-for="(image, index) in post.images" 
+                      :key="index"
+                      class="image-item"
+                    >
+                      <el-image 
+                        :src="buildImageUrl(image)" 
+                        fit="cover"
+                        :preview-src-list="post.images.map(img => buildImageUrl(img))"
+                        :initial-index="index"
+                      />
                     </div>
                   </div>
-                  <div class="comment-content">
-                    <p>{{ comment.content }}</p>
-                  </div>
-                  <div class="comment-actions">
-                    <span class="action-link" @click="showReplyInput(comment)">回复</span>
-                    <span class="action-link" @click="toggleCommentLike(comment)">
-                      ❤️ {{ comment.likeCount }}
-                    </span>
-                  </div>
-                  
-                  <!-- 回复输入框 -->
-                  <div v-if="comment.showReplyInput" class="reply-input">
-                    <el-input
-                      v-model="comment.replyContent"
-                      placeholder="回复评论..."
-                      :maxlength="2000"
-                      show-word-limit
-                      @keyup.enter="submitReply(comment)"
-                    >
-                      <template #append>
-                        <el-button @click="submitReply(comment)">回复</el-button>
-                      </template>
-                    </el-input>
-                  </div>
-                  
-                  <!-- 回复列表 -->
-                  <div v-if="comment.replyCount > 0" class="replies-section">
-                    <div class="replies-list">
-                      <div 
-                        v-for="reply in replyStates[comment.commentId]?.replies || []" 
-                        :key="reply.commentId"
-                        class="reply-item"
+                </div>
+              </div>
+              
+              <!-- 动态统计 -->
+              <div class="post-stats">
+                <span class="stat-item">
+                  <el-icon><Star /></el-icon>
+                  {{ post.likeCount }}
+                </span>
+                <span class="stat-item">
+                  <el-icon><ChatDotRound /></el-icon>
+                  {{ post.commentCount }}
+                </span>
+              </div>
+              
+              <!-- 动态操作 -->
+              <div class="post-actions-bar" @click.stop>
+                <el-button type="text" @click="toggleLike(post)" class="action-button">
+                  <el-icon><Star /></el-icon>
+                  {{ post.isLiked ? '取消点赞' : '点赞' }}
+                </el-button>
+                <el-button type="text" @click="showComments(post)" class="action-button">
+                  <el-icon><ChatDotRound /></el-icon>
+                  评论
+                </el-button>
+              </div>
+              
+              <!-- 评论区域 -->
+              <div v-if="post.showComments" class="comments-section" @click.stop>
+                <!-- 评论列表 -->
+                <div class="comments-list">
+                  <div 
+                    v-for="comment in momentsStore.comments[post.postId] || []" 
+                    :key="comment.commentId"
+                    class="comment-item"
+                  >
+                    <div class="comment-header">
+                      <el-avatar 
+                        :src="getCommentAuthorAvatarUrl(comment)" 
+                        :size="32"
+                        @error="(event) => handleCommentAvatarError(event, comment)"
+                      />
+                      <div class="comment-info">
+                        <span class="comment-author">{{ comment.authorName }}</span>
+                        <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
+                      </div>
+                    </div>
+                    <div class="comment-content">
+                      <p>{{ comment.content }}</p>
+                    </div>
+                    <div class="comment-actions">
+                      <span class="action-link" @click="showReplyInput(comment)">回复</span>
+                      <span class="action-link" @click="toggleCommentLike(comment)">
+                        <el-icon><Star /></el-icon>
+                        {{ comment.likeCount }}
+                      </span>
+                    </div>
+                    
+                    <!-- 回复输入框 -->
+                    <div v-if="comment.showReplyInput" class="reply-input">
+                      <el-input
+                        v-model="comment.replyContent"
+                        placeholder="回复评论..."
+                        :maxlength="2000"
+                        show-word-limit
+                        @keyup.enter="submitReply(comment)"
                       >
-                        <div class="reply-header">
-                          <el-avatar 
-                            :src="getCommentAuthorAvatarUrl(reply)" 
-                            :size="24"
-                            @error="(event) => handleCommentAvatarError(event, reply)"
-                          />
-                          <div class="reply-info">
-                            <span class="reply-author">{{ reply.authorName }}</span>
-                            <span class="reply-time">{{ formatTime(reply.createdAt) }}</span>
+                        <template #append>
+                          <el-button @click="submitReply(comment)">回复</el-button>
+                        </template>
+                      </el-input>
+                    </div>
+                    
+                    <!-- 回复列表 -->
+                    <div v-if="comment.replyCount > 0" class="replies-section">
+                      <div class="replies-list">
+                        <div 
+                          v-for="reply in replyStates[comment.commentId]?.replies || []" 
+                          :key="reply.commentId"
+                          class="reply-item"
+                        >
+                          <div class="reply-header">
+                            <el-avatar 
+                              :src="getCommentAuthorAvatarUrl(reply)" 
+                              :size="24"
+                              @error="(event) => handleCommentAvatarError(event, reply)"
+                            />
+                            <div class="reply-info">
+                              <span class="reply-author">{{ reply.authorName }}</span>
+                              <span class="reply-time">{{ formatTime(reply.createdAt) }}</span>
+                            </div>
                           </div>
-                        </div>
-                        <div class="reply-content">
-                          <p>{{ reply.content }}</p>
-                        </div>
-                        <div class="reply-actions">
-                          <span class="action-link" @click="toggleCommentLike(reply)">
-                            ❤️ {{ reply.likeCount }}
-                          </span>
+                          <div class="reply-content">
+                            <p>{{ reply.content }}</p>
+                          </div>
+                          <div class="reply-actions">
+                            <span class="action-link" @click="toggleCommentLike(reply)">
+                              <el-icon><Star /></el-icon>
+                              {{ reply.likeCount }}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <!-- 加载更多回复 -->
-                  <div v-if="replyStates[comment.commentId]?.hasMore" class="load-more-replies">
-                    <el-button 
-                      @click="loadMoreReplies(comment.commentId)" 
-                      :loading="replyStates[comment.commentId]?.loading"
-                      size="small"
-                      type="text"
-                    >
-                      加载更多回复
-                    </el-button>
-                  </div>
-                  
-                  <!-- 没有更多回复 -->
-                  <div v-else-if="replyStates[comment.commentId]?.replies.length > 0" class="no-more-replies">
-                    <span class="no-more-text">没有更多回复了</span>
-                  </div>
-                  
-                  <!-- 加载中状态 -->
-                  <div v-if="replyStates[comment.commentId]?.loading && replyStates[comment.commentId]?.replies.length === 0" class="loading-replies">
-                    <el-icon class="is-loading"><Loading /></el-icon>
-                    <span>加载回复中...</span>
+                    
+                    <!-- 加载更多回复 -->
+                    <div v-if="replyStates[comment.commentId]?.hasMore" class="load-more-replies">
+                      <el-button 
+                        @click="loadMoreReplies(comment.commentId)" 
+                        :loading="replyStates[comment.commentId]?.loading"
+                        size="small"
+                        type="text"
+                      >
+                        加载更多回复
+                      </el-button>
+                    </div>
+                    
+                    <!-- 没有更多回复 -->
+                    <div v-else-if="replyStates[comment.commentId]?.replies.length > 0" class="no-more-replies">
+                      <span class="no-more-text">没有更多回复了</span>
+                    </div>
+                    
+                    <!-- 加载中状态 -->
+                    <div v-if="replyStates[comment.commentId]?.loading && replyStates[comment.commentId]?.replies.length === 0" class="loading-replies">
+                      <el-icon class="is-loading"><Loading /></el-icon>
+                      <span>加载回复中...</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <!-- 评论输入框 -->
-              <div class="comment-input">
-                <el-input
-                  v-model="post.newComment"
-                  placeholder="写下你的评论..."
-                  :maxlength="2000"
-                  show-word-limit
-                  @keyup.enter="submitComment(post)"
-                >
-                  <template #append>
-                    <el-button @click="submitComment(post)">发送</el-button>
-                  </template>
-                </el-input>
+                
+                <!-- 评论输入框 -->
+                <div class="comment-input">
+                  <el-input
+                    v-model="post.newComment"
+                    placeholder="写下你的评论..."
+                    :maxlength="2000"
+                    show-word-limit
+                    @keyup.enter="submitComment(post)"
+                  >
+                    <template #append>
+                      <el-button @click="submitComment(post)">发送</el-button>
+                    </template>
+                  </el-input>
+                </div>
               </div>
             </div>
-          </el-card>
+            <div class="post-card-bg"></div>
+          </div>
         </div>
         
         <!-- 滚动加载指示器 -->
@@ -319,7 +399,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search } from '@element-plus/icons-vue'
+import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
 import { createPost, searchPosts } from '@/api/post'
@@ -333,6 +413,9 @@ const activeMenu = ref('/moments')
 const filterType = ref('')
 const publishing = ref(false)
 const isMobileMenuOpen = ref(false)
+
+// 移动端发布相关
+const showMobileEditor = ref(false)
 
 // 滚动加载相关状态
 const isLoadingMore = ref(false)
@@ -552,6 +635,85 @@ const publishPost = async () => {
         })
       }
       newPost.value.images = []
+      
+      ElMessage.success('动态发布成功')
+    }
+  } catch (error) {
+    ElMessage.error('动态发布失败')
+  } finally {
+    publishing.value = false
+  }
+}
+
+/**
+ * 移动端发布动态
+ */
+const publishPostMobile = async () => {
+  if (!newPost.value.content.trim()) {
+    ElMessage.warning('请输入动态内容')
+    return
+  }
+  
+  try {
+    publishing.value = true
+    
+    // 创建FormData，包含内容和图片
+    const formData = new FormData()
+    formData.append('content', newPost.value.content)
+    
+    // 添加图片文件，从文件对象中提取原始文件
+    if (newPost.value.images && newPost.value.images.length > 0) {
+      newPost.value.images.forEach((fileObj, index) => {
+        if (fileObj.raw) {
+          formData.append('images', fileObj.raw)
+        }
+      })
+    }
+    
+    // 直接调用API发布动态
+    const response = await createPost(formData)
+    
+    if (response.code === 200) {
+      // 将新动态添加到列表开头，确保数据结构一致
+      const newPostData = response.data
+      
+      // 构造与列表API一致的数据结构
+      const postData = {
+        postId: newPostData.postId,
+        authorId: userStore.userInfo?.userId,
+        authorType: 'user',
+        authorName: userStore.userInfo?.nickname,
+        authorAvatar: userStore.userInfo?.avatar,
+        content: newPostData.content,
+        images: newPostData.imageUrls || [], // 使用imageUrls字段
+        likeCount: 0,
+        commentCount: 0,
+        isLiked: false,
+        createdAt: newPostData.createdAt,
+        updatedAt: newPostData.createdAt,
+        showComments: true // 设置评论区域为展开状态
+      }
+      
+      momentsStore.posts.unshift(postData)
+      
+      // 为新发布的动态加载评论和回复
+      await momentsStore.loadComments(postData.postId, {}, true)
+      await loadAllReplies(postData.postId)
+    
+      // 清空表单
+      newPost.value.content = ''
+      // 清理URL对象并清空图片列表
+      if (newPost.value.images && newPost.value.images.length > 0) {
+        newPost.value.images.forEach(fileObj => {
+          if (fileObj.url && fileObj.url.startsWith('blob:')) {
+            URL.revokeObjectURL(fileObj.url)
+          }
+        })
+      }
+      newPost.value.images = []
+      
+      // 关闭移动端编辑器
+      showMobileEditor.value = false
       
       ElMessage.success('动态发布成功')
     }
@@ -1049,127 +1211,184 @@ const clearSearch = async () => {
 .moments-container {
   min-height: 100vh;
   background: var(--color-bg);
+  position: relative;
+  overflow-x: hidden;
 }
 
-.header {
-  background: var(--color-card);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  position: sticky;
+/* 背景装饰 */
+.background-decoration {
+  position: fixed;
   top: 0;
-  z-index: 100;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.floating-orb {
+  position: absolute;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(34, 211, 107, 0.1), rgba(74, 222, 128, 0.05));
+  filter: blur(40px);
+  animation: float 20s ease-in-out infinite;
+}
+
+.orb-1 {
+  width: 300px;
+  height: 300px;
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.orb-2 {
+  width: 200px;
+  height: 200px;
+  top: 60%;
+  right: 15%;
+  animation-delay: -7s;
+}
+
+.orb-3 {
+  width: 150px;
+  height: 150px;
+  bottom: 20%;
+  left: 20%;
+  animation-delay: -14s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-30px) rotate(120deg); }
+  66% { transform: translateY(20px) rotate(240deg); }
+}
+
+.gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   height: 100%;
-  max-width: 1200px;
+  background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.02) 100%);
+}
+
+.main-content {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-.logo h1 {
-  margin: 0;
+/* 页面标题 */
+.page-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-top: 40px;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #22d36b, #4ade80, #86efac);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+}
+
+.page-subtitle {
+  font-size: 1.1rem;
   color: var(--color-text);
-  font-size: 24px;
+  opacity: 0.8;
 }
 
-.user-avatar {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-
-.username {
-  margin-left: 8px;
-  color: #333;
-}
-
-.main-content {
-  max-width: 800px;
-  margin: 20px auto;
-  padding: 0 20px;
-  background: var(--color-bg);
-}
-
+/* 动态发布区域 */
 .post-editor-section {
-  margin-bottom: 20px;
+  margin-bottom: 40px;
 }
 
 .post-editor-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 30px;
   margin-bottom: 16px;
-  border-radius: 12px;
-  background: var(--color-card);
-  color: var(--color-text);
+  transition: all 0.3s ease;
+}
+
+.post-editor-card:hover {
+  border-color: rgba(34, 211, 107, 0.2);
+  box-shadow: 0 8px 32px rgba(34, 211, 107, 0.1);
 }
 
 .editor-header {
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .editor-info {
-  margin-left: 12px;
+  margin-left: 16px;
 }
 
 .editor-name {
   font-weight: 600;
   color: var(--color-text);
   display: block;
+  font-size: 1.1rem;
 }
 
 .editor-hint {
   color: var(--color-text);
-  font-size: 14px;
+  font-size: 0.9rem;
+  opacity: 0.7;
 }
 
 .editor-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.image-selector {
-  margin-top: 8px;
-}
-
-.editor-actions {
+.publish-button {
+  background: linear-gradient(135deg, #22d36b, #4ade80);
+  border: none;
+  padding: 12px 24px;
+  font-weight: 600;
   display: flex;
-  justify-content: flex-end;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  gap: 8px;
+  transition: all 0.3s ease;
 }
 
-.section-header h3 {
-  margin: 0;
-  color: var(--color-text);
+.publish-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
 }
 
-.filter-options {
-  display: flex;
-  gap: 12px;
-  align-items: center;
+/* 搜索和筛选区域 */
+.search-filter-section {
+  margin-bottom: 30px;
 }
 
 .search-container {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
+  margin-bottom: 16px;
 }
 
 .search-input {
-  width: 240px;
+  flex: 1;
+  min-width: 200px;
 }
 
-.search-type-select {
-  width: 100px;
+.search-type-select,
+.filter-select {
+  width: 120px;
 }
 
 .search-result-info {
@@ -1178,36 +1397,60 @@ const clearSearch = async () => {
 
 .search-result-info .el-tag {
   cursor: pointer;
+  background: rgba(34, 211, 107, 0.1);
+  border-color: rgba(34, 211, 107, 0.2);
+  color: #22d36b;
+}
+
+/* 动态列表 */
+.posts-section {
+  margin-bottom: 40px;
+}
+
+.posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .post-card {
-  margin-bottom: 12px;
-  border-radius: 12px;
-  background: var(--color-card);
-  color: var(--color-text);
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
 .post-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  border-color: rgba(34, 211, 107, 0.2);
+  box-shadow: 0 12px 40px rgba(34, 211, 107, 0.1);
 }
 
-.post-card:active {
-  transform: translateY(0);
+.post-card-content {
+  position: relative;
+  z-index: 2;
 }
 
 .post-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 .post-author {
   display: flex;
   align-items: center;
+}
+
+.author-avatar {
+  width: 48px;
+  height: 48px;
 }
 
 .author-info {
@@ -1218,32 +1461,51 @@ const clearSearch = async () => {
   font-weight: 600;
   color: var(--color-text);
   display: block;
+  font-size: 1rem;
 }
 
 .post-time {
   color: var(--color-text);
-  font-size: 11px;
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.post-type-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.post-type-badge.robot {
+  background: rgba(34, 211, 107, 0.1);
+  color: #22d36b;
+}
+
+.post-type-badge.user {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
 }
 
 .post-content {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .post-content p {
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
   line-height: 1.6;
   color: var(--color-text);
-  font-size: 14px;
+  font-size: 0.95rem;
 }
 
 .post-images {
-  margin-top: 12px;
+  margin-top: 16px;
 }
 
 .image-grid {
   display: grid;
-  gap: 4px;
-  border-radius: 8px;
+  gap: 8px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -1272,6 +1534,8 @@ const clearSearch = async () => {
 .image-item {
   aspect-ratio: 1;
   cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .image-item .el-image {
@@ -1281,154 +1545,156 @@ const clearSearch = async () => {
 
 .post-stats {
   display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--color-text);
-  font-size: 12px;
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.stat-item .el-icon {
+  font-size: 16px;
+  color: #22d36b;
 }
 
 .post-actions-bar {
   display: flex;
-  gap: 12px;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-border);
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.action-button:hover {
+  color: #22d36b;
+  transform: translateY(-1px);
+}
+
+.action-button .el-icon {
+  font-size: 16px;
 }
 
 .comments-section {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border);
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .comments-list {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .comment-item {
-  margin-bottom: 12px;
-  padding: 8px;
-  background: var(--color-card);
-  border-radius: 8px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .comment-header {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .comment-info {
-  margin-left: 8px;
+  margin-left: 12px;
 }
 
 .comment-author {
   font-weight: 600;
   color: var(--color-text);
-  font-size: 13px;
+  font-size: 0.9rem;
 }
 
 .comment-time {
   color: var(--color-text);
-  font-size: 11px;
+  font-size: 0.75rem;
   margin-left: 8px;
+  opacity: 0.6;
 }
 
 .comment-content {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .comment-content p {
   margin: 0;
   color: var(--color-text);
   line-height: 1.5;
-  font-size: 13px;
+  font-size: 0.9rem;
 }
 
 .comment-actions {
-  margin-top: 8px;
   display: flex;
-  gap: 12px;
+  gap: 16px;
 }
 
 .action-link {
-  color: var(--color-primary);
+  color: #22d36b;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s ease;
 }
 
 .action-link:hover {
-  text-decoration: underline;
+  opacity: 0.8;
+  transform: translateY(-1px);
 }
 
-.reply-input {
-  margin-top: 8px;
-}
-
-.comment-input {
-  margin-top: 12px;
-}
-
-/* 滚动加载指示器样式 */
-.scroll-loading-indicator {
-  text-align: center;
-  margin: 16px 0;
-  padding: 12px;
-  color: var(--color-text);
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--color-card);
-  border-radius: 8px;
-}
-
-.scroll-loading-indicator .el-icon {
+.action-link .el-icon {
   font-size: 14px;
 }
 
-/* 没有更多内容提示样式 */
-.no-more-content {
-  text-align: center;
-  margin: 16px 0;
-  padding: 12px;
-  color: var(--color-text);
-  font-size: 13px;
-  background: var(--color-card);
-  border-radius: 8px;
+.reply-input {
+  margin-top: 12px;
 }
 
-/* 空状态样式 */
-.empty-state {
-  text-align: center;
-  margin: 30px 0;
-  padding: 30px 16px;
-  background: var(--color-card);
-  border-radius: 12px;
+.comment-input {
+  margin-top: 16px;
 }
 
 .replies-section {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-border);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .replies-list {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .reply-item {
-  margin-bottom: 8px;
-  padding: 6px 8px;
-  background: var(--color-card);
-  border-radius: 6px;
-  border-left: 3px solid var(--color-border);
+  margin-bottom: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border-left: 3px solid rgba(34, 211, 107, 0.2);
 }
 
 .reply-header {
   display: flex;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .reply-info {
@@ -1440,24 +1706,25 @@ const clearSearch = async () => {
 .reply-author {
   font-weight: 600;
   color: var(--color-text);
-  font-size: 12px;
+  font-size: 0.8rem;
 }
 
 .reply-time {
   color: var(--color-text);
-  font-size: 10px;
+  font-size: 0.7rem;
   margin-left: 8px;
+  opacity: 0.6;
 }
 
 .reply-content {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .reply-content p {
   margin: 0;
   color: var(--color-text);
   line-height: 1.4;
-  font-size: 12px;
+  font-size: 0.8rem;
 }
 
 .reply-actions {
@@ -1466,253 +1733,432 @@ const clearSearch = async () => {
 }
 
 .reply-actions .action-link {
-  font-size: 11px;
+  font-size: 0.75rem;
 }
 
 .load-more-replies {
   text-align: center;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .no-more-replies {
   text-align: center;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .no-more-text {
   color: var(--color-text);
-  font-size: 12px;
+  font-size: 0.8rem;
+  opacity: 0.6;
 }
 
 .loading-replies {
   text-align: center;
-  margin-top: 8px;
+  margin-top: 12px;
   color: var(--color-text);
-  font-size: 12px;
+  font-size: 0.8rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .loading-replies .el-icon {
   font-size: 14px;
 }
 
-.mobile-menu {
-  position: fixed;
+.post-card-bg {
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, rgba(34, 211, 107, 0.02), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.post-card:hover .post-card-bg {
+  opacity: 1;
+}
+
+/* 滚动加载指示器样式 */
+.scroll-loading-indicator {
+  text-align: center;
+  margin: 20px 0;
+  padding: 16px;
+  color: var(--color-text);
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.mobile-menu-open {
-  transform: translateX(0);
+.scroll-loading-indicator .el-icon {
+  font-size: 16px;
+  color: #22d36b;
 }
 
-.mobile-menu-content {
-  background-color: #fff;
-  padding: 20px;
-  width: 80%;
-  max-width: 400px;
-  border-radius: 8px;
+/* 没有更多内容提示样式 */
+.no-more-content {
+  text-align: center;
+  margin: 20px 0;
+  padding: 16px;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.mobile-nav-item {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  cursor: pointer;
+/* 空状态样式 */
+.empty-state {
+  text-align: center;
+  margin: 40px 0;
+  padding: 40px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.mobile-nav-item:hover {
-  background-color: #f0f0f0;
-}
-
-.mobile-nav-divider {
-  height: 1px;
-  background-color: #e0e0e0;
-  margin: 10px 0;
-}
-
-.mobile-menu-toggle {
-  display: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
-  transition: background-color 0.3s;
-  color: #333;
-}
-
-.mobile-menu-toggle:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.desktop-menu {
-  display: block;
-}
-
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .header-content {
-    padding: 0 16px;
-    height: 56px;
-  }
-  
-  .logo h1 {
-    font-size: 20px;
-  }
-  
-  .desktop-menu {
-    display: none;
-  }
-  
-  .user-info {
-    display: none;
-  }
-  
-  .mobile-menu-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
   .main-content {
-    padding-top: 76px;
-    padding-left: 16px;
-    padding-right: 16px;
+    padding: 0 16px;
   }
   
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+  .page-header {
+    padding-top: 20px;
+    margin-bottom: 30px;
   }
   
-  .filter-options {
-    width: 100%;
-    flex-direction: column;
-    gap: 8px;
+  .page-title {
+    font-size: 2rem;
   }
   
-  .search-container {
-    width: 100%;
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .search-input {
-    width: 100%;
-  }
-  
-  .search-type-select {
-    width: 100%;
+  .page-subtitle {
+    font-size: 1rem;
   }
   
   .post-editor-card {
-    margin-bottom: 16px;
+    padding: 20px;
+  }
+  
+  .search-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .search-input,
+  .search-type-select,
+  .filter-select {
+    width: 100%;
+  }
+  
+  .post-card {
+    padding: 20px;
+  }
+  
+  .post-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .post-type-badge {
+    align-self: flex-end;
+  }
+  
+  .post-actions-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .action-button {
+    justify-content: center;
   }
 }
 
 @media (max-width: 480px) {
-  .header-content {
-    padding: 0 12px;
-    height: 52px;
-  }
-  
-  .logo h1 {
-    font-size: 18px;
-  }
-  
   .main-content {
-    padding-top: 72px;
-    padding-left: 12px;
-    padding-right: 12px;
+    padding: 0 12px;
   }
   
-  .mobile-menu-content {
-    padding: 16px;
-    width: 90%;
+  .page-header {
+    padding-top: 16px;
+    margin-bottom: 24px;
   }
   
-  .mobile-nav-item {
-    padding: 8px 0;
+  .page-title {
+    font-size: 1.8rem;
   }
   
-  .mobile-nav-item span {
-    font-size: 15px;
-  }
-  
-  .post-editor-card {
-    margin-bottom: 12px;
-  }
-  
-  .editor-content {
-    gap: 8px;
+  .page-subtitle {
+    font-size: 0.9rem;
   }
   
   .post-card {
-    margin-bottom: 8px;
+    padding: 16px;
   }
   
-  .post-content p {
-    font-size: 13px;
+  .author-avatar {
+    width: 40px;
+    height: 40px;
   }
   
   .post-stats {
-    font-size: 11px;
     gap: 12px;
   }
   
-  .post-actions-bar {
-    gap: 8px;
-  }
-  
   .comment-item {
-    padding: 6px;
-  }
-  
-  .comment-content p {
-    font-size: 12px;
+    padding: 12px;
   }
   
   .reply-item {
-    padding: 4px 6px;
+    padding: 8px;
   }
   
-  .reply-content p {
-    font-size: 11px;
+  /* 移动端浮动按钮位置调整 */
+  .mobile-fab-container {
+    bottom: 70px;
+    right: 16px;
   }
   
-  /* 小屏幕滚动加载指示器样式 */
-  .scroll-loading-indicator {
-    margin: 12px 0;
-    padding: 10px;
-    font-size: 12px;
+  .mobile-fab {
+    width: 52px;
+    height: 52px;
+    font-size: 22px;
   }
   
-  .scroll-loading-indicator .el-icon {
-    font-size: 13px;
+  /* 移动端弹窗样式调整 */
+  .mobile-editor-dialog :deep(.el-dialog) {
+    margin: 10px;
+    width: calc(100% - 20px) !important;
   }
   
-  /* 小屏幕没有更多内容提示样式 */
-  .no-more-content {
-    margin: 12px 0;
-    padding: 10px;
-    font-size: 12px;
+  .mobile-editor-content {
+    padding: 16px;
   }
   
-  /* 小屏幕空状态样式 */
-  .empty-state {
-    margin: 20px 0;
-    padding: 20px 12px;
+  .mobile-editor-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+  
+  .mobile-editor-footer {
+    padding: 16px;
+  }
+  
+  .mobile-editor-footer .el-button {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+/* 移动端浮动按钮 */
+.mobile-fab-container {
+  display: none;
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.mobile-fab {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #22d36b, #4ade80);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+}
+
+.mobile-fab:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 35px rgba(34, 211, 107, 0.4);
+}
+
+.mobile-fab:active {
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* 移动端编辑器弹窗 */
+.mobile-editor-dialog {
+  border-radius: 16px;
+}
+
+.mobile-editor-dialog :deep(.el-dialog) {
+  border-radius: 16px;
+  background: var(--color-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-editor-dialog :deep(.el-dialog__header) {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+}
+
+.mobile-editor-dialog :deep(.el-dialog__title) {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.mobile-editor-dialog :deep(.el-dialog__body) {
+  padding: 0;
+}
+
+.mobile-editor-dialog :deep(.el-dialog__footer) {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 16px 16px;
+  padding: 20px;
+}
+
+.mobile-editor-content {
+  padding: 20px;
+}
+
+.mobile-editor-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-editor-info {
+  margin-left: 16px;
+}
+
+.mobile-editor-name {
+  font-weight: 600;
+  color: var(--color-text);
+  display: block;
+  font-size: 1.1rem;
+}
+
+.mobile-editor-hint {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.mobile-editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mobile-image-selector {
+  margin-top: 8px;
+}
+
+.mobile-editor-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobile-editor-footer .el-button {
+  flex: 1;
+  padding: 12px 20px;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+.mobile-editor-footer .el-button--primary {
+  background: linear-gradient(135deg, #22d36b, #4ade80);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mobile-editor-footer .el-button--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
+}
+
+@media (max-width: 768px) {
+  /* 隐藏桌面端发布区域 */
+  .post-editor-section {
+    display: none;
+  }
+  
+  /* 显示移动端浮动按钮 */
+  .mobile-fab-container {
+    display: block;
+  }
+  
+  .main-content {
+    padding: 0 16px;
+  }
+  
+  .page-header {
+    padding-top: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .page-title {
+    font-size: 2rem;
+  }
+  
+  .page-subtitle {
+    font-size: 1rem;
+  }
+  
+  .search-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .search-input,
+  .search-type-select,
+  .filter-select {
+    width: 100%;
+  }
+  
+  .post-card {
+    padding: 20px;
+  }
+  
+  .post-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .post-type-badge {
+    align-self: flex-end;
+  }
+  
+  .post-actions-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .action-button {
+    justify-content: center;
   }
 }
 </style> 

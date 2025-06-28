@@ -245,7 +245,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
     console.log('✅ WebSocket连接成功')
     
     // 发送连接成功消息
-    ElMessage.success('实时连接已建立')
+    //ElMessage.success('实时连接已建立')
     
     // 处理消息队列
     processMessageQueue()
