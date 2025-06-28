@@ -72,6 +72,18 @@ public class RobotConfig {
         private String personality;
         private String description;
         private String background;
+        
+        // 个人基本信息
+        private String gender;           // 性别：male/female/other
+        private int age;                 // 年龄
+        private String mbti;             // MBTI性格类型
+        private String bloodType;        // 血型：A/B/O/AB
+        private String zodiac;           // 星座
+        private String occupation;       // 职业
+        private String location;         // 所在地
+        private String education;        // 学历
+        private String relationship;     // 感情状态：single/married/in_relationship
+        
         private List<String> traits;
         private List<String> interests;
         private SpeakingStyle speakingStyle;
@@ -99,6 +111,34 @@ public class RobotConfig {
         
         public String getBackground() { return background; }
         public void setBackground(String background) { this.background = background; }
+        
+        // 个人基本信息的Getter和Setter
+        public String getGender() { return gender; }
+        public void setGender(String gender) { this.gender = gender; }
+        
+        public int getAge() { return age; }
+        public void setAge(int age) { this.age = age; }
+        
+        public String getMbti() { return mbti; }
+        public void setMbti(String mbti) { this.mbti = mbti; }
+        
+        public String getBloodType() { return bloodType; }
+        public void setBloodType(String bloodType) { this.bloodType = bloodType; }
+        
+        public String getZodiac() { return zodiac; }
+        public void setZodiac(String zodiac) { this.zodiac = zodiac; }
+        
+        public String getOccupation() { return occupation; }
+        public void setOccupation(String occupation) { this.occupation = occupation; }
+        
+        public String getLocation() { return location; }
+        public void setLocation(String location) { this.location = location; }
+        
+        public String getEducation() { return education; }
+        public void setEducation(String education) { this.education = education; }
+        
+        public String getRelationship() { return relationship; }
+        public void setRelationship(String relationship) { this.relationship = relationship; }
         
         public List<String> getTraits() { return traits; }
         public void setTraits(List<String> traits) { this.traits = traits; }

@@ -53,7 +53,7 @@ world:
         description: "机器人会分享一天的经历和感悟"
       
       - name: "晚安祝福"
-        time: "21:00-24:00"
+        time: "21:00-23:59"
         description: "机器人会发送温馨的晚安祝福"
     
     special_events:

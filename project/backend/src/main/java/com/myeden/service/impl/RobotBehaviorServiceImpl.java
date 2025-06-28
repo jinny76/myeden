@@ -327,41 +327,114 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         return robot.isInActiveTimeSlot();
     }
     
+    /**
+     * 计算行为触发概率 - 增加随机性和情绪影响
+     */
     @Override
     public double calculateBehaviorProbability(Robot robot, String behaviorType, String context) {
-        double baseProbability = 0.3; // 基础概率
-        
-        // 根据行为类型调整概率
-        switch (behaviorType) {
-            case "post":
-                baseProbability = 0.2; // 发布动态概率较低
-                break;
-            case "comment":
-                baseProbability = 0.4; // 评论概率中等
-                break;
-            case "reply":
-                baseProbability = 0.5; // 回复概率较高
-                break;
+        try {
+            double baseProbability = 0.3;
+            
+            // 根据行为类型调整基础概率
+            switch (behaviorType) {
+                case "post":
+                    baseProbability = 0.25;
+                    break;
+                case "comment":
+                    baseProbability = 0.35;
+                    break;
+                case "reply":
+                    baseProbability = 0.45;
+                    break;
+                default:
+                    baseProbability = 0.3;
+            }
+            
+            // 时间因素
+            LocalTime currentTime = LocalTime.now();
+            double timeMultiplier = getTimeMultiplier(robot, currentTime);
+            
+            // 社交能量影响
+            double socialEnergyMultiplier = getSocialEnergyMultiplier(robot);
+            
+            // 情绪影响
+            double moodMultiplier = getMoodMultiplier(robot);
+            
+            // 随机因子
+            double randomFactor = 0.3 + random.nextDouble() * 0.4; // 0.3-0.7
+            
+            // 计算最终概率
+            double finalProbability = baseProbability * timeMultiplier * socialEnergyMultiplier * moodMultiplier * randomFactor;
+            
+            // 确保概率在合理范围内
+            return Math.min(Math.max(finalProbability, 0.05), 0.95);
+            
+        } catch (Exception e) {
+            logger.error("计算行为概率失败: {}", e.getMessage(), e);
+            return 0.3; // 默认概率
         }
+    }
+    
+    /**
+     * 获取时间倍数
+     */
+    private double getTimeMultiplier(Robot robot, LocalTime currentTime) {
+        // 这里可以根据机器人的活跃时间配置来计算
+        // 简化实现，根据时间段返回不同的倍数
+        int hour = currentTime.getHour();
         
-        // 根据时间调整概率
-        LocalTime currentTime = LocalTime.now();
-        if (currentTime.getHour() >= 9 && currentTime.getHour() <= 18) {
-            baseProbability *= 1.5; // 工作时间概率提高
-        } else if (currentTime.getHour() >= 19 && currentTime.getHour() <= 21) {
-            baseProbability *= 1.2; // 晚上时间概率稍高
+        if (hour >= 8 && hour <= 12) {
+            return 1.2; // 上午活跃
+        } else if (hour >= 14 && hour <= 18) {
+            return 1.3; // 下午活跃
+        } else if (hour >= 19 && hour <= 23) {
+            return 1.5; // 晚上最活跃
+        } else if (hour >= 0 && hour <= 6) {
+            return 0.3; // 深夜不活跃
         } else {
-            baseProbability *= 0.5; // 其他时间概率降低
+            return 0.8; // 其他时间
         }
+    }
+    
+    /**
+     * 获取社交能量倍数
+     */
+    private double getSocialEnergyMultiplier(Robot robot) {
+        // 根据机器人的社交能量配置计算
+        // 这里可以根据机器人的性格特征来调整
+        String personality = robot.getPersonality();
         
-        // 根据机器人性格调整概率
-        if (robot.getPersonality().contains("活泼") || robot.getPersonality().contains("开朗")) {
-            baseProbability *= 1.3;
-        } else if (robot.getPersonality().contains("安静") || robot.getPersonality().contains("内敛")) {
-            baseProbability *= 0.7;
+        switch (personality) {
+            case "文艺青年":
+                return 0.6;
+            case "技术宅":
+                return 0.7;
+            case "时尚达人":
+                return 0.9;
+            case "成熟稳重":
+                return 0.4;
+            case "运动达人":
+                return 0.8;
+            case "学霸女神":
+                return 0.5;
+            case "退休教师":
+                return 0.3;
+            case "可爱萌妹":
+                return 0.9;
+            default:
+                return 0.7;
         }
-        
-        return Math.min(baseProbability, 1.0); // 确保概率不超过1
+    }
+    
+    /**
+     * 获取情绪倍数
+     */
+    private double getMoodMultiplier(Robot robot) {
+        // 模拟机器人的情绪状态
+        // 这里可以实现更复杂的情绪系统
+        double baseMood = 0.7;
+        double moodSwing = random.nextDouble() * 0.6 - 0.3; // -0.3 到 0.3 的波动
+        return baseMood + moodSwing;
     }
     
     @Override
@@ -508,16 +581,126 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     
     private String buildPostContext() {
         LocalDateTime now = LocalDateTime.now();
-        return String.format("当前时间: %s, 天气: 晴朗, 心情: 愉快", 
-                           now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+        LocalTime time = now.toLocalTime();
+        String timeOfDay = getTimeOfDay(time);
+        String weather = getRandomWeather();
+        String mood = getRandomMood();
+        String activity = getRandomActivity(timeOfDay);
+        
+        return String.format(
+            "现在是%s，%s。%s，%s。%s",
+            now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
+            timeOfDay,
+            weather,
+            mood,
+            activity
+        );
     }
     
     private String buildCommentContext(String postContent) {
-        return String.format("对动态内容进行评论: %s", postContent);
+        return String.format("看到一条朋友圈动态：%s", postContent);
     }
     
     private String buildReplyContext(String commentContent) {
-        return String.format("对评论内容进行回复: %s", commentContent);
+        return String.format("有人评论了：%s", commentContent);
+    }
+    
+    /**
+     * 获取时间段描述
+     */
+    private String getTimeOfDay(LocalTime time) {
+        if (time.isBefore(LocalTime.of(6, 0))) {
+            return "夜深人静的时候";
+        } else if (time.isBefore(LocalTime.of(9, 0))) {
+            return "清晨时分";
+        } else if (time.isBefore(LocalTime.of(12, 0))) {
+            return "上午时光";
+        } else if (time.isBefore(LocalTime.of(14, 0))) {
+            return "午休时间";
+        } else if (time.isBefore(LocalTime.of(18, 0))) {
+            return "下午时光";
+        } else if (time.isBefore(LocalTime.of(21, 0))) {
+            return "傍晚时分";
+        } else {
+            return "夜晚时光";
+        }
+    }
+    
+    /**
+     * 获取随机天气
+     */
+    private String getRandomWeather() {
+        String[] weathers = {
+            "阳光明媚，心情舒畅",
+            "微风轻拂，很舒服",
+            "阴天多云，适合思考",
+            "小雨绵绵，很有诗意",
+            "天气不错，适合出门",
+            "今天天气很好呢",
+            "阳光正好，微风不燥",
+            "天气有点阴，但心情不错"
+        };
+        return weathers[random.nextInt(weathers.length)];
+    }
+    
+    /**
+     * 获取随机心情
+     */
+    private String getRandomMood() {
+        String[] moods = {
+            "心情很愉快",
+            "感觉还不错",
+            "有点小开心",
+            "心情平静",
+            "充满期待",
+            "感觉很有活力",
+            "心情轻松",
+            "有点小感慨"
+        };
+        return moods[random.nextInt(moods.length)];
+    }
+    
+    /**
+     * 获取随机活动
+     */
+    private String getRandomActivity(String timeOfDay) {
+        String[] morningActivities = {
+            "准备开始新的一天",
+            "刚起床，精神饱满",
+            "在吃早餐",
+            "准备出门工作"
+        };
+        
+        String[] afternoonActivities = {
+            "在努力工作",
+            "休息一下",
+            "在喝咖啡",
+            "处理一些事情"
+        };
+        
+        String[] eveningActivities = {
+            "准备吃晚饭",
+            "在散步",
+            "在看书",
+            "在听音乐"
+        };
+        
+        String[] nightActivities = {
+            "准备休息了",
+            "在思考人生",
+            "在写日记",
+            "在放松心情"
+        };
+        
+        if (timeOfDay.contains("清晨") || timeOfDay.contains("上午")) {
+            return morningActivities[random.nextInt(morningActivities.length)];
+        } else if (timeOfDay.contains("下午") || timeOfDay.contains("午休")) {
+            return afternoonActivities[random.nextInt(afternoonActivities.length)];
+        } else if (timeOfDay.contains("傍晚")) {
+            return eveningActivities[random.nextInt(eveningActivities.length)];
+        } else {
+            return nightActivities[random.nextInt(nightActivities.length)];
+        }
     }
     
     /**
