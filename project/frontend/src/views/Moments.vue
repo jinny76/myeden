@@ -179,6 +179,7 @@
             v-for="post in momentsStore.posts" 
             :key="post.postId" 
             class="post-card"
+            :data-post-id="post.postId"
           >
             <div class="post-card-content">
               <!-- 动态头部 -->
@@ -377,6 +378,19 @@
         </div>
       </div>
     </div>
+
+    <!-- 下拉刷新指示器 -->
+    <div class="refresh-indicator" :class="{ show: isRefreshing || isPulling }">
+      <el-icon v-if="isRefreshing"><Loading /></el-icon>
+      <svg v-else width="20" height="20" viewBox="0 0 50 50" class="refresh-svg">
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="90" stroke-dashoffset="30">
+          <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+      <span>
+        {{ isRefreshing ? '正在刷新...' : (isPulling ? '下拉刷新' : '') }}
+      </span>
+    </div>
   </div>
 </template>
 
@@ -408,6 +422,13 @@ const showMobileEditor = ref(false)
 // 滚动加载相关状态
 const isLoadingMore = ref(false)
 const scrollThreshold = 100 // 距离底部多少像素时触发加载
+
+// 下拉刷新相关状态
+const isRefreshing = ref(false)
+const refreshThreshold = 80 // 下拉多少像素触发刷新
+const startY = ref(0)
+const currentY = ref(0)
+const isPulling = ref(false)
 
 // 新动态数据
 const newPost = ref({
@@ -468,6 +489,84 @@ const handleFilterChange = async () => {
     await momentsStore.loadPosts({ authorType: filterType.value }, true)
     // 为筛选后的动态加载评论和回复
     await loadAllCommentsAndReplies()
+  }
+}
+
+/**
+ * 下拉刷新处理函数
+ */
+const handleTouchStart = (event) => {
+  // 检查是否在主内容区域，且不是按钮或其他交互元素
+  const target = event.target
+  const mainContent = document.querySelector('.main-content')
+  
+  // 检查目标元素是否是可交互元素
+  const isInteractiveElement = target.closest('button, input, select, textarea, a, [role="button"]')
+  
+  // 只在页面顶部、在主内容区域、且不是交互元素时启用下拉刷新
+  if (window.pageYOffset === 0 && 
+      mainContent && 
+      mainContent.contains(target) && 
+      !isInteractiveElement) {
+    startY.value = event.touches[0].clientY
+    isPulling.value = true
+  }
+}
+
+const handleTouchMove = (event) => {
+  if (!isPulling.value || isRefreshing.value) return
+  
+  currentY.value = event.touches[0].clientY
+  const deltaY = currentY.value - startY.value
+  
+  // 只处理向下滑动，且距离足够大才阻止默认行为
+  if (deltaY > 10 && window.pageYOffset === 0) {
+    // 阻止默认滚动行为
+    event.preventDefault()
+    
+    // 添加下拉效果
+    const pullDistance = Math.min(deltaY * 0.5, refreshThreshold)
+    document.body.style.transform = `translateY(${pullDistance}px)`
+  }
+}
+
+const handleTouchEnd = async (event) => {
+  if (!isPulling.value) return
+  
+  const deltaY = currentY.value - startY.value
+  
+  // 重置下拉效果
+  document.body.style.transform = ''
+  isPulling.value = false
+  
+  // 如果下拉距离足够，触发刷新
+  if (deltaY > refreshThreshold && window.pageYOffset === 0) {
+    await performRefresh()
+  }
+}
+
+/**
+ * 执行刷新操作
+ */
+const performRefresh = async () => {
+  if (isRefreshing.value) return
+  try {
+    isRefreshing.value = true
+    // 刷新数据
+    await momentsStore.loadPosts({}, true)
+    await loadAllCommentsAndReplies()
+    // 清除搜索和筛选状态
+    if (searchKeyword.value.trim()) {
+      searchKeyword.value = ''
+      searchType.value = 'all'
+    }
+    filterType.value = ''
+    // 不再弹出任何 message
+  } catch (error) {
+    // 不弹窗，仅可选地在控制台输出
+    console.error('刷新失败:', error)
+  } finally {
+    isRefreshing.value = false
   }
 }
 
@@ -1017,8 +1116,51 @@ const navigateTo = (path) => {
   isMobileMenuOpen.value = false
 }
 
+/**
+ * 滚动定位到指定的分享
+ * @param {string} postId - 分享ID
+ */
+const scrollToPost = async (postId) => {
+  try {
+    // 等待DOM更新
+    await nextTick()
+    
+    // 查找对应的分享元素
+    const postElement = document.querySelector(`[data-post-id="${postId}"]`)
+    
+    if (postElement) {
+      // 滚动到分享位置
+      postElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      })
+      
+      // 添加高亮效果
+      postElement.classList.add('highlight-post')
+      
+      // 3秒后移除高亮效果
+      setTimeout(() => {
+        postElement.classList.remove('highlight-post')
+      }, 3000)
+      
+      // 清除URL参数
+      //router.replace({ path: '/moments', query: {} })
+    } else {
+      // 如果分享不在当前页面，尝试加载更多内容
+      console.log(`分享 ${postId} 不在当前页面，尝试加载更多内容`)
+      
+      // 这里可以添加逻辑来加载更多内容直到找到目标分享
+      // 暂时显示提示信息
+      message.info('该分享可能已被删除或不在当前页面')
+    }
+  } catch (error) {
+    console.error('定位分享失败:', error)
+  }
+}
+
 const goToPostDetail = (post) => {
-  router.push(`/post/${post.postId}`)
+  // 明细页已被移除，此函数不再需要
+  console.log('明细页功能已被移除')
 }
 
 // 生命周期
@@ -1027,12 +1169,26 @@ onMounted(async () => {
     await momentsStore.loadPosts({}, true)
     // 自动加载所有动态的评论和回复
     await loadAllCommentsAndReplies()
+    
+    // 检查URL参数，如果有postId则定位到对应分享
+    if (route.query.postId) {
+      await scrollToPost(route.query.postId)
+    }
   } catch (error) {
+    console.error('加载动态列表失败:', error)
     message.error('加载动态列表失败')
   }
   
   // 添加滚动事件监听器
   window.addEventListener('scroll', throttledHandleScroll, { passive: true })
+  
+  // 只在移动端添加触摸事件监听器（下拉刷新）
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  if (isMobile) {
+    document.addEventListener('touchstart', handleTouchStart, { passive: true })
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('touchend', handleTouchEnd, { passive: true })
+  }
   
   // 添加点击外部关闭移动端菜单的监听
   document.addEventListener('click', handleClickOutside)
@@ -1051,6 +1207,15 @@ onUnmounted(() => {
   
   // 移除滚动事件监听器
   window.removeEventListener('scroll', throttledHandleScroll)
+  
+  // 只在移动端移除触摸事件监听器
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  if (isMobile) {
+    document.removeEventListener('touchstart', handleTouchStart)
+    document.removeEventListener('touchmove', handleTouchMove)
+    document.removeEventListener('touchend', handleTouchEnd)
+  }
+  
   document.removeEventListener('click', handleClickOutside)
 })
 
@@ -1273,7 +1438,7 @@ const clearSearch = async () => {
 .page-header {
   text-align: center;
   margin-bottom: 40px;
-  padding-top: 40px;
+  padding-top: 80px;
 }
 
 .page-title {
@@ -1829,7 +1994,7 @@ const clearSearch = async () => {
   }
   
   .page-header {
-    padding-top: 20px;
+    padding-top: 16px;
     margin-bottom: 30px;
   }
   
@@ -2134,7 +2299,7 @@ const clearSearch = async () => {
   }
   
   .page-header {
-    padding-top: 20px;
+    padding-top: 16px;
     margin-bottom: 30px;
   }
   
@@ -2210,5 +2375,81 @@ const clearSearch = async () => {
   color: #22d36b;
   transform: scale(1.1);
   transition: all 0.2s;
+}
+
+/* 分享高亮效果 */
+.post-card.highlight-post {
+  animation: highlightPulse 3s ease-in-out;
+  border-color: #22d36b !important;
+  box-shadow: 0 0 20px rgba(34, 211, 107, 0.3) !important;
+}
+
+@keyframes highlightPulse {
+  0% {
+    transform: scale(1);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  20% {
+    transform: scale(1.02);
+    border-color: #22d36b;
+    box-shadow: 0 0 30px rgba(34, 211, 107, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* 下拉刷新指示器 */
+.refresh-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(34, 211, 107, 0.95);
+  color: white;
+  padding: 8px 24px;
+  border-radius: 0 0 16px 16px;
+  font-size: 1rem;
+  font-weight: 500;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  box-shadow: 0 4px 16px rgba(34,211,107,0.15);
+}
+
+.refresh-indicator.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.refresh-indicator .el-icon {
+  font-size: 20px;
+  animation: spin 1s linear infinite;
+}
+
+.refresh-svg {
+  display: block;
+  margin-right: 4px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg);}
+  to { transform: rotate(360deg);}
+}
+
+/* 下拉刷新时的页面效果 */
+body.pulling {
+  transition: transform 0.3s ease;
+}
+
+body.refreshing {
+  transition: transform 0.3s ease;
 }
 </style> 

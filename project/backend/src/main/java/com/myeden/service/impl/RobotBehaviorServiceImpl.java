@@ -509,7 +509,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     
     /**
      * 为指定机器人触发对近三天帖子的评论
-     * 只对机器人没有回复过的帖子进行评论
+     * 优先选择最新的人类文章进行回复
      * 
      * @param robotId 机器人ID
      */
@@ -531,7 +531,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return;
             }
             
-            // 获取近三天的帖子
+            // 获取近三天的帖子，按时间倒序排列（最新的在前）
             LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(1);
             List<Post> recentPosts = postRepository.findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(threeDaysAgo);
             
@@ -540,8 +540,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return;
             }
             
-            // 过滤出机器人没有评论过的帖子
-            List<Post> uncommentedPosts = new ArrayList<>();
+            // 分离人类用户和机器人的帖子
+            List<Post> humanPosts = new ArrayList<>();
+            List<Post> robotPosts = new ArrayList<>();
+            
             for (Post post : recentPosts) {
                 // 跳过机器人自己发布的帖子
                 if (robotId.equals(post.getAuthorId())) {
@@ -551,22 +553,31 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 // 检查机器人是否已经评论过这个帖子
                 boolean hasCommented = commentService.hasRobotCommentedOnPost(robotId, post.getPostId());
                 if (!hasCommented) {
-                    uncommentedPosts.add(post);
+                    // 根据authorType判断是否为人类用户
+                    if ("user".equals(post.getAuthorType())) {
+                        humanPosts.add(post);
+                    } else if ("robot".equals(post.getAuthorType())) {
+                        robotPosts.add(post);
+                    }
                 }
             }
             
-            if (uncommentedPosts.isEmpty()) {
+            // 优先选择人类用户的帖子，如果没有则选择机器人的帖子
+            List<Post> targetPosts = !humanPosts.isEmpty() ? humanPosts : robotPosts;
+            
+            if (targetPosts.isEmpty()) {
                 logger.debug("机器人 {} 已经评论过所有近三天的帖子", robot.getName());
                 return;
             }
             
-            // 随机选择一个未评论的帖子
-            Post selectedPost = uncommentedPosts.get(random.nextInt(uncommentedPosts.size()));
+            // 选择最新的帖子（列表已经按时间倒序排列，所以第一个就是最新的）
+            Post selectedPost = targetPosts.get(0);
             
             // 触发机器人评论
             boolean success = triggerRobotComment(robotId, selectedPost.getPostId());
             if (success) {
-                logger.info("机器人 {} 成功对帖子 {} 触发评论", robot.getName(), selectedPost.getPostId());
+                String postType = humanPosts.contains(selectedPost) ? "人类用户" : "机器人";
+                logger.info("机器人 {} 成功对{}帖子 {} 触发评论", robot.getName(), postType, selectedPost.getPostId());
             } else {
                 logger.debug("机器人 {} 对帖子 {} 触发评论失败", robot.getName(), selectedPost.getPostId());
             }
@@ -578,7 +589,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     
     /**
      * 为指定机器人触发对近三天评论的回复
-     * 只对机器人没有回复过的评论进行回复
+     * 优先回复最新的人类用户评论
      * 
      * @param robotId 机器人ID
      */
@@ -600,7 +611,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return;
             }
             
-            // 获取近三天的评论
+            // 获取近三天的评论，按时间倒序排列（最新的在前）
             LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(1);
             List<Comment> recentComments = commentService.findRecentComments(threeDaysAgo);
             
@@ -609,8 +620,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return;
             }
             
-            // 过滤出机器人没有回复过的评论
-            List<Comment> unrepliedComments = new ArrayList<>();
+            // 分离人类用户和机器人的评论
+            List<Comment> humanComments = new ArrayList<>();
+            List<Comment> robotComments = new ArrayList<>();
+            
             for (Comment comment : recentComments) {
                 // 跳过机器人自己发布的评论
                 if (robotId.equals(comment.getAuthorId())) {
@@ -620,22 +633,31 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 // 检查机器人是否已经回复过这个评论
                 boolean hasReplied = commentService.hasRobotRepliedToComment(robotId, comment.getCommentId());
                 if (!hasReplied) {
-                    unrepliedComments.add(comment);
+                    // 根据authorType判断是否为人类用户
+                    if ("user".equals(comment.getAuthorType())) {
+                        humanComments.add(comment);
+                    } else if ("robot".equals(comment.getAuthorType())) {
+                        robotComments.add(comment);
+                    }
                 }
             }
             
-            if (unrepliedComments.isEmpty()) {
+            // 优先选择人类用户的评论，如果没有则选择机器人的评论
+            List<Comment> targetComments = !humanComments.isEmpty() ? humanComments : robotComments;
+            
+            if (targetComments.isEmpty()) {
                 logger.debug("机器人 {} 已经回复过所有近三天的评论", robot.getName());
                 return;
             }
             
-            // 随机选择一个未回复的评论
-            Comment selectedComment = unrepliedComments.get(random.nextInt(unrepliedComments.size()));
+            // 选择最新的评论（列表已经按时间倒序排列，所以第一个就是最新的）
+            Comment selectedComment = targetComments.get(0);
             
             // 触发机器人回复
             boolean success = triggerRobotReply(robotId, selectedComment.getCommentId());
             if (success) {
-                logger.info("机器人 {} 成功对评论 {} 触发回复", robot.getName(), selectedComment.getCommentId());
+                String commentType = humanComments.contains(selectedComment) ? "人类用户" : "机器人";
+                logger.info("机器人 {} 成功对{}评论 {} 触发回复", robot.getName(), commentType, selectedComment.getCommentId());
             } else {
                 logger.debug("机器人 {} 对评论 {} 触发回复失败", robot.getName(), selectedComment.getCommentId());
             }
@@ -926,5 +948,68 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
      */
     private String generatePostId() {
         return "post_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    
+    /**
+     * 测试方法：验证机器人优先回复人类用户的逻辑
+     * 仅用于开发和测试阶段
+     */
+    public void testHumanPriorityLogic() {
+        logger.info("=== 测试机器人优先回复人类用户逻辑 ===");
+        
+        try {
+            // 获取所有活跃的机器人
+            List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
+            if (activeRobots.isEmpty()) {
+                logger.info("没有找到活跃的机器人");
+                return;
+            }
+            
+            // 获取近三天的帖子
+            LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(1);
+            List<Post> recentPosts = postRepository.findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(threeDaysAgo);
+            
+            logger.info("找到 {} 条近三天的帖子", recentPosts.size());
+            
+            // 统计人类用户和机器人的帖子数量
+            int humanPostCount = 0;
+            int robotPostCount = 0;
+            
+            for (Post post : recentPosts) {
+                if ("user".equals(post.getAuthorType())) {
+                    humanPostCount++;
+                } else if ("robot".equals(post.getAuthorType())) {
+                    robotPostCount++;
+                }
+            }
+            
+            logger.info("人类用户帖子: {} 条", humanPostCount);
+            logger.info("机器人帖子: {} 条", robotPostCount);
+            
+            // 获取近三天的评论
+            List<Comment> recentComments = commentService.findRecentComments(threeDaysAgo);
+            
+            logger.info("找到 {} 条近三天的评论", recentComments.size());
+            
+            // 统计人类用户和机器人的评论数量
+            int humanCommentCount = 0;
+            int robotCommentCount = 0;
+            
+            for (Comment comment : recentComments) {
+                if ("user".equals(comment.getAuthorType())) {
+                    humanCommentCount++;
+                } else if ("robot".equals(comment.getAuthorType())) {
+                    robotCommentCount++;
+                }
+            }
+            
+            logger.info("人类用户评论: {} 条", humanCommentCount);
+            logger.info("机器人评论: {} 条", robotCommentCount);
+            
+            logger.info("=== 测试完成 ===");
+            
+        } catch (Exception e) {
+            logger.error("测试失败: {}", e.getMessage(), e);
+        }
     }
 } 

@@ -402,7 +402,10 @@ const loadRecentPosts = async () => {
 }
 
 const navigateToPost = (postId) => {
-  router.push(`/post/${postId}`)
+  router.push({
+    path: '/moments',
+    query: { postId: postId }
+  })
 }
 
 const getAuthorAvatarUrl = (post) => {

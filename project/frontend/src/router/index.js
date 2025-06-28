@@ -60,15 +60,6 @@ const routes = [
         }
       },
       {
-        path: 'post/:postId',
-        name: 'PostDetail',
-        component: () => import('@/views/PostDetail.vue'),
-        meta: {
-          title: '动态详情 - 我的伊甸园',
-          requiresAuth: true
-        }
-      },
-      {
         path: 'world',
         name: 'World',
         component: () => import('@/views/World.vue'),
