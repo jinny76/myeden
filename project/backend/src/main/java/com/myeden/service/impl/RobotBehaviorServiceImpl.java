@@ -532,7 +532,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             }
             
             // 获取近三天的帖子
-            LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
+            LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(1);
             List<Post> recentPosts = postRepository.findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(threeDaysAgo);
             
             if (recentPosts.isEmpty()) {
@@ -601,7 +601,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             }
             
             // 获取近三天的评论
-            LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
+            LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(1);
             List<Comment> recentComments = commentService.findRecentComments(threeDaysAgo);
             
             if (recentComments.isEmpty()) {
