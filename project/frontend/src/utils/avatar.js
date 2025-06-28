@@ -32,8 +32,9 @@ export const buildAvatarUrl = (avatarUrl) => {
     return `${window.location.origin}${apiAvatarUrl}`
   }
 
-  if (avatarUrl.includes('/avatar')) {
-    return null;
+  if (avatarUrl.includes('/avatars/')) {
+    const apiAvatarUrl = avatarUrl.replace('/avatars/', '/api/v1/files/avatars/')
+    return `${window.location.origin}${apiAvatarUrl}`
   }
   
   // 如果是其他相对路径，添加域名
