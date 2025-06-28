@@ -50,7 +50,7 @@
             >
               <div class="robot-content">
                 <div class="robot-avatar">
-                  <el-avatar :src="robot.avatar" :size="60" />
+                  <el-avatar :src="getRobotAvatarUrl(robot)" :size="60" />
                   <div class="robot-status" :class="{ active: robot.active }">
                     <el-icon v-if="robot.active" class="status-icon">
                       <CircleCheck />
@@ -120,7 +120,7 @@ import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton } from '@element-plus/icons-vue'
-import { getUserAvatarUrl } from '@/utils/avatar'
+import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 
 // 响应式数据
 const router = useRouter()

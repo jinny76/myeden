@@ -31,6 +31,10 @@ export const buildAvatarUrl = (avatarUrl) => {
     const apiAvatarUrl = avatarUrl.replace('/uploads/', '/api/v1/files/')
     return `${window.location.origin}${apiAvatarUrl}`
   }
+
+  if (avatarUrl.includes('/avatar')) {
+    return null;
+  }
   
   // 如果是其他相对路径，添加域名
   if (avatarUrl.startsWith('/')) {

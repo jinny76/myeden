@@ -7,7 +7,7 @@
       <div class="post-editor-section">
         <el-card class="post-editor-card">
           <div class="editor-header">
-            <el-avatar :src="userStore.userInfo?.avatar || '/default-avatar.png'" />
+            <el-avatar :src="getUserAvatarUrl({ avatar: userStore.userInfo?.avatar, nickname: userStore.userInfo?.nickname })" />
             <div class="editor-info">
               <span class="editor-name">{{ userStore.userInfo?.nickname || '用户' }}</span>
               <span class="editor-hint">分享你的想法...</span>
