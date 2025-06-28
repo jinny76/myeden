@@ -14,19 +14,25 @@
           </el-menu>
         </div>
         <div class="user-info">
-          <el-dropdown @command="handleUserCommand">
-            <span class="user-avatar">
-              <el-avatar :src="getUserAvatarUrl(userStore.userInfo)" />
-              <span class="username">{{ userStore.userInfo?.nickname || '用户' }}</span>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile-setup">个人资料</el-dropdown-item>
-                <el-dropdown-item command="settings">设置</el-dropdown-item>
-                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+          <template v-if="isLoggedIn">
+            <el-dropdown @command="handleUserCommand">
+              <span class="user-avatar">
+                <el-avatar :src="getUserAvatarUrl(userStore.userInfo)" />
+                <span class="username">{{ userStore.userInfo?.nickname || '用户' }}</span>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="profile-setup">个人资料</el-dropdown-item>
+                  <el-dropdown-item command="settings">设置</el-dropdown-item>
+                  <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </template>
+          <template v-else>
+            <el-button type="primary" @click="navigateTo('/login')">登录</el-button>
+            <el-button @click="navigateTo('/register')" style="margin-left: 10px;">注册</el-button>
+          </template>
         </div>
       </div>
     </el-header>
@@ -50,7 +56,7 @@
       </div>
 
       <!-- 功能导航区域 -->
-      <div class="feature-section">
+      <div class="feature-section" v-if="isLoggedIn">
         <el-row :gutter="20">
           <el-col :span="8">
             <el-card class="feature-card" @click="navigateTo('/moments')">
@@ -82,19 +88,44 @@
         </el-row>
       </div>
 
+      <!-- 未登录提示 -->
+      <div class="login-prompt" v-else>
+        <el-card class="prompt-card">
+          <div class="prompt-content">
+            <h3>登录后体验更多功能</h3>
+            <p>登录后你可以：</p>
+            <ul>
+              <li>发布和查看动态</li>
+              <li>与AI机器人互动</li>
+              <li>管理个人资料</li>
+              <li>探索虚拟世界</li>
+            </ul>
+            <div class="prompt-actions">
+              <el-button type="primary" size="large" @click="navigateTo('/login')">立即登录</el-button>
+              <el-button size="large" @click="navigateTo('/register')" style="margin-left: 15px;">注册账号</el-button>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
       <!-- 最近动态预览 -->
-      <div class="recent-posts-section">
+      <div class="recent-posts-section" v-if="isLoggedIn">
         <h3>最近动态</h3>
         <div class="posts-preview">
-          <el-card v-for="post in recentPosts" :key="post.postId" class="post-preview-card">
+          <el-card 
+            v-for="post in recentPosts" 
+            :key="post.postId" 
+            class="post-preview-card"
+            @click="navigateToPost(post.postId)"
+          >
             <div class="post-header">
-              <el-avatar :src="post.authorAvatar" />
+              <el-avatar :src="getUserAvatarUrl({ avatar: post.authorAvatar, nickname: post.authorName })" />
               <span class="author-name">{{ post.authorName }}</span>
               <span class="post-time">{{ formatTime(post.createdAt) }}</span>
             </div>
             <div class="post-content">
               <p>{{ post.content }}</p>
-            </div>
+            </div>1
             <div class="post-footer">
               <span class="like-count">❤️ {{ post.likeCount }}</span>
               <span class="comment-count">💬 {{ post.commentCount }}</span>
@@ -107,7 +138,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
@@ -120,7 +151,7 @@ import { getUserAvatarUrl } from '@/utils/avatar'
 const router = useRouter()
 const userStore = useUserStore()
 const momentsStore = useMomentsStore()
-const activeMenu = ref('/')
+const activeMenu = computed(() => router.currentRoute.value.path)
 const recentPosts = ref([])
 
 // 计算属性
@@ -177,7 +208,10 @@ const formatTime = (time) => {
 const loadRecentPosts = async () => {
   try {
     // 调用API获取最近动态
-    const response = await getPostList(1, 5)
+    const response = await getPostList({
+      page: 1,
+      size: 5
+    })
     if (response.code === 200 && response.data) {
       recentPosts.value = response.data.posts.map(post => ({
         postId: post.postId,
@@ -237,13 +271,29 @@ const loadRecentPosts = async () => {
   }
 }
 
+const navigateToPost = (postId) => {
+  // 跳转到朋友圈页面，并传递动态ID参数
+  router.push({ path: '/moments', query: { postId: postId } })
+}
+
 // 生命周期
 onMounted(() => {
-  if (!isLoggedIn.value) {
-    router.push('/login')
-    return
+  // 如果用户已登录，加载最近动态
+  if (isLoggedIn.value) {
+    loadRecentPosts()
   }
-  loadRecentPosts()
+})
+
+// 添加watch监听用户登录状态变化，自动加载数据
+watch(isLoggedIn, (newValue, oldValue) => {
+  if (newValue && !oldValue) {
+    // 用户刚登录，显示欢迎提示
+    ElMessage.success(`欢迎回来，${userStore.userInfo?.nickname || '用户'}！`)
+    loadRecentPosts()
+  } else if (newValue) {
+    // 用户已登录，加载数据
+    loadRecentPosts()
+  }
 })
 </script>
 
@@ -415,6 +465,13 @@ onMounted(() => {
   border: none;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.post-preview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
 }
 
 .post-header {
@@ -456,6 +513,48 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.login-prompt {
+  margin-bottom: 40px;
+}
+
+.prompt-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.prompt-content {
+  padding: 30px;
+}
+
+.prompt-content h3 {
+  color: #333;
+  margin-bottom: 16px;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.prompt-content p {
+  color: #666;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.prompt-content ul {
+  color: #666;
+  line-height: 1.8;
+}
+
+.prompt-content li {
+  margin-bottom: 8px;
+}
+
+.prompt-actions {
+  text-align: right;
 }
 
 @media (max-width: 768px) {
