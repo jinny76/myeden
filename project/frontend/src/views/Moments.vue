@@ -179,7 +179,6 @@
             v-for="post in momentsStore.posts" 
             :key="post.postId" 
             class="post-card"
-            @click="goToPostDetail(post)"
           >
             <div class="post-card-content">
               <!-- 动态头部 -->
@@ -226,32 +225,20 @@
                 </div>
               </div>
               
-              <!-- 动态统计 -->
+              <!-- 动态统计（点赞/评论） -->
               <div class="post-stats">
-                <span class="stat-item">
-                  <el-icon><Star /></el-icon>
-                  {{ post.likeCount }}
+                <span class="stat-item like-stat" @click="toggleLike(post)">
+                  <el-icon :class="{ 'liked': post.isLiked }"><Star /></el-icon>
+                  <span>{{ post.likeCount }}</span>
                 </span>
                 <span class="stat-item">
                   <el-icon><ChatDotRound /></el-icon>
-                  {{ post.commentCount }}
+                  <span>{{ post.commentCount }}</span>
                 </span>
-              </div>
-              
-              <!-- 动态操作 -->
-              <div class="post-actions-bar" @click.stop>
-                <el-button type="text" @click="toggleLike(post)" class="action-button">
-                  <el-icon><Star /></el-icon>
-                  {{ post.isLiked ? '取消点赞' : '点赞' }}
-                </el-button>
-                <el-button type="text" @click="showComments(post)" class="action-button">
-                  <el-icon><ChatDotRound /></el-icon>
-                  评论
-                </el-button>
               </div>
               
               <!-- 评论区域 -->
-              <div v-if="post.showComments" class="comments-section" @click.stop>
+              <div class="comments-section" @click.stop>
                 <!-- 评论列表 -->
                 <div class="comments-list">
                   <div 
@@ -1565,27 +1552,23 @@ const clearSearch = async () => {
 
 .post-actions-bar {
   display: flex;
-  gap: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-direction: row;
+  gap: 8px;
+  justify-content: flex-start;
 }
 
-.action-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--color-text);
-  font-weight: 500;
-  transition: all 0.3s ease;
+.like-button {
+  justify-content: center;
+  padding: 10px 12px;
+  min-width: 0;
 }
 
-.action-button:hover {
-  color: #22d36b;
-  transform: translateY(-1px);
+.like-button .el-icon {
+  font-size: 14px;
 }
 
-.action-button .el-icon {
-  font-size: 16px;
+.like-text {
+  font-size: 0.8rem;
 }
 
 .comments-section {
@@ -1830,6 +1813,16 @@ const clearSearch = async () => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+  /* 隐藏桌面端发布区域 */
+  .post-editor-section {
+    display: none;
+  }
+  
+  /* 显示移动端浮动按钮 */
+  .mobile-fab-container {
+    display: block;
+  }
+  
   .main-content {
     padding: 0 16px;
   }
@@ -1845,10 +1838,6 @@ const clearSearch = async () => {
   
   .page-subtitle {
     font-size: 1rem;
-  }
-  
-  .post-editor-card {
-    padding: 20px;
   }
   
   .search-container {
@@ -1877,12 +1866,24 @@ const clearSearch = async () => {
   }
   
   .post-actions-bar {
-    flex-direction: column;
+    flex-direction: row;
     gap: 8px;
+    justify-content: space-around;
   }
   
-  .action-button {
+  .like-button {
+    flex: 1;
     justify-content: center;
+    padding: 10px 8px;
+    min-width: 0;
+  }
+  
+  .like-button .el-icon {
+    font-size: 14px;
+  }
+  
+  .like-text {
+    font-size: 0.8rem;
   }
 }
 
@@ -1915,6 +1916,23 @@ const clearSearch = async () => {
   
   .post-stats {
     gap: 12px;
+  }
+  
+  .post-actions-bar {
+    gap: 6px;
+  }
+  
+  .like-button {
+    padding: 8px 6px;
+    gap: 4px;
+  }
+  
+  .like-button .el-icon {
+    font-size: 13px;
+  }
+  
+  .like-text {
+    font-size: 0.75rem;
   }
   
   .comment-item {
@@ -2153,12 +2171,43 @@ const clearSearch = async () => {
   }
   
   .post-actions-bar {
-    flex-direction: column;
+    flex-direction: row;
     gap: 8px;
+    justify-content: space-around;
   }
   
-  .action-button {
+  .like-button {
+    flex: 1;
     justify-content: center;
+    padding: 10px 8px;
+    min-width: 0;
   }
+  
+  .like-button .el-icon {
+    font-size: 14px;
+  }
+  
+  .like-text {
+    font-size: 0.8rem;
+  }
+}
+
+.like-stat {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s;
+  user-select: none;
+}
+.like-stat:hover .el-icon,
+.like-stat:active .el-icon {
+  color: #22d36b;
+  transform: scale(1.1);
+}
+.like-stat .el-icon.liked {
+  color: #22d36b;
+  transform: scale(1.1);
+  transition: all 0.2s;
 }
 </style> 
