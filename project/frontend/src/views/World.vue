@@ -3,16 +3,21 @@
     <!-- 顶部导航栏 -->
     <el-header class="header">
       <div class="header-content">
+        <!-- Logo区域 -->
         <div class="logo">
           <h1>虚拟世界</h1>
         </div>
-        <div class="nav-menu">
+        
+        <!-- 桌面端导航菜单 -->
+        <div class="nav-menu desktop-menu">
           <el-menu mode="horizontal" :router="true" :default-active="activeMenu">
             <el-menu-item index="/">首页</el-menu-item>
             <el-menu-item index="/moments">朋友圈</el-menu-item>
             <el-menu-item index="/world">虚拟世界</el-menu-item>
           </el-menu>
         </div>
+        
+        <!-- 用户信息区域 -->
         <div class="user-info">
           <el-dropdown @command="handleUserCommand">
             <span class="user-avatar">
@@ -27,6 +32,41 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
+        </div>
+        
+        <!-- 移动端菜单按钮 -->
+        <div class="mobile-menu-toggle" @click="toggleMobileMenu">
+          <el-icon size="24">
+            <Menu v-if="!isMobileMenuOpen" />
+            <Close v-else />
+          </el-icon>
+        </div>
+      </div>
+      
+      <!-- 移动端导航菜单 -->
+      <div class="mobile-menu" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
+        <div class="mobile-menu-content">
+          <div class="mobile-nav-item" @click="navigateTo('/')">
+            <el-icon><House /></el-icon>
+            <span>首页</span>
+          </div>
+          <div class="mobile-nav-item" @click="navigateTo('/moments')">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>朋友圈</span>
+          </div>
+          <div class="mobile-nav-item" @click="navigateTo('/world')">
+            <el-icon><Compass /></el-icon>
+            <span>虚拟世界</span>
+          </div>
+          <div class="mobile-nav-divider"></div>
+          <div class="mobile-nav-item" @click="navigateTo('/profile-setup')">
+            <el-icon><User /></el-icon>
+            <span>个人资料</span>
+          </div>
+          <div class="mobile-nav-item" @click="handleLogout">
+            <el-icon><SwitchButton /></el-icon>
+            <span>退出登录</span>
+          </div>
         </div>
       </div>
     </el-header>
@@ -145,12 +185,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { CircleCheck, CircleClose, Refresh } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton } from '@element-plus/icons-vue'
 import { getUserAvatarUrl } from '@/utils/avatar'
 
 // 响应式数据
@@ -158,6 +198,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const worldStore = useWorldStore()
 const activeMenu = ref('/world')
+const isMobileMenuOpen = ref(false)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -230,7 +271,33 @@ onMounted(async () => {
     console.error('初始化世界数据失败:', error)
     ElMessage.error('加载世界数据失败')
   }
+  
+  // 添加点击外部关闭移动端菜单的监听
+  document.addEventListener('click', handleClickOutside)
 })
+
+// 组件卸载时移除事件监听
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+// 点击外部区域关闭移动端菜单
+const handleClickOutside = (event) => {
+  const header = document.querySelector('.header')
+  if (header && !header.contains(event.target) && isMobileMenuOpen.value) {
+    isMobileMenuOpen.value = false
+  }
+}
+
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
+const navigateTo = (path) => {
+  router.push(path)
+  // 移动端导航后关闭菜单
+  isMobileMenuOpen.value = false
+}
 </script>
 
 <style scoped>
@@ -295,6 +362,79 @@ onMounted(async () => {
   margin-left: 8px;
   color: #333;
   font-weight: 500;
+}
+
+.mobile-menu-toggle {
+  display: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.3s;
+  color: #333;
+}
+
+.mobile-menu-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.mobile-menu {
+  display: none;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 999;
+}
+
+.mobile-menu-open {
+  display: block;
+}
+
+.mobile-menu-content {
+  padding: 16px 20px;
+}
+
+.mobile-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.3s;
+  color: #333;
+  font-weight: 500;
+}
+
+.mobile-nav-item:hover {
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.mobile-nav-item:active {
+  background-color: rgba(102, 126, 234, 0.2);
+}
+
+.mobile-nav-item .el-icon {
+  margin-right: 12px;
+  font-size: 18px;
+  color: #667eea;
+}
+
+.mobile-nav-item span {
+  font-size: 16px;
+}
+
+.mobile-nav-divider {
+  height: 1px;
+  background-color: rgba(0, 0, 0, 0.1);
+  margin: 12px 0;
+}
+
+.desktop-menu {
+  display: block;
 }
 
 .main-content {
@@ -512,16 +652,32 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .header-content {
-    padding: 0 10px;
+    padding: 0 16px;
+    height: 56px;
   }
   
   .logo h1 {
     font-size: 20px;
   }
   
+  .desktop-menu {
+    display: none;
+  }
+  
+  .user-info {
+    display: none;
+  }
+  
+  .mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
   .main-content {
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-top: 76px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
   
   .robots-grid {
@@ -543,6 +699,100 @@ onMounted(async () => {
   
   .robot-avatar {
     margin-bottom: 12px;
+  }
+  
+  .robot-info h4 {
+    font-size: 16px;
+  }
+  
+  .robot-intro {
+    font-size: 13px;
+  }
+  
+  .robot-tags {
+    justify-content: center;
+  }
+  
+  .stats-content {
+    padding: 16px;
+  }
+  
+  .stat-number {
+    font-size: 24px;
+  }
+  
+  .stat-label {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    padding: 0 12px;
+    height: 52px;
+  }
+  
+  .logo h1 {
+    font-size: 18px;
+  }
+  
+  .main-content {
+    padding-top: 72px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  
+  .mobile-menu-content {
+    padding: 12px 16px;
+  }
+  
+  .mobile-nav-item {
+    padding: 10px 0;
+  }
+  
+  .mobile-nav-item span {
+    font-size: 15px;
+  }
+  
+  .world-header h2 {
+    font-size: 22px;
+  }
+  
+  .world-description {
+    font-size: 14px;
+  }
+  
+  .section-header h3 {
+    font-size: 18px;
+  }
+  
+  .section-header p {
+    font-size: 13px;
+  }
+  
+  .robot-info h4 {
+    font-size: 15px;
+  }
+  
+  .robot-intro {
+    font-size: 12px;
+  }
+  
+  .robot-tags {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  
+  .stats-content {
+    padding: 12px;
+  }
+  
+  .stat-number {
+    font-size: 20px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
   }
 }
 </style> 

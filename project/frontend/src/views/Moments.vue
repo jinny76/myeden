@@ -3,20 +3,25 @@
     <!-- 顶部导航栏 -->
     <el-header class="header">
       <div class="header-content">
+        <!-- Logo区域 -->
         <div class="logo">
           <h1>朋友圈</h1>
         </div>
-        <div class="nav-menu">
+        
+        <!-- 桌面端导航菜单 -->
+        <div class="nav-menu desktop-menu">
           <el-menu mode="horizontal" :router="true" :default-active="activeMenu">
             <el-menu-item index="/">首页</el-menu-item>
             <el-menu-item index="/moments">朋友圈</el-menu-item>
             <el-menu-item index="/world">虚拟世界</el-menu-item>
           </el-menu>
         </div>
+        
+        <!-- 用户信息区域 -->
         <div class="user-info">
           <el-dropdown @command="handleUserCommand">
             <span class="user-avatar">
-              <el-avatar :src="userStore.userInfo?.avatar || '/default-avatar.png'" />
+              <el-avatar :src="getUserAvatarUrl(userStore.userInfo)" />
               <span class="username">{{ userStore.userInfo?.nickname || '用户' }}</span>
             </span>
             <template #dropdown>
@@ -27,6 +32,41 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
+        </div>
+        
+        <!-- 移动端菜单按钮 -->
+        <div class="mobile-menu-toggle" @click="toggleMobileMenu">
+          <el-icon size="24">
+            <Menu v-if="!isMobileMenuOpen" />
+            <Close v-else />
+          </el-icon>
+        </div>
+      </div>
+      
+      <!-- 移动端导航菜单 -->
+      <div class="mobile-menu" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
+        <div class="mobile-menu-content">
+          <div class="mobile-nav-item" @click="navigateTo('/')">
+            <el-icon><House /></el-icon>
+            <span>首页</span>
+          </div>
+          <div class="mobile-nav-item" @click="navigateTo('/moments')">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>朋友圈</span>
+          </div>
+          <div class="mobile-nav-item" @click="navigateTo('/world')">
+            <el-icon><Compass /></el-icon>
+            <span>虚拟世界</span>
+          </div>
+          <div class="mobile-nav-divider"></div>
+          <div class="mobile-nav-item" @click="navigateTo('/profile-setup')">
+            <el-icon><User /></el-icon>
+            <span>个人资料</span>
+          </div>
+          <div class="mobile-nav-item" @click="handleLogout">
+            <el-icon><SwitchButton /></el-icon>
+            <span>退出登录</span>
+          </div>
         </div>
       </div>
     </el-header>
@@ -310,7 +350,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ChatDotRound, MoreFilled, Close, Loading } from '@element-plus/icons-vue'
+import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
 import { createPost } from '@/api/post'
@@ -323,6 +363,7 @@ const momentsStore = useMomentsStore()
 const activeMenu = ref('/moments')
 const filterType = ref('')
 const publishing = ref(false)
+const isMobileMenuOpen = ref(false)
 
 // 新动态数据
 const newPost = ref({
@@ -760,6 +801,16 @@ const buildImageUrl = (imageUrl) => {
   return imageUrl
 }
 
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
+const navigateTo = (path) => {
+  router.push(path)
+  // 移动端导航后关闭菜单
+  isMobileMenuOpen.value = false
+}
+
 // 生命周期
 onMounted(async () => {
   try {
@@ -769,8 +820,12 @@ onMounted(async () => {
   } catch (error) {
     ElMessage.error('加载动态列表失败')
   }
+  
+  // 添加点击外部关闭移动端菜单的监听
+  document.addEventListener('click', handleClickOutside)
 })
 
+// 组件卸载时移除事件监听
 onUnmounted(() => {
   // 清理创建的URL对象，避免内存泄漏
   if (newPost.value.images && newPost.value.images.length > 0) {
@@ -780,7 +835,17 @@ onUnmounted(() => {
       }
     })
   }
+  
+  document.removeEventListener('click', handleClickOutside)
 })
+
+// 点击外部区域关闭移动端菜单
+const handleClickOutside = (event) => {
+  const header = document.querySelector('.header')
+  if (header && !header.contains(event.target) && isMobileMenuOpen.value) {
+    isMobileMenuOpen.value = false
+  }
+}
 
 /**
  * 加载所有动态的评论和回复
@@ -1174,5 +1239,232 @@ const loadAllCommentsAndReplies = async () => {
 
 .loading-replies .el-icon {
   font-size: 14px;
+}
+
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.mobile-menu-open {
+  transform: translateX(0);
+}
+
+.mobile-menu-content {
+  background-color: #fff;
+  padding: 20px;
+  width: 80%;
+  max-width: 400px;
+  border-radius: 8px;
+}
+
+.mobile-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.mobile-nav-item:hover {
+  background-color: #f0f0f0;
+}
+
+.mobile-nav-divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 10px 0;
+}
+
+.mobile-menu-toggle {
+  display: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.3s;
+  color: #333;
+}
+
+.mobile-menu-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.desktop-menu {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .header-content {
+    padding: 0 16px;
+    height: 56px;
+  }
+  
+  .logo h1 {
+    font-size: 20px;
+  }
+  
+  .desktop-menu {
+    display: none;
+  }
+  
+  .user-info {
+    display: none;
+  }
+  
+  .mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .main-content {
+    padding-top: 76px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  
+  .post-editor-card {
+    margin-bottom: 16px;
+  }
+  
+  .editor-header {
+    margin-bottom: 12px;
+  }
+  
+  .editor-content {
+    gap: 12px;
+  }
+  
+  .post-card {
+    margin-bottom: 12px;
+  }
+  
+  .post-header {
+    margin-bottom: 8px;
+  }
+  
+  .post-content p {
+    font-size: 14px;
+  }
+  
+  .post-stats {
+    font-size: 12px;
+  }
+  
+  .post-actions-bar {
+    gap: 12px;
+  }
+  
+  .comment-item {
+    padding: 8px;
+  }
+  
+  .comment-author {
+    font-size: 13px;
+  }
+  
+  .comment-time {
+    font-size: 11px;
+  }
+  
+  .comment-content p {
+    font-size: 13px;
+  }
+  
+  .reply-item {
+    padding: 6px 8px;
+  }
+  
+  .reply-author {
+    font-size: 12px;
+  }
+  
+  .reply-time {
+    font-size: 10px;
+  }
+  
+  .reply-content p {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    padding: 0 12px;
+    height: 52px;
+  }
+  
+  .logo h1 {
+    font-size: 18px;
+  }
+  
+  .main-content {
+    padding-top: 72px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  
+  .mobile-menu-content {
+    padding: 16px;
+    width: 90%;
+  }
+  
+  .mobile-nav-item {
+    padding: 8px 0;
+  }
+  
+  .mobile-nav-item span {
+    font-size: 15px;
+  }
+  
+  .post-editor-card {
+    margin-bottom: 12px;
+  }
+  
+  .editor-content {
+    gap: 8px;
+  }
+  
+  .post-card {
+    margin-bottom: 8px;
+  }
+  
+  .post-content p {
+    font-size: 13px;
+  }
+  
+  .post-stats {
+    font-size: 11px;
+    gap: 12px;
+  }
+  
+  .post-actions-bar {
+    gap: 8px;
+  }
+  
+  .comment-item {
+    padding: 6px;
+  }
+  
+  .comment-content p {
+    font-size: 12px;
+  }
+  
+  .reply-item {
+    padding: 4px 6px;
+  }
+  
+  .reply-content p {
+    font-size: 11px;
+  }
 }
 </style> 

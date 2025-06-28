@@ -3,16 +3,21 @@
     <!-- 顶部导航栏 -->
     <el-header class="header">
       <div class="header-content">
+        <!-- Logo区域 -->
         <div class="logo">
           <h1>我的伊甸园</h1>
         </div>
-        <div class="nav-menu">
+        
+        <!-- 桌面端导航菜单 -->
+        <div class="nav-menu desktop-menu">
           <el-menu mode="horizontal" :router="true" :default-active="activeMenu">
             <el-menu-item index="/">首页</el-menu-item>
             <el-menu-item index="/moments">朋友圈</el-menu-item>
             <el-menu-item index="/world">虚拟世界</el-menu-item>
           </el-menu>
         </div>
+        
+        <!-- 用户信息区域 -->
         <div class="user-info">
           <template v-if="isLoggedIn">
             <el-dropdown @command="handleUserCommand">
@@ -30,8 +35,57 @@
             </el-dropdown>
           </template>
           <template v-else>
-            <el-button type="primary" @click="navigateTo('/login')">登录</el-button>
-            <el-button @click="navigateTo('/register')" style="margin-left: 10px;">注册</el-button>
+            <div class="auth-buttons">
+              <el-button type="primary" size="small" @click="navigateTo('/login')">登录</el-button>
+              <el-button size="small" @click="navigateTo('/register')">注册</el-button>
+            </div>
+          </template>
+        </div>
+        
+        <!-- 移动端菜单按钮 -->
+        <div class="mobile-menu-toggle" @click="toggleMobileMenu">
+          <el-icon size="24">
+            <Menu v-if="!isMobileMenuOpen" />
+            <Close v-else />
+          </el-icon>
+        </div>
+      </div>
+      
+      <!-- 移动端导航菜单 -->
+      <div class="mobile-menu" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
+        <div class="mobile-menu-content">
+          <div class="mobile-nav-item" @click="navigateTo('/')">
+            <el-icon><House /></el-icon>
+            <span>首页</span>
+          </div>
+          <div class="mobile-nav-item" @click="navigateTo('/moments')">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>朋友圈</span>
+          </div>
+          <div class="mobile-nav-item" @click="navigateTo('/world')">
+            <el-icon><Compass /></el-icon>
+            <span>虚拟世界</span>
+          </div>
+          <div class="mobile-nav-divider"></div>
+          <template v-if="isLoggedIn">
+            <div class="mobile-nav-item" @click="navigateTo('/profile-setup')">
+              <el-icon><User /></el-icon>
+              <span>个人资料</span>
+            </div>
+            <div class="mobile-nav-item" @click="handleLogout">
+              <el-icon><SwitchButton /></el-icon>
+              <span>退出登录</span>
+            </div>
+          </template>
+          <template v-else>
+            <div class="mobile-nav-item" @click="navigateTo('/login')">
+              <el-icon><UserFilled /></el-icon>
+              <span>登录</span>
+            </div>
+            <div class="mobile-nav-item" @click="navigateTo('/register')">
+              <el-icon><UserFilled /></el-icon>
+              <span>注册</span>
+            </div>
           </template>
         </div>
       </div>
@@ -58,7 +112,7 @@
       <!-- 功能导航区域 -->
       <div class="feature-section" v-if="isLoggedIn">
         <el-row :gutter="20">
-          <el-col :span="8">
+          <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
             <el-card class="feature-card" @click="navigateTo('/moments')">
               <div class="feature-icon">
                 <el-icon size="40"><ChatDotRound /></el-icon>
@@ -67,7 +121,7 @@
               <p>查看和发布动态，与朋友和AI机器人互动</p>
             </el-card>
           </el-col>
-          <el-col :span="8">
+          <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
             <el-card class="feature-card" @click="navigateTo('/world')">
               <div class="feature-icon">
                 <el-icon size="40"><Compass /></el-icon>
@@ -76,7 +130,7 @@
               <p>探索虚拟世界，了解AI机器人的设定和背景</p>
             </el-card>
           </el-col>
-          <el-col :span="8">
+          <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
             <el-card class="feature-card" @click="navigateTo('/profile-setup')">
               <div class="feature-icon">
                 <el-icon size="40"><User /></el-icon>
@@ -128,7 +182,7 @@
             </div>
             <div class="post-content">
               <p>{{ post.content }}</p>
-            </div>1
+            </div>
             <div class="post-footer">
               <span class="like-count">❤️ {{ post.likeCount }}</span>
               <span class="comment-count">💬 {{ post.commentCount }}</span>
@@ -141,12 +195,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChatDotRound, Compass, User } from '@element-plus/icons-vue'
+import { ChatDotRound, Compass, User, Menu, Close, House, SwitchButton, UserFilled } from '@element-plus/icons-vue'
 import { getPostList } from '@/api/post'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 
@@ -156,6 +210,7 @@ const userStore = useUserStore()
 const momentsStore = useMomentsStore()
 const activeMenu = computed(() => router.currentRoute.value.path)
 const recentPosts = ref([])
+const isMobileMenuOpen = ref(false)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -163,6 +218,8 @@ const isLoggedIn = computed(() => userStore.isLoggedIn)
 // 方法
 const navigateTo = (path) => {
   router.push(path)
+  // 移动端导航后关闭菜单
+  isMobileMenuOpen.value = false
 }
 
 const handleUserCommand = async (command) => {
@@ -190,6 +247,8 @@ const handleLogout = async () => {
     await userStore.logout()
     ElMessage.success('退出登录成功')
     router.push('/login')
+    // 移动端退出后关闭菜单
+    isMobileMenuOpen.value = false
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('退出登录失败')
@@ -322,13 +381,33 @@ const handleAuthorAvatarError = (event, post) => {
   }
 }
 
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
 // 生命周期
 onMounted(() => {
   // 如果用户已登录，加载最近动态
   if (isLoggedIn.value) {
     loadRecentPosts()
   }
+  
+  // 添加点击外部关闭移动端菜单的监听
+  document.addEventListener('click', handleClickOutside)
 })
+
+// 组件卸载时移除事件监听
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+// 点击外部区域关闭移动端菜单
+const handleClickOutside = (event) => {
+  const header = document.querySelector('.header')
+  if (header && !header.contains(event.target) && isMobileMenuOpen.value) {
+    isMobileMenuOpen.value = false
+  }
+}
 
 // 添加watch监听用户登录状态变化，自动加载数据
 watch(isLoggedIn, (newValue, oldValue) => {
@@ -358,16 +437,20 @@ watch(isLoggedIn, (newValue, oldValue) => {
   left: 0;
   right: 0;
   z-index: 1000;
+  padding: 0;
+  height: auto;
+  min-height: 60px;
 }
 
 .header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 100%;
+  height: 60px;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
+  position: relative;
 }
 
 .logo h1 {
@@ -375,12 +458,17 @@ watch(isLoggedIn, (newValue, oldValue) => {
   color: #333;
   font-size: 24px;
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .nav-menu {
   flex: 1;
   display: flex;
   justify-content: center;
+}
+
+.desktop-menu {
+  display: block;
 }
 
 .user-info {
@@ -405,6 +493,82 @@ watch(isLoggedIn, (newValue, oldValue) => {
   margin-left: 8px;
   color: #333;
   font-weight: 500;
+  white-space: nowrap;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mobile-menu-toggle {
+  display: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.3s;
+  color: #333;
+}
+
+.mobile-menu-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.mobile-menu {
+  display: none;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 999;
+}
+
+.mobile-menu-open {
+  display: block;
+}
+
+.mobile-menu-content {
+  padding: 16px 20px;
+}
+
+.mobile-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.3s;
+  color: #333;
+  font-weight: 500;
+}
+
+.mobile-nav-item:hover {
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.mobile-nav-item:active {
+  background-color: rgba(102, 126, 234, 0.2);
+}
+
+.mobile-nav-item .el-icon {
+  margin-right: 12px;
+  font-size: 18px;
+  color: #667eea;
+}
+
+.mobile-nav-item span {
+  font-size: 16px;
+}
+
+.mobile-nav-divider {
+  height: 1px;
+  background-color: rgba(0, 0, 0, 0.1);
+  margin: 12px 0;
 }
 
 .main-content {
@@ -603,22 +767,198 @@ watch(isLoggedIn, (newValue, oldValue) => {
   text-align: right;
 }
 
+.prompt-actions .el-button {
+  margin: 0 8px;
+}
+
 @media (max-width: 768px) {
   .header-content {
-    padding: 0 10px;
+    padding: 0 16px;
+    height: 56px;
   }
   
   .logo h1 {
     font-size: 20px;
   }
   
+  .desktop-menu {
+    display: none;
+  }
+  
+  .user-info {
+    display: none;
+  }
+  
+  .mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
   .main-content {
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-top: 76px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
   
   .posts-preview {
     grid-template-columns: 1fr;
+  }
+  
+  .feature-section .el-col {
+    margin-bottom: 16px;
+  }
+  
+  .welcome-content h2 {
+    font-size: 24px;
+  }
+  
+  .welcome-content p {
+    font-size: 14px;
+  }
+  
+  .feature-card {
+    padding: 20px 16px;
+  }
+  
+  .feature-card h3 {
+    font-size: 18px;
+  }
+  
+  .feature-card p {
+    font-size: 14px;
+  }
+  
+  .prompt-content {
+    padding: 20px;
+  }
+  
+  .prompt-content h3 {
+    font-size: 20px;
+  }
+  
+  .prompt-actions {
+    text-align: center;
+  }
+  
+  .prompt-actions .el-button {
+    margin: 0 8px;
+  }
+  
+  .recent-posts-section h3 {
+    font-size: 20px;
+  }
+  
+  .post-preview-card {
+    margin-bottom: 16px;
+  }
+  
+  .post-header {
+    flex-wrap: wrap;
+  }
+  
+  .post-time {
+    font-size: 11px;
+  }
+  
+  .post-content p {
+    font-size: 14px;
+  }
+  
+  .post-footer {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    padding: 0 12px;
+    height: 52px;
+  }
+  
+  .logo h1 {
+    font-size: 18px;
+  }
+  
+  .main-content {
+    padding-top: 72px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  
+  .mobile-menu-content {
+    padding: 12px 16px;
+  }
+  
+  .mobile-nav-item {
+    padding: 10px 0;
+  }
+  
+  .mobile-nav-item span {
+    font-size: 15px;
+  }
+  
+  .welcome-content h2 {
+    font-size: 22px;
+  }
+  
+  .welcome-content p {
+    font-size: 13px;
+  }
+  
+  .feature-card {
+    padding: 16px 12px;
+  }
+  
+  .feature-card h3 {
+    font-size: 16px;
+  }
+  
+  .feature-card p {
+    font-size: 13px;
+  }
+  
+  .prompt-content {
+    padding: 16px;
+  }
+  
+  .prompt-content h3 {
+    font-size: 18px;
+  }
+  
+  .prompt-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .prompt-actions .el-button {
+    margin: 0;
+    width: 100%;
+  }
+  
+  .recent-posts-section h3 {
+    font-size: 18px;
+  }
+  
+  .post-preview-card {
+    padding: 12px;
+  }
+  
+  .post-header {
+    margin-bottom: 8px;
+  }
+  
+  .post-content {
+    margin-bottom: 8px;
+  }
+  
+  .post-content p {
+    font-size: 13px;
+  }
+  
+  .post-footer {
+    font-size: 11px;
+    gap: 12px;
   }
 }
 </style> 
