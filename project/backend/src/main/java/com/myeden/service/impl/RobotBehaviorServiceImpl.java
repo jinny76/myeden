@@ -1,7 +1,9 @@
 package com.myeden.service.impl;
 
 import com.myeden.entity.Robot;
+import com.myeden.entity.Post;
 import com.myeden.repository.RobotRepository;
+import com.myeden.repository.PostRepository;
 import com.myeden.service.DifyService;
 import com.myeden.service.PostService;
 import com.myeden.service.CommentService;
@@ -12,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Async;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -21,6 +24,8 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.UUID;
 
 /**
  * 机器人行为管理服务实现类
@@ -36,6 +41,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     
     @Autowired
     private RobotRepository robotRepository;
+    
+    @Autowired
+    private PostRepository postRepository;
     
     @Autowired
     private DifyService difyService;
@@ -131,9 +139,23 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             String context = buildPostContext();
             String content = difyService.generatePostContent(robot, context);
             
-            // 发布动态
-            PostService.PostResult postResult = postService.createPost(robotId, "robot", content, null);
-            if (postResult != null) {
+            // 直接创建动态实体，避免调用postService.createPost
+            Post post = new Post();
+            post.setPostId(generatePostId());
+            post.setAuthorId(robotId);
+            post.setAuthorType("robot");
+            post.setContent(content);
+            post.setImages(new ArrayList<>());
+            post.setLikeCount(0);
+            post.setCommentCount(0);
+            post.setIsDeleted(false);
+            post.setCreatedAt(LocalDateTime.now());
+            post.setUpdatedAt(LocalDateTime.now());
+            
+            // 保存到数据库
+            Post savedPost = postRepository.save(post);
+            
+            if (savedPost != null) {
                 stats.incrementPost();
                 logger.info("机器人成功发布动态: {}, 内容: {}", robotId, content);
                 
@@ -144,7 +166,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     actionData.put("robotName", robot.getName());
                     actionData.put("actionType", "post");
                     actionData.put("actionContent", content);
-                    actionData.put("postId", postResult.getPostId());
+                    actionData.put("postId", savedPost.getPostId());
                     actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
                     
                     webSocketService.pushRobotAction(actionData);
@@ -475,5 +497,99 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         } catch (Exception e) {
             logger.error("刷新机器人在线状态失败: {}", e.getMessage(), e);
         }
+    }
+    
+    /**
+     * 触发所有在线机器人对指定动态进行评论
+     * 当有新动态发布时，自动触发所有符合条件的机器人进行AI评论
+     * 
+     * @param postId 动态ID
+     * @param postContent 动态内容（用于日志记录）
+     * @return 成功触发的机器人数量
+     */
+    @Async("aiTaskExecutor")
+    public void triggerAllRobotsComment(String postId, String postContent) {
+        try {
+            logger.info("开始触发所有在线机器人评论，动态ID: {}, 内容: {}", postId, 
+                       postContent != null ? postContent.substring(0, Math.min(postContent.length(), 50)) + "..." : "无内容");
+            
+            // 获取所有激活的机器人
+            List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
+            if (activeRobots.isEmpty()) {
+                logger.info("没有找到激活的机器人");
+                return;
+            }
+            
+            int triggeredCount = 0;
+            int totalRobots = activeRobots.size();
+            List<String> triggeredRobots = new ArrayList<>();
+            List<String> skippedRobots = new ArrayList<>();
+            
+            for (Robot robot : activeRobots) {
+                try {
+                    // 检查机器人是否在活跃时间段
+                    if (!isRobotActive(robot)) {
+                        logger.debug("机器人 {} 不在活跃时间段，跳过", robot.getName());
+                        skippedRobots.add(robot.getName() + "(非活跃时间)");
+                        continue;
+                    }
+                    
+                    // 检查今日评论数量限制
+                    RobotDailyStats stats = getDailyStats(robot.getRobotId());
+                    if (stats.getCommentCount() >= 20) { // 每日最多20条评论
+                        logger.debug("机器人 {} 今日评论数量已达上限，跳过", robot.getName());
+                        skippedRobots.add(robot.getName() + "(评论上限)");
+                        continue;
+                    }
+                    
+                    // 计算触发概率
+                    double probability = calculateBehaviorProbability(robot, "comment", "对动态发表评论");
+                    if (random.nextDouble() > probability) {
+                        logger.debug("机器人 {} 评论概率未触发，概率: {}", robot.getName(), probability);
+                        skippedRobots.add(robot.getName() + "(概率未命中)");
+                        continue;
+                    }
+                    
+                    // 触发机器人评论
+                    boolean success = triggerRobotComment(robot.getRobotId(), postId);
+                    if (success) {
+                        triggeredCount++;
+                        triggeredRobots.add(robot.getName());
+                        logger.info("机器人 {} 成功触发评论", robot.getName());
+                    } else {
+                        skippedRobots.add(robot.getName() + "(触发失败)");
+                        logger.debug("机器人 {} 触发评论失败", robot.getName());
+                    }
+                    
+                    // 添加随机延迟，避免机器人同时评论
+                    Thread.sleep(random.nextInt(3000) + 1000); // 1-4秒随机延迟
+                    
+                } catch (Exception e) {
+                    logger.error("触发机器人 {} 评论失败: {}", robot.getName(), e.getMessage());
+                    skippedRobots.add(robot.getName() + "(异常:" + e.getMessage() + ")");
+                }
+            }
+            
+            // 记录详细的触发结果
+            logger.info("AI机器人评论触发完成，动态ID: {}, 总机器人: {}, 成功触发: {}", 
+                      postId, totalRobots, triggeredCount);
+            logger.info("成功触发的机器人: {}", String.join(", ", triggeredRobots));
+            if (!skippedRobots.isEmpty()) {
+                logger.info("跳过的机器人: {}", String.join(", ", skippedRobots));
+            }
+            
+            return;
+            
+        } catch (Exception e) {
+            logger.error("触发所有机器人评论失败: {}", e.getMessage(), e);
+            return;
+        }
+    }
+    
+    /**
+     * 生成动态ID
+     */
+    private String generatePostId() {
+        return "post_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
 } 

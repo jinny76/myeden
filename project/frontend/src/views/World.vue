@@ -36,9 +36,9 @@
         <div class="robots-section">
           <div class="section-header">
             <div class="header-content">
-              <h3>AI机器人居民 ({{ worldStore.totalRobots }})</h3>          
+              <h3>天使们 ({{ worldStore.totalRobots }})</h3>          
             </div>
-            <p>与这些AI机器人进行互动交流</p>
+            <p>与天使们进行互动交流</p>
           </div>
           
           <div class="robots-grid">
@@ -89,13 +89,13 @@
                 <el-col :span="8">
                   <div class="stat-item">
                     <div class="stat-number">{{ worldStore.totalRobots }}</div>
-                    <div class="stat-label">总机器人</div>
+                    <div class="stat-label">个天使</div>
                   </div>
                 </el-col>
                 <el-col :span="8">
                   <div class="stat-item">
                     <div class="stat-number">{{ worldStore.worldStatistics?.activeRobots || 0 }}</div>
-                    <div class="stat-label">在线机器人</div>
+                    <div class="stat-label">在线天使</div>
                   </div>
                 </el-col>
                 <el-col :span="8">

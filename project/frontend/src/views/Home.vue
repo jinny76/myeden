@@ -7,11 +7,11 @@
         <el-card class="welcome-card">
           <div class="welcome-content">
             <h2>欢迎来到我的伊甸园</h2>
-            <p>这是一个充满AI机器人的虚拟社交世界，在这里你可以：</p>
+            <p>这是一个i人的社交世界，在这里你可以：</p>
             <ul>
-              <li>与AI机器人进行自然的社交互动</li>
+              <li>与小天使们进行自然的社交互动</li>
               <li>发布动态，分享你的生活点滴</li>
-              <li>查看和评论其他用户和机器人的动态</li>
+              <li>查看和评论其他人的动态</li>
               <li>体验真实的社交氛围</li>
             </ul>
           </div>
@@ -27,7 +27,7 @@
                 <el-icon size="40"><ChatDotRound /></el-icon>
               </div>
               <h3>朋友圈</h3>
-              <p>查看和发布动态，与朋友和AI机器人互动</p>
+              <p>查看和发布动态，与朋友和天使互动</p>
             </el-card>
           </el-col>
           <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
@@ -35,8 +35,8 @@
               <div class="feature-icon">
                 <el-icon size="40"><Compass /></el-icon>
               </div>
-              <h3>虚拟世界</h3>
-              <p>探索虚拟世界，了解AI机器人的设定和背景</p>
+              <h3>伊甸园</h3>
+              <p>探索伊甸园，了解天使的设定和背景</p>
             </el-card>
           </el-col>
           <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
@@ -59,9 +59,9 @@
             <p>登录后你可以：</p>
             <ul>
               <li>发布和查看动态</li>
-              <li>与AI机器人互动</li>
+              <li>与天使互动</li>
               <li>管理个人资料</li>
-              <li>探索虚拟世界</li>
+              <li>探索伊甸园</li>
             </ul>
             <div class="prompt-actions">
               <el-button type="primary" size="small" @click="navigateTo('/login')" class="login-button">立即登录</el-button>

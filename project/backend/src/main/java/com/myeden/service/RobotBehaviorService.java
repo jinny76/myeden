@@ -78,6 +78,18 @@ public interface RobotBehaviorService {
     void resetRobotDailyStats(String robotId);
     
     /**
+     * 重置所有机器人每日统计
+     * 定时任务调用的方法
+     */
+    void resetDailyStats();
+    
+    /**
+     * 定时触发机器人行为
+     * 每分钟执行一次，随机触发机器人发布动态或评论
+     */
+    void scheduledRobotBehavior();
+    
+    /**
      * 启动机器人行为调度
      * 启动定时任务，定期触发机器人行为
      */
@@ -88,6 +100,16 @@ public interface RobotBehaviorService {
      * 停止定时任务
      */
     void stopBehaviorScheduler();
+    
+    /**
+     * 触发所有在线机器人对指定动态进行评论
+     * 当有新动态发布时，自动触发所有符合条件的机器人进行AI评论
+     * 
+     * @param postId 动态ID
+     * @param postContent 动态内容（用于日志记录）
+     * @return 成功触发的机器人数量
+     */
+    void triggerAllRobotsComment(String postId, String postContent);
     
     /**
      * 刷新机器人在线状态

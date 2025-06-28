@@ -3,11 +3,19 @@ package com.myeden.controller;
 import com.myeden.entity.Robot;
 import com.myeden.service.RobotBehaviorService;
 import com.myeden.service.WorldService;
+import com.myeden.service.PostService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 
 /**
  * 机器人行为管理控制器
@@ -20,11 +28,16 @@ import java.util.List;
 @RequestMapping("/api/v1/robots")
 public class RobotController {
     
+    private static final Logger logger = LoggerFactory.getLogger(RobotController.class);
+    
     @Autowired
     private RobotBehaviorService robotBehaviorService;
     
     @Autowired
     private WorldService worldService;
+    
+    @Autowired
+    private PostService postService;
     
     /**
      * 获取机器人列表
@@ -194,6 +207,44 @@ public class RobotController {
             return ResponseEntity.ok(EventResponse.success(null, "刷新机器人在线状态成功"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(EventResponse.error("刷新机器人在线状态失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 手动触发所有在线机器人对指定动态进行评论
+     * 
+     * @param postId 动态ID
+     * @return 触发结果
+     */
+    @PostMapping("/trigger-comment/{postId}")
+    public ResponseEntity<Map<String, Object>> triggerRobotComment(@PathVariable String postId) {
+        try {
+            logger.info("手动触发机器人评论，动态ID: {}", postId);
+            
+            // 验证动态是否存在
+            PostService.PostDetail postDetail = postService.getPostDetail(postId);
+            if (postDetail == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "动态不存在"));
+            }
+            
+            // 触发所有机器人评论
+            robotBehaviorService.triggerAllRobotsComment(postId, postDetail.getContent());
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "成功触发机器人进行评论");
+            result.put("postId", postId);
+            result.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            
+            logger.info("手动触发机器人评论完成，动态ID: {}", postId);
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            logger.error("手动触发机器人评论失败: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "message", "触发失败: " + e.getMessage()));
         }
     }
 } 

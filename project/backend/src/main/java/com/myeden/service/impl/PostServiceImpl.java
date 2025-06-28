@@ -11,13 +11,16 @@ import com.myeden.repository.PostLikeRepository;
 import com.myeden.service.PostService;
 import com.myeden.service.FileService;
 import com.myeden.service.WebSocketService;
+import com.myeden.service.RobotBehaviorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,6 +40,7 @@ import java.util.stream.Collectors;
  * - 支持分页查询和排序
  * - 集成WebSocket实时消息推送
  * - 完善点赞功能，防止重复点赞
+ * - 自动触发AI机器人评论功能
  * 
  * @author MyEden Team
  * @version 1.0.0
@@ -64,6 +68,9 @@ public class PostServiceImpl implements PostService {
     
     @Autowired
     private WebSocketService webSocketService;
+    
+    @Autowired
+    private ApplicationContext applicationContext;
     
     @Override
     public PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images) {
@@ -153,6 +160,9 @@ public class PostServiceImpl implements PostService {
             } catch (Exception e) {
                 logger.warn("WebSocket消息推送失败", e);
             }
+            
+            // 触发AI机器人评论（异步执行，避免阻塞主流程）
+            triggerRobotCommentsAsync(savedPost.getPostId(), content);
             
             return new PostResult(
                 savedPost.getPostId(),
@@ -479,5 +489,30 @@ public class PostServiceImpl implements PostService {
      */
     private String generatePostLikeId() {
         return "post_like_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    
+    /**
+     * 异步触发所有在线机器人对新动态进行评论
+     * 使用Spring的@Async注解，由AI任务执行器处理
+     * 
+     * @param postId 动态ID
+     * @param postContent 动态内容
+     */
+    @Async("aiTaskExecutor")
+    public void triggerRobotCommentsAsync(String postId, String postContent) {
+        try {
+            logger.info("开始触发AI机器人评论，动态ID: {}", postId);
+            
+            // 通过ApplicationContext获取RobotBehaviorService实例，避免循环依赖
+            RobotBehaviorService robotBehaviorService = applicationContext.getBean(RobotBehaviorService.class);
+            
+            // 调用RobotBehaviorService的批量触发方法
+            robotBehaviorService.triggerAllRobotsComment(postId, postContent);
+            
+            logger.info("AI机器人评论触发完成，动态ID: {}", postId);
+            
+        } catch (Exception e) {
+            logger.error("异步触发AI机器人评论失败: {}", e.getMessage(), e);
+        }
     }
 } 

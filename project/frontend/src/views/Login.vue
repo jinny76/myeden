@@ -3,7 +3,7 @@
     <div class="login-card">
       <div class="login-header">
         <h2>欢迎回来</h2>
-        <p>登录你的伊甸园账户</p>
+        <p>登录你的伊甸园</p>
       </div>
       
       <el-form

@@ -58,6 +58,8 @@ public class DifyServiceImpl implements DifyService {
             
             String prompt = buildPostPrompt(robot, context);
             DifyRequest request = new DifyRequest(inputs, prompt);
+            request.setUser(robot.getName());
+            request.setResponseMode("blocking");
             
             return callDifyApi(request, "生成动态内容");
         } catch (Exception e) {
@@ -77,6 +79,8 @@ public class DifyServiceImpl implements DifyService {
             
             String prompt = buildCommentPrompt(robot, postContent, context);
             DifyRequest request = new DifyRequest(inputs, prompt);
+            request.setUser(robot.getName());
+            request.setResponseMode("blocking");
             
             return callDifyApi(request, "生成评论内容");
         } catch (Exception e) {
@@ -96,6 +100,8 @@ public class DifyServiceImpl implements DifyService {
             
             String prompt = buildReplyPrompt(robot, commentContent, context);
             DifyRequest request = new DifyRequest(inputs, prompt);
+            request.setUser(robot.getName());
+            request.setResponseMode("blocking");
             
             return callDifyApi(request, "生成回复内容");
         } catch (Exception e) {
@@ -114,6 +120,8 @@ public class DifyServiceImpl implements DifyService {
             
             String prompt = buildInnerThoughtsPrompt(robot, situation);
             DifyRequest request = new DifyRequest(inputs, prompt);
+            request.setUser(robot.getName());
+            request.setResponseMode("blocking");
             
             return callDifyApi(request, "生成内心活动");
         } catch (Exception e) {
@@ -173,9 +181,9 @@ public class DifyServiceImpl implements DifyService {
             
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 DifyResponse difyResponse = response.getBody();
-                if ("success".equals(difyResponse.getCode()) && difyResponse.getData() != null) {
+                if ("message".equals(difyResponse.getEvent()) && difyResponse.getAnswer() != null) {
                     successCalls.incrementAndGet();
-                    return difyResponse.getData().getText();
+                    return difyResponse.getAnswer();
                 }
             }
             
@@ -197,7 +205,7 @@ public class DifyServiceImpl implements DifyService {
     // 构建提示词的方法
     private String buildPostPrompt(Robot robot, String context) {
         return String.format(
-            "你是%s，一个%s的AI机器人。请根据你的性格特点，生成一条符合当前情境的动态内容。" +
+            "你是%s，一个%s的伊甸园居民。请根据你的性格特点，生成一条符合当前情境的动态内容。" +
             "要求：1. 内容要积极正面；2. 符合你的性格特征；3. 长度在50-200字之间；4. 可以适当使用表情符号。" +
             "当前情境：%s",
             robot.getName(), robot.getPersonality(), context
@@ -206,7 +214,7 @@ public class DifyServiceImpl implements DifyService {
     
     private String buildCommentPrompt(Robot robot, String postContent, String context) {
         return String.format(
-            "你是%s，一个%s的AI机器人。请对以下动态内容发表评论：" +
+            "你是%s，一个%s的伊甸园居民。请对以下动态内容发表评论：" +
             "动态内容：%s" +
             "要求：1. 评论要积极正面；2. 符合你的性格特征；3. 长度在20-100字之间；4. 可以适当使用表情符号。",
             robot.getName(), robot.getPersonality(), postContent
@@ -215,7 +223,7 @@ public class DifyServiceImpl implements DifyService {
     
     private String buildReplyPrompt(Robot robot, String commentContent, String context) {
         return String.format(
-            "你是%s，一个%s的AI机器人。请对以下评论进行回复：" +
+            "你是%s，一个%s的伊甸园居民。请对以下评论进行回复：" +
             "评论内容：%s" +
             "要求：1. 回复要积极正面；2. 符合你的性格特征；3. 长度在20-100字之间；4. 可以适当使用表情符号。",
             robot.getName(), robot.getPersonality(), commentContent
@@ -224,7 +232,7 @@ public class DifyServiceImpl implements DifyService {
     
     private String buildInnerThoughtsPrompt(Robot robot, String situation) {
         return String.format(
-            "你是%s，一个%s的AI机器人。请根据当前情况，生成你的内心独白：" +
+            "你是%s，一个%s的伊甸园居民。请根据当前情况，生成你的内心独白：" +
             "当前情况：%s" +
             "要求：1. 内心独白要真实自然；2. 符合你的性格特征；3. 长度在30-150字之间。",
             robot.getName(), robot.getPersonality(), situation

@@ -3,7 +3,7 @@
     <div class="register-card">
       <div class="register-header">
         <h2>欢迎来到我的伊甸园</h2>
-        <p>创建一个新账户开始你的虚拟社交之旅</p>
+        <p>创建一个新账户开始你的伊甸园之旅</p>
       </div>
       
       <el-form

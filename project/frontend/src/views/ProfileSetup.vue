@@ -55,7 +55,7 @@
           />
         </el-form-item>
         
-        <el-form-item label="个性签名" prop="bio">
+        <el-form-item label="介绍你自己给天使们" prop="bio">
           <el-input
             v-model="formData.bio"
             type="textarea"
