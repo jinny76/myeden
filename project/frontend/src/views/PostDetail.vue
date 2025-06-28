@@ -77,19 +77,14 @@
           
           <!-- 动态统计 -->
           <div class="post-stats">
-            <span class="like-count">❤️ {{ post.likeCount }}</span>
-            <span class="comment-count">💬 {{ post.commentCount }}</span>
-          </div>
-          
-          <!-- 动态操作 -->
-          <div class="post-actions-bar">
-            <el-button type="text" @click="toggleLike(post)">
-              {{ post.isLiked ? '❤️ 取消点赞' : '🤍 点赞' }}
-            </el-button>
-            <el-button type="text" @click="scrollToComments">
-              <el-icon><ChatDotRound /></el-icon>
-              评论 ({{ post.commentCount }})
-            </el-button>
+            <span class="stat-item like-stat" @click="toggleLike(post)">
+              <el-icon :class="{ 'liked': post.isLiked }"><Star /></el-icon>
+              <span>{{ post.likeCount }}</span>
+            </span>
+            <span class="stat-item">
+              <el-icon><Message /></el-icon>
+              <span>{{ post.commentCount }}</span>
+            </span>
           </div>
         </el-card>
 
@@ -123,7 +118,8 @@
               <div class="comment-actions">
                 <span class="action-link" @click="showReplyInput(comment)">回复</span>
                 <span class="action-link" @click="toggleCommentLike(comment)">
-                  ❤️ {{ comment.likeCount }}
+                  <el-icon :class="{ 'liked': comment.isLiked }"><Star /></el-icon>
+                  {{ comment.likeCount }}
                 </span>
               </div>
               
@@ -166,7 +162,8 @@
                     </div>
                     <div class="reply-actions">
                       <span class="action-link" @click="toggleCommentLike(reply)">
-                        ❤️ {{ reply.likeCount }}
+                        <el-icon :class="{ 'liked': reply.isLiked }"><Star /></el-icon>
+                        {{ reply.likeCount }}
                       </span>
                     </div>
                   </div>
@@ -231,7 +228,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, ChatDotRound, MoreFilled, Loading } from '@element-plus/icons-vue'
+import { ArrowLeft, ChatDotRound, MoreFilled, Loading, Message, Star } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getPostDetail } from '@/api/post'
 import { getCommentList, createComment, replyComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
@@ -376,8 +373,12 @@ const toggleLike = async (post) => {
   try {
     if (post.isLiked) {
       await momentsStore.unlikePostAction(post.postId)
+      post.likeCount--
+      post.isLiked = false
     } else {
       await momentsStore.likePostAction(post.postId)
+      post.likeCount++
+      post.isLiked = true
     }
   } catch (error) {
     ElMessage.error('操作失败')
@@ -669,6 +670,41 @@ onMounted(() => {
   font-size: 14px;
 }
 
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.stat-item .el-icon {
+  font-size: 16px;
+  color: #22d36b;
+}
+
+.like-stat {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s;
+  user-select: none;
+}
+
+.like-stat:hover .el-icon,
+.like-stat:active .el-icon {
+  color: #22d36b;
+  transform: scale(1.1);
+}
+
+.like-stat .el-icon.liked {
+  color: #22d36b;
+  transform: scale(1.1);
+  transition: all 0.2s;
+}
+
 .post-actions-bar {
   display: flex;
   gap: 16px;
@@ -748,6 +784,17 @@ onMounted(() => {
 
 .action-link:hover {
   text-decoration: underline;
+}
+
+.action-link .el-icon {
+  font-size: 14px;
+  color: #22d36b;
+  transition: all 0.2s;
+}
+
+.action-link .el-icon.liked {
+  color: #22d36b;
+  transform: scale(1.1);
 }
 
 .reply-input {
