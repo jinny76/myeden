@@ -49,10 +49,11 @@
               v-model="newPost.content"
               type="textarea"
               :rows="3"
-              placeholder="分享你的想法..."
+              placeholder="分享你的想法... (Ctrl+Enter 发送)"
               :maxlength="500"
               show-word-limit
               resize="none"
+              @keydown.ctrl.enter="publishPost"
             />
             
             <!-- 图片选择 -->
@@ -205,6 +206,7 @@
                       placeholder="回复评论..."
                       :maxlength="200"
                       show-word-limit
+                      @keyup.enter="submitReply(comment)"
                     >
                       <template #append>
                         <el-button @click="submitReply(comment)">回复</el-button>
@@ -275,6 +277,7 @@
                   placeholder="写下你的评论..."
                   :maxlength="200"
                   show-word-limit
+                  @keyup.enter="submitComment(post)"
                 >
                   <template #append>
                     <el-button @click="submitComment(post)">发送</el-button>
@@ -415,14 +418,31 @@ const publishPost = async () => {
     const response = await createPost(formData)
     
     if (response.code === 200) {
-      // 将新动态添加到列表开头
+      // 将新动态添加到列表开头，确保数据结构一致
       const newPostData = response.data
-      newPostData.showComments = true // 设置评论区域为展开状态
-      momentsStore.posts.unshift(newPostData)
+      
+      // 构造与列表API一致的数据结构
+      const postData = {
+        postId: newPostData.postId,
+        authorId: userStore.userInfo?.userId,
+        authorType: 'user',
+        authorName: userStore.userInfo?.nickname,
+        authorAvatar: userStore.userInfo?.avatar,
+        content: newPostData.content,
+        images: newPostData.imageUrls || [], // 使用imageUrls字段
+        likeCount: 0,
+        commentCount: 0,
+        isLiked: false,
+        createdAt: newPostData.createdAt,
+        updatedAt: newPostData.createdAt,
+        showComments: true // 设置评论区域为展开状态
+      }
+      
+      momentsStore.posts.unshift(postData)
       
       // 为新发布的动态加载评论和回复
-      await momentsStore.loadComments(newPostData.postId, {}, true)
-      await loadAllReplies(newPostData.postId)
+      await momentsStore.loadComments(postData.postId, {}, true)
+      await loadAllReplies(postData.postId)
       
       // 清空表单
       newPost.value.content = ''
@@ -562,12 +582,20 @@ const submitComment = async (post) => {
     return
   }
   
+  // 防止重复提交
+  if (post.submittingComment) {
+    return
+  }
+  
   try {
+    post.submittingComment = true
     await momentsStore.publishComment(post.postId, { content: post.newComment })
     post.newComment = ''
     ElMessage.success('评论发表成功')
   } catch (error) {
     ElMessage.error('评论发表失败')
+  } finally {
+    post.submittingComment = false
   }
 }
 
@@ -592,7 +620,13 @@ const submitReply = async (comment) => {
     return
   }
   
+  // 防止重复提交
+  if (comment.submittingReply) {
+    return
+  }
+  
   try {
+    comment.submittingReply = true
     await momentsStore.replyCommentAction(comment.commentId, { content: comment.replyContent })
     comment.showReplyInput = false
     
@@ -605,6 +639,8 @@ const submitReply = async (comment) => {
     ElMessage.success('回复发表成功')
   } catch (error) {
     ElMessage.error('回复发表失败')
+  } finally {
+    comment.submittingReply = false
   }
 }
 
