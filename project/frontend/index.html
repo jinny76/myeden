@@ -13,59 +13,206 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
   <!-- 主题色 -->
-  <meta name="theme-color" content="#409EFF" />
+  <meta name="theme-color" content="#22d36b" />
   
   <title>我的伊甸园 - 虚拟社交世界</title>
   
   <style>
-    /* 加载动画 */
+    /* 加载动画容器 */
     .loading-container {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
       display: flex;
       justify-content: center;
       align-items: center;
       z-index: 9999;
+      font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
     }
     
+    /* 加载内容区域 */
+    .loading-content {
+      text-align: center;
+      max-width: 400px;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* 应用Logo */
+    .app-logo {
+      font-size: 32px;
+      font-weight: bold;
+      color: #22d36b;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px rgba(34, 211, 107, 0.5);
+      animation: logoGlow 2s ease-in-out infinite alternate;
+    }
+    
+    @keyframes logoGlow {
+      from { text-shadow: 0 0 20px rgba(34, 211, 107, 0.5); }
+      to { text-shadow: 0 0 30px rgba(34, 211, 107, 0.8); }
+    }
+    
+    /* 高级加载动画 */
     .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
+      position: relative;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 30px;
+    }
+    
+    .spinner-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
       border-radius: 50%;
-      border-top-color: #fff;
-      animation: spin 1s ease-in-out infinite;
+      border: 3px solid transparent;
+      border-top-color: #22d36b;
+      animation: spin 1.5s linear infinite;
+    }
+    
+    .spinner-ring:nth-child(2) {
+      width: 70%;
+      height: 70%;
+      top: 15%;
+      left: 15%;
+      border-top-color: #4ade80;
+      animation-duration: 1.2s;
+      animation-direction: reverse;
+    }
+    
+    .spinner-ring:nth-child(3) {
+      width: 40%;
+      height: 40%;
+      top: 30%;
+      left: 30%;
+      border-top-color: #86efac;
+      animation-duration: 0.8s;
     }
     
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
     
+    /* 加载文字 */
     .loading-text {
-      color: white;
-      font-size: 18px;
-      margin-top: 20px;
-      font-family: 'Microsoft YaHei', sans-serif;
+      color: #f5f5f5;
+      font-size: 16px;
+      margin-bottom: 20px;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+    
+    /* 进度条容器 */
+    .progress-container {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+    
+    /* 进度条 */
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #22d36b, #4ade80, #86efac);
+      border-radius: 2px;
+      width: 0%;
+      animation: progress 3s ease-in-out infinite;
+      box-shadow: 0 0 10px rgba(34, 211, 107, 0.5);
+    }
+    
+    @keyframes progress {
+      0% { width: 0%; }
+      50% { width: 70%; }
+      100% { width: 100%; }
+    }
+    
+    /* 加载状态文字 */
+    .loading-status {
+      color: #a0a0a0;
+      font-size: 12px;
+      opacity: 0.8;
     }
     
     /* 隐藏加载动画 */
     .loading-hidden {
       opacity: 0;
-      transition: opacity 0.5s ease;
+      transform: scale(0.95);
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
       pointer-events: none;
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .loading-content {
+        padding: 30px 20px;
+        margin: 0 20px;
+      }
+      
+      .app-logo {
+        font-size: 28px;
+      }
+      
+      .loading-spinner {
+        width: 60px;
+        height: 60px;
+      }
+      
+      .loading-text {
+        font-size: 14px;
+      }
+    }
+    
+    /* 深色主题适配 */
+    @media (prefers-color-scheme: light) {
+      .loading-container {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%);
+      }
+      
+      .loading-content {
+        background: rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      
+      .loading-text {
+        color: #374151;
+      }
+      
+      .loading-status {
+        color: #6b7280;
+      }
+      
+      .progress-container {
+        background: rgba(0, 0, 0, 0.1);
+      }
     }
   </style>
 </head>
 <body>
   <!-- 加载动画 -->
   <div id="loading" class="loading-container">
-    <div style="text-align: center;">
-      <div class="loading-spinner"></div>
+    <div class="loading-content">
+      <div class="app-logo">🌍 我的伊甸园</div>
+      <div class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+      </div>
       <div class="loading-text">正在进入伊甸园...</div>
+      <div class="progress-container">
+        <div class="progress-bar"></div>
+      </div>
+      <div class="loading-status">初始化中，请稍候</div>
     </div>
   </div>
   
@@ -84,10 +231,27 @@
           loading.classList.add('loading-hidden');
           setTimeout(function() {
             loading.style.display = 'none';
-          }, 500);
+          }, 600);
         }
-      }, 1000);
+      }, 1500);
     });
+    
+    // 动态更新加载状态
+    let statusIndex = 0;
+    const statusMessages = [
+      '初始化中，请稍候',
+      '加载用户数据...',
+      '连接实时服务...',
+      '准备就绪...'
+    ];
+    
+    const statusElement = document.querySelector('.loading-status');
+    if (statusElement) {
+      setInterval(() => {
+        statusElement.textContent = statusMessages[statusIndex];
+        statusIndex = (statusIndex + 1) % statusMessages.length;
+      }, 800);
+    }
   </script>
 </body>
 </html> 
