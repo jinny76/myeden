@@ -22,7 +22,7 @@ import request from '@/utils/request'
  */
 export function register(data) {
   return request({
-    url: '/api/v1/users/register',
+    url: '/users/register',
     method: 'post',
     data
   })
