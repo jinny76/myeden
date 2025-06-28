@@ -1,15 +1,5 @@
 <template>
-  <div id="app" class="app-container">
-    <!-- 路由视图 -->
-    <router-view v-slot="{ Component, route }">
-      <transition name="fade" mode="out-in">
-        <component :is="Component" :key="route.path" />
-      </transition>
-    </router-view>
-    
-    <!-- 全局消息提示 -->
-    <el-backtop :right="40" :bottom="40" />
-  </div>
+  <router-view />
 </template>
 
 <script setup>

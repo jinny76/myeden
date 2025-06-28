@@ -1,76 +1,6 @@
 <template>
+  <AppHeader />
   <div class="moments-container">
-    <!-- 顶部导航栏 -->
-    <el-header class="header">
-      <div class="header-content">
-        <!-- Logo区域 -->
-        <div class="logo">
-          <h1>朋友圈</h1>
-        </div>
-        
-        <!-- 桌面端导航菜单 -->
-        <div class="nav-menu desktop-menu">
-          <el-menu mode="horizontal" :router="true" :default-active="activeMenu">
-            <el-menu-item index="/">首页</el-menu-item>
-            <el-menu-item index="/moments">朋友圈</el-menu-item>
-            <el-menu-item index="/world">虚拟世界</el-menu-item>
-          </el-menu>
-        </div>
-        
-        <!-- 用户信息区域 -->
-        <div class="user-info">
-          <el-dropdown @command="handleUserCommand">
-            <span class="user-avatar">
-              <el-avatar :src="getUserAvatarUrl(userStore.userInfo)" />
-              <span class="username">{{ userStore.userInfo?.nickname || '用户' }}</span>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile-setup">个人资料</el-dropdown-item>
-                <el-dropdown-item command="settings">设置</el-dropdown-item>
-                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-        
-        <!-- 移动端菜单按钮 -->
-        <div class="mobile-menu-toggle" @click="toggleMobileMenu">
-          <el-icon size="24">
-            <Menu v-if="!isMobileMenuOpen" />
-            <Close v-else />
-          </el-icon>
-        </div>
-      </div>
-      
-      <!-- 移动端导航菜单 -->
-      <div class="mobile-menu" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
-        <div class="mobile-menu-content">
-          <div class="mobile-nav-item" @click="navigateTo('/')">
-            <el-icon><House /></el-icon>
-            <span>首页</span>
-          </div>
-          <div class="mobile-nav-item" @click="navigateTo('/moments')">
-            <el-icon><ChatDotRound /></el-icon>
-            <span>朋友圈</span>
-          </div>
-          <div class="mobile-nav-item" @click="navigateTo('/world')">
-            <el-icon><Compass /></el-icon>
-            <span>虚拟世界</span>
-          </div>
-          <div class="mobile-nav-divider"></div>
-          <div class="mobile-nav-item" @click="navigateTo('/profile-setup')">
-            <el-icon><User /></el-icon>
-            <span>个人资料</span>
-          </div>
-          <div class="mobile-nav-item" @click="handleLogout">
-            <el-icon><SwitchButton /></el-icon>
-            <span>退出登录</span>
-          </div>
-        </div>
-      </div>
-    </el-header>
-
     <!-- 主要内容区域 -->
     <div class="main-content">
       <!-- 动态发布区域 -->
@@ -912,6 +842,7 @@ const loadAllCommentsAndReplies = async () => {
   max-width: 800px;
   margin: 20px auto;
   padding: 0 20px;
+  background: var(--color-bg);
 }
 
 .post-editor-section {
@@ -920,6 +851,8 @@ const loadAllCommentsAndReplies = async () => {
 
 .post-editor-card {
   border-radius: 12px;
+  background: var(--color-card);
+  color: var(--color-text);
 }
 
 .editor-header {
@@ -934,12 +867,12 @@ const loadAllCommentsAndReplies = async () => {
 
 .editor-name {
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
   display: block;
 }
 
 .editor-hint {
-  color: #999;
+  color: var(--color-text);
   font-size: 14px;
 }
 
@@ -967,12 +900,14 @@ const loadAllCommentsAndReplies = async () => {
 
 .section-header h3 {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
 }
 
 .post-card {
   margin-bottom: 16px;
   border-radius: 12px;
+  background: var(--color-card);
+  color: var(--color-text);
 }
 
 .post-header {
@@ -993,12 +928,12 @@ const loadAllCommentsAndReplies = async () => {
 
 .author-name {
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
   display: block;
 }
 
 .post-time {
-  color: #999;
+  color: var(--color-text);
   font-size: 12px;
 }
 
@@ -1009,7 +944,7 @@ const loadAllCommentsAndReplies = async () => {
 .post-content p {
   margin: 0 0 12px 0;
   line-height: 1.6;
-  color: #333;
+  color: var(--color-text);
 }
 
 .post-images {
@@ -1059,7 +994,7 @@ const loadAllCommentsAndReplies = async () => {
   display: flex;
   gap: 16px;
   margin-bottom: 8px;
-  color: #666;
+  color: var(--color-text);
   font-size: 14px;
 }
 
@@ -1067,13 +1002,13 @@ const loadAllCommentsAndReplies = async () => {
   display: flex;
   gap: 16px;
   padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border);
 }
 
 .comments-section {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border);
 }
 
 .comments-list {
@@ -1083,7 +1018,7 @@ const loadAllCommentsAndReplies = async () => {
 .comment-item {
   margin-bottom: 12px;
   padding: 12px;
-  background-color: #f8f9fa;
+  background: var(--color-card);
   border-radius: 8px;
 }
 
@@ -1099,19 +1034,19 @@ const loadAllCommentsAndReplies = async () => {
 
 .comment-author {
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
   font-size: 14px;
 }
 
 .comment-time {
-  color: #999;
+  color: var(--color-text);
   font-size: 12px;
   margin-left: 8px;
 }
 
 .comment-content p {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
   line-height: 1.5;
 }
 
@@ -1122,7 +1057,7 @@ const loadAllCommentsAndReplies = async () => {
 }
 
 .action-link {
-  color: #409eff;
+  color: var(--color-primary);
   cursor: pointer;
   font-size: 12px;
 }
@@ -1145,14 +1080,14 @@ const loadAllCommentsAndReplies = async () => {
 }
 
 .no-more {
-  color: #999;
+  color: var(--color-text);
   font-size: 14px;
 }
 
 .replies-section {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border);
 }
 
 .replies-list {
@@ -1162,9 +1097,9 @@ const loadAllCommentsAndReplies = async () => {
 .reply-item {
   margin-bottom: 8px;
   padding: 8px 12px;
-  background-color: #f8f9fa;
+  background: var(--color-card);
   border-radius: 6px;
-  border-left: 3px solid #e9ecef;
+  border-left: 3px solid var(--color-border);
 }
 
 .reply-header {
@@ -1181,12 +1116,12 @@ const loadAllCommentsAndReplies = async () => {
 
 .reply-author {
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
   font-size: 13px;
 }
 
 .reply-time {
-  color: #999;
+  color: var(--color-text);
   font-size: 11px;
   margin-left: 8px;
 }
@@ -1197,7 +1132,7 @@ const loadAllCommentsAndReplies = async () => {
 
 .reply-content p {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
   line-height: 1.4;
   font-size: 13px;
 }
@@ -1222,14 +1157,14 @@ const loadAllCommentsAndReplies = async () => {
 }
 
 .no-more-text {
-  color: #999;
+  color: var(--color-text);
   font-size: 12px;
 }
 
 .loading-replies {
   text-align: center;
   margin-top: 8px;
-  color: #999;
+  color: var(--color-text);
   font-size: 12px;
   display: flex;
   align-items: center;

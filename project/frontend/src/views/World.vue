@@ -1,76 +1,5 @@
 <template>
-  <div class="world-container">
-    <!-- 顶部导航栏 -->
-    <el-header class="header">
-      <div class="header-content">
-        <!-- Logo区域 -->
-        <div class="logo">
-          <h1>虚拟世界</h1>
-        </div>
-        
-        <!-- 桌面端导航菜单 -->
-        <div class="nav-menu desktop-menu">
-          <el-menu mode="horizontal" :router="true" :default-active="activeMenu">
-            <el-menu-item index="/">首页</el-menu-item>
-            <el-menu-item index="/moments">朋友圈</el-menu-item>
-            <el-menu-item index="/world">虚拟世界</el-menu-item>
-          </el-menu>
-        </div>
-        
-        <!-- 用户信息区域 -->
-        <div class="user-info">
-          <el-dropdown @command="handleUserCommand">
-            <span class="user-avatar">
-              <el-avatar :src="getUserAvatarUrl(userStore.userInfo)" />
-              <span class="username">{{ userStore.userInfo?.nickname || '用户' }}</span>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile-setup">个人资料</el-dropdown-item>
-                <el-dropdown-item command="settings">设置</el-dropdown-item>
-                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-        
-        <!-- 移动端菜单按钮 -->
-        <div class="mobile-menu-toggle" @click="toggleMobileMenu">
-          <el-icon size="24">
-            <Menu v-if="!isMobileMenuOpen" />
-            <Close v-else />
-          </el-icon>
-        </div>
-      </div>
-      
-      <!-- 移动端导航菜单 -->
-      <div class="mobile-menu" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
-        <div class="mobile-menu-content">
-          <div class="mobile-nav-item" @click="navigateTo('/')">
-            <el-icon><House /></el-icon>
-            <span>首页</span>
-          </div>
-          <div class="mobile-nav-item" @click="navigateTo('/moments')">
-            <el-icon><ChatDotRound /></el-icon>
-            <span>朋友圈</span>
-          </div>
-          <div class="mobile-nav-item" @click="navigateTo('/world')">
-            <el-icon><Compass /></el-icon>
-            <span>虚拟世界</span>
-          </div>
-          <div class="mobile-nav-divider"></div>
-          <div class="mobile-nav-item" @click="navigateTo('/profile-setup')">
-            <el-icon><User /></el-icon>
-            <span>个人资料</span>
-          </div>
-          <div class="mobile-nav-item" @click="handleLogout">
-            <el-icon><SwitchButton /></el-icon>
-            <span>退出登录</span>
-          </div>
-        </div>
-      </div>
-    </el-header>
-
+  <div class="world-container">  
     <!-- 主要内容区域 -->
     <div class="main-content">
       <!-- 加载状态 -->
@@ -547,23 +476,34 @@ const navigateTo = (path) => {
   position: absolute;
   bottom: -2px;
   right: -2px;
-  background: var(--color-error);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: 10px;
-  border: 2px solid white;
+  background: #ff4d4f; /* 默认离线为亮红色 */
+  color: #fff;
+  padding: 2px 10px 2px 6px;
+  border-radius: 10px;
+  font-size: 12px;
+  border: 2.5px solid var(--color-bg);
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  font-weight: 600;
+  z-index: 2;
+  transition: background 0.2s, border 0.2s;
 }
-
 .robot-status.active {
-  background: var(--color-success);
+  background: #22d36b; /* 在线为明亮绿色 */
 }
-
+[data-theme='dark'] .robot-status {
+  border: 2.5px solid #232425; /* 暗色主题下用深色边框 */
+  color: #fff;
+  background: #ff4d4f;
+}
+[data-theme='dark'] .robot-status.active {
+  background: #22d36b;
+}
 .status-icon {
-  font-size: 8px;
+  font-size: 12px;
+  filter: drop-shadow(0 0 2px #0008);
 }
 
 .status-tag {

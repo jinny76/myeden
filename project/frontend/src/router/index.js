@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import MainLayout from '@/layouts/MainLayout.vue'
 
 /**
  * 路由配置
@@ -17,15 +18,6 @@ import { ElMessage } from 'element-plus'
 
 // 路由配置
 const routes = [
-  {
-    path: '/',
-    name: 'Home',
-    component: () => import('@/views/Home.vue'),
-    meta: {
-      title: '首页 - 我的伊甸园',
-      requiresAuth: false
-    }
-  },
   {
     path: '/login',
     name: 'Login',
@@ -45,31 +37,46 @@ const routes = [
     }
   },
   {
-    path: '/profile-setup',
-    name: 'ProfileSetup',
-    component: () => import('@/views/ProfileSetup.vue'),
-    meta: {
-      title: '完善资料 - 我的伊甸园',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/world',
-    name: 'World',
-    component: () => import('@/views/World.vue'),
-    meta: {
-      title: '虚拟世界 - 我的伊甸园',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/moments',
-    name: 'Moments',
-    component: () => import('@/views/Moments.vue'),
-    meta: {
-      title: '朋友圈 - 我的伊甸园',
-      requiresAuth: true
-    }
+    path: '/',
+    component: MainLayout,
+    children: [
+      {
+        path: '',
+        name: 'Home',
+        component: () => import('@/views/Home.vue'),
+        meta: {
+          title: '首页 - 我的伊甸园',
+          requiresAuth: false
+        }
+      },
+      {
+        path: 'moments',
+        name: 'Moments',
+        component: () => import('@/views/Moments.vue'),
+        meta: {
+          title: '朋友圈 - 我的伊甸园',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'world',
+        name: 'World',
+        component: () => import('@/views/World.vue'),
+        meta: {
+          title: '虚拟世界 - 我的伊甸园',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'profile-setup',
+        name: 'ProfileSetup',
+        component: () => import('@/views/ProfileSetup.vue'),
+        meta: {
+          title: '完善资料 - 我的伊甸园',
+          requiresAuth: true
+        }
+      }
+    ]
   }
 ]
 

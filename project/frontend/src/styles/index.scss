@@ -344,4 +344,206 @@ a, .el-button--primary, .el-tag--success {
   color: #fff !important;
   background: var(--color-primary) !important;
   border-color: var(--color-primary) !important;
+}
+
+// 强制覆盖 Element Plus 组件的背景/边框/文本色，适配主题
+:root, [data-theme='dark'] {
+  // 输入框、文本域无边框
+  .el-input__wrapper,
+  .el-textarea__inner {
+    background: #202123 !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--color-text) !important;
+    transition: box-shadow 0.2s;
+  }
+  // 焦点时用主色阴影提示
+  .el-input__wrapper.is-focus,
+  .el-textarea__inner:focus {
+    box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.18) !important;
+    border: none !important;
+  }
+  // 文件上传卡片
+  .el-upload,
+  .el-upload-list__item,
+  .el-upload-dragger {
+    background: var(--color-card) !important;
+    color: var(--color-text) !important;
+    border-color: var(--color-border) !important;
+  }
+  // 菜单、下拉菜单
+  .el-menu,
+  .el-menu-item,
+  .el-sub-menu__title,
+  .el-dropdown-menu,
+  .el-dropdown-menu__item {
+    background: var(--color-card) !important;
+    color: var(--color-text) !important;
+    border-color: var(--color-border) !important;
+  }
+  .el-menu-item.is-active,
+  .el-dropdown-menu__item.is-active {
+    background: var(--color-primary) !important;
+    color: #fff !important;
+  }
+  // 弹窗
+  .el-dialog,
+  .el-message-box {
+    background: var(--color-card) !important;
+    color: var(--color-text) !important;
+    border-color: var(--color-border) !important;
+  }
+  // 选择器
+  .el-select-dropdown,
+  .el-select-dropdown__item {
+    background: var(--color-card) !important;
+    color: var(--color-text) !important;
+    border-color: var(--color-border) !important;
+  }
+  // 表格
+  .el-table,
+  .el-table th,
+  .el-table td {
+    background: var(--color-card) !important;
+    color: var(--color-text) !important;
+    border-color: var(--color-border) !important;
+  }
+  // 卡片
+  .el-card {
+    background: var(--color-card) !important;
+    color: var(--color-text) !important;
+    border-color: var(--color-border) !important;
+  }
+}
+
+// 优化主按钮配色
+.el-button,
+.el-button--primary {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: #fff !important;
+  transition: background 0.2s, border-color 0.2s;
+}
+.el-button:hover,
+.el-button:focus {
+  background: #16a34a !important;
+  border-color: #16a34a !important;
+}
+
+// 纯文本按钮（如点赞、评论）
+.el-button--text,
+.el-button--text:not(.is-disabled) {
+  background: transparent !important;
+  border: none !important;
+  color: var(--color-primary) !important;
+  box-shadow: none !important;
+  padding: 0 4px;
+}
+.el-button--text:hover,
+.el-button--text:focus {
+  color: #16a34a !important;
+  text-decoration: underline;
+  background: transparent !important;
+}
+
+// 朴素按钮、禁用按钮
+.el-button.is-plain {
+  background: transparent !important;
+  color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+.el-button.is-disabled,
+.el-button.is-disabled:focus,
+.el-button.is-disabled:hover {
+  background: var(--color-border) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+  opacity: 0.6;
+}
+
+// 文本框、字数统计、placeholder
+.el-input__wrapper,
+.el-textarea__inner {
+  border-color: var(--color-border) !important;
+  background: var(--color-card) !important;
+  color: var(--color-text) !important;
+}
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.15) !important;
+}
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder {
+  color: var(--color-text) !important;
+  opacity: 0.5;
+}
+.el-input__count,
+.el-textarea__count {
+  color: var(--color-text) !important;
+  opacity: 0.6;
+  background: transparent !important;
+}
+
+// 其他控件主题适配
+.el-switch.is-checked .el-switch__core {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+.el-radio__input.is-checked .el-radio__inner,
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary) !important;
+}
+.el-tag--success,
+.el-tag--info,
+.el-tag--warning,
+.el-tag--danger {
+  background: var(--color-card) !important;
+  color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* 暗色主题下的特殊优化 */
+[data-theme='dark'] {
+  .el-input__wrapper,
+  .el-textarea__inner {
+    border-color: #3a3b3c !important;
+    background: #2d2e2f !important;
+  }
+  .el-input__wrapper.is-focus,
+  .el-textarea__inner:focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.2) !important;
+  }
+  .el-input__count,
+  .el-textarea__count {
+    color: #a0a0a0 !important;
+    opacity: 0.8;
+  }
+  .el-input__inner::placeholder,
+  .el-textarea__inner::placeholder {
+    color: #a0a0a0 !important;
+    opacity: 0.6;
+  }
+  
+  /* 日期选择器边框优化 */
+  .el-date-editor.el-input,
+  .el-date-editor.el-input__wrapper {
+    border-color: #3a3b3c !important;
+    background: #2d2e2f !important;
+  }
+  
+  /* 单选框组边框优化 */
+  .el-radio-group {
+    .el-radio {
+      color: var(--color-text) !important;
+    }
+  }
+  
+  /* 文件上传区域边框优化 */
+  .el-upload-dragger {
+    border-color: #3a3b3c !important;
+    background: #2d2e2f !important;
+  }
 } 
