@@ -88,4 +88,11 @@ public interface RobotBehaviorService {
      * 停止定时任务
      */
     void stopBehaviorScheduler();
+    
+    /**
+     * 刷新机器人在线状态
+     * 根据机器人的活跃时间配置更新数据库中的isActive状态
+     * 并推送WebSocket消息通知状态变化
+     */
+    void refreshRobotActiveStatus();
 } 

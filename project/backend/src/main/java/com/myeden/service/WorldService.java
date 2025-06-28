@@ -201,13 +201,15 @@ public interface WorldService {
         private int totalPosts;
         private int totalComments;
         private int totalRobots;
+        private int activeRobots;
         private String worldCreatedAt;
         
-        public WorldStatistics(int totalUsers, int totalPosts, int totalComments, int totalRobots, String worldCreatedAt) {
+        public WorldStatistics(int totalUsers, int totalPosts, int totalComments, int totalRobots, int activeRobots, String worldCreatedAt) {
             this.totalUsers = totalUsers;
             this.totalPosts = totalPosts;
             this.totalComments = totalComments;
             this.totalRobots = totalRobots;
+            this.activeRobots = activeRobots;
             this.worldCreatedAt = worldCreatedAt;
         }
         
@@ -216,6 +218,7 @@ public interface WorldService {
         public int getTotalPosts() { return totalPosts; }
         public int getTotalComments() { return totalComments; }
         public int getTotalRobots() { return totalRobots; }
+        public int getActiveRobots() { return activeRobots; }
         public String getWorldCreatedAt() { return worldCreatedAt; }
     }
     

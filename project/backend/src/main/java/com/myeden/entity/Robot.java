@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -289,8 +290,7 @@ public class Robot {
             return true; // 如果没有设置活跃时间，默认全天活跃
         }
         
-        LocalDateTime now = LocalDateTime.now();
-        String currentTime = String.format("%02d:%02d", now.getHour(), now.getMinute());
+        LocalTime currentTime = LocalTime.now();
         
         for (ActiveTimeRange range : this.activeTimeRanges) {
             if (isTimeInRange(currentTime, range.getStartTime(), range.getEndTime())) {
@@ -301,10 +301,22 @@ public class Robot {
     }
     
     /**
-     * 检查时间是否在指定范围内
+     * 检查时间是否在指定范围内（支持跨天时间段）
      */
-    private boolean isTimeInRange(String currentTime, String startTime, String endTime) {
-        return currentTime.compareTo(startTime) >= 0 && currentTime.compareTo(endTime) <= 0;
+    private boolean isTimeInRange(LocalTime currentTime, String startTimeStr, String endTimeStr) {
+        LocalTime startTime = LocalTime.parse(startTimeStr);
+        LocalTime endTime = LocalTime.parse(endTimeStr);
+        
+        // 如果结束时间小于开始时间，说明是跨天时间段
+        if (endTime.isBefore(startTime)) {
+            // 跨天时间段：当前时间 >= 开始时间 或 当前时间 <= 结束时间
+            return currentTime.isAfter(startTime) || currentTime.equals(startTime) || 
+                   currentTime.isBefore(endTime) || currentTime.equals(endTime);
+        } else {
+            // 同一天时间段：开始时间 <= 当前时间 <= 结束时间
+            return (currentTime.isAfter(startTime) || currentTime.equals(startTime)) && 
+                   (currentTime.isBefore(endTime) || currentTime.equals(endTime));
+        }
     }
     
     /**

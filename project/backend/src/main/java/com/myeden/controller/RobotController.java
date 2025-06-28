@@ -180,4 +180,20 @@ public class RobotController {
             return ResponseEntity.badRequest().body(EventResponse.error("停止机器人行为调度失败: " + e.getMessage()));
         }
     }
+    
+    /**
+     * 手动刷新机器人在线状态
+     * 根据机器人的活跃时间配置更新所有机器人的在线状态
+     * @return 刷新结果
+     */
+    @PostMapping("/status/refresh")
+    public ResponseEntity<EventResponse> refreshRobotStatus() {
+        try {
+            // 调用RobotBehaviorService的刷新方法
+            robotBehaviorService.refreshRobotActiveStatus();
+            return ResponseEntity.ok(EventResponse.success(null, "刷新机器人在线状态成功"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(EventResponse.error("刷新机器人在线状态失败: " + e.getMessage()));
+        }
+    }
 } 

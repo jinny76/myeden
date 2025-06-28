@@ -66,7 +66,9 @@
         <!-- 机器人列表 -->
         <div class="robots-section">
           <div class="section-header">
-            <h3>AI机器人居民 ({{ worldStore.totalRobots }})</h3>
+            <div class="header-content">
+              <h3>AI机器人居民 ({{ worldStore.totalRobots }})</h3>          
+            </div>
             <p>与这些AI机器人进行互动交流</p>
           </div>
           
@@ -80,8 +82,14 @@
               <div class="robot-content">
                 <div class="robot-avatar">
                   <el-avatar :src="robot.avatar" :size="60" />
-                  <div class="robot-status" :class="{ active: robot.isActive }">
-                    {{ robot.isActive ? '在线' : '离线' }}
+                  <div class="robot-status" :class="{ active: robot.active }">
+                    <el-icon v-if="robot.active" class="status-icon">
+                      <CircleCheck />
+                    </el-icon>
+                    <el-icon v-else class="status-icon">
+                      <CircleClose />
+                    </el-icon>
+                    {{ robot.active ? '在线' : '离线' }}
                   </div>
                 </div>
                 <div class="robot-info">
@@ -90,7 +98,14 @@
                   <div class="robot-tags">
                     <el-tag size="small" type="info">{{ robot.personality }}</el-tag>
                     <el-tag size="small" type="success">{{ robot.nickname }}</el-tag>
-                  </div>
+                    <el-tag 
+                      size="small" 
+                      :type="robot.active ? 'success' : 'danger'"
+                      class="status-tag"
+                    >
+                      {{ robot.active ? '在线' : '离线' }}
+                    </el-tag>
+                  </div>                
                 </div>
               </div>
             </el-card>
@@ -110,7 +125,7 @@
                 </el-col>
                 <el-col :span="8">
                   <div class="stat-item">
-                    <div class="stat-number">{{ worldStore.activeRobots.length }}</div>
+                    <div class="stat-number">{{ worldStore.worldStatistics?.activeRobots || 0 }}</div>
                     <div class="stat-label">在线机器人</div>
                   </div>
                 </el-col>
@@ -135,6 +150,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { CircleCheck, CircleClose, Refresh } from '@element-plus/icons-vue'
 import { getUserAvatarUrl } from '@/utils/avatar'
 
 // 响应式数据
@@ -197,6 +213,9 @@ const retryLoad = async () => {
     ElMessage.error('重新加载失败')
   }
 }
+
+// 计算属性：是否为开发环境
+const isDevelopment = computed(() => import.meta.env.DEV)
 
 // 生命周期
 onMounted(async () => {
@@ -335,11 +354,19 @@ onMounted(async () => {
   margin-bottom: 24px;
 }
 
+.section-header .header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
 .section-header h3 {
   color: #333;
   font-size: 24px;
   font-weight: bold;
-  margin-bottom: 8px;
+  margin: 0;
 }
 
 .section-header p {
@@ -391,10 +418,37 @@ onMounted(async () => {
   border-radius: 8px;
   font-size: 10px;
   border: 2px solid white;
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .robot-status.active {
   background: #67c23a;
+}
+
+.status-icon {
+  font-size: 8px;
+}
+
+.status-tag {
+  margin-left: 4px;
+}
+
+.debug-info {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(64, 158, 255, 0.1);
+  border-radius: 4px;
+  border: 1px dashed #409eff;
+}
+
+.debug-text {
+  display: block;
+  margin-top: 4px;
+  color: #409eff;
+  font-size: 11px;
+  font-family: monospace;
 }
 
 .robot-info {

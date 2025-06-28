@@ -37,11 +37,20 @@ export const useUserStore = defineStore('user', () => {
       const savedToken = getToken()
       if (savedToken) {
         token.value = savedToken
-        await fetchUserInfo()
+        // 尝试获取用户信息，但不抛出错误
+        try {
+          await fetchUserInfo()
+          return true
+        } catch (error) {
+          console.warn('获取用户信息失败，可能是token过期:', error)
+          // 不清除token，让用户手动处理
+          return false
+        }
       }
+      return false
     } catch (error) {
       console.error('初始化用户状态失败:', error)
-      logout()
+      return false
     }
   }
 

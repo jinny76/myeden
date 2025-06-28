@@ -118,4 +118,16 @@ export function stopBehaviorScheduler() {
     url: '/robots/scheduler/stop',
     method: 'post'
   })
+}
+
+/**
+ * 刷新机器人在线状态
+ * 根据机器人的活跃时间配置更新所有机器人的在线状态
+ * @returns {Promise} 刷新结果
+ */
+export function refreshRobotStatus() {
+  return request({
+    url: '/robots/status/refresh',
+    method: 'post'
+  })
 } 

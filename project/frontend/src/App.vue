@@ -41,17 +41,17 @@ const websocketStore = useWebSocketStore()
 onMounted(async () => {
   try {
     // 初始化用户状态
-    await userStore.initUser()
+    const initSuccess = await userStore.initUser()
     
     // 如果用户已登录，连接WebSocket
-    if (userStore.isLoggedIn) {
+    if (userStore.isLoggedIn && initSuccess) {
       await websocketStore.connect()
     }
     
     console.log('✅ 应用初始化完成')
   } catch (error) {
     console.error('❌ 应用初始化失败:', error)
-    ElMessage.error('应用初始化失败，请刷新页面重试')
+    // 不显示错误消息，让用户正常使用
   }
 })
 

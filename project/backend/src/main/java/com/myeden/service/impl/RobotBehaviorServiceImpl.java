@@ -301,12 +301,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             return false;
         }
         
-        LocalTime currentTime = LocalTime.now();
-        LocalTime startTime = LocalTime.parse("08:00");
-        LocalTime endTime = LocalTime.parse("22:00");
-        
-        // 简单的活跃时间段判断（8:00-22:00）
-        return currentTime.isAfter(startTime) && currentTime.isBefore(endTime);
+        // 使用机器人配置的活跃时间段进行判断
+        return robot.isInActiveTimeSlot();
     }
     
     @Override
@@ -371,9 +367,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     }
     
     /**
-     * 定时触发机器人行为（每30分钟执行一次）
+     * 定时触发机器人行为（每分钟执行一次）
      */
-    @Scheduled(fixedRate = 1800000) // 30分钟
+    @Scheduled(fixedRate = 60000) // 1分钟
     public void scheduledRobotBehavior() {
         try {
             List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
@@ -424,5 +420,60 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     
     private String buildReplyContext(String commentContent) {
         return String.format("对评论内容进行回复: %s", commentContent);
+    }
+    
+    /**
+     * 刷新机器人在线状态（每5分钟执行一次）
+     * 根据机器人的活跃时间配置更新数据库中的isActive状态
+     */
+    @Scheduled(fixedRate = 300000) // 5分钟
+    public void refreshRobotActiveStatus() {
+        try {
+            logger.info("开始刷新机器人在线状态...");
+            List<Robot> allRobots = robotRepository.findAll();
+            int updatedCount = 0;
+            
+            for (Robot robot : allRobots) {
+                boolean shouldBeActive = robot.isInActiveTimeSlot();
+                boolean currentActive = robot.getIsActive();
+                
+                // 如果状态需要更新
+                if (shouldBeActive != currentActive) {
+                    robot.setIsActive(shouldBeActive);
+                    robot.setUpdatedAt(LocalDateTime.now());
+                    robotRepository.save(robot);
+                    updatedCount++;
+                    
+                    logger.info("机器人 {} 状态更新: {} -> {}", 
+                              robot.getName(), 
+                              currentActive ? "在线" : "离线", 
+                              shouldBeActive ? "在线" : "离线");
+                    
+                    // 推送WebSocket消息通知状态变化
+                    try {
+                        Map<String, Object> statusData = new HashMap<>();
+                        statusData.put("robotId", robot.getRobotId());
+                        statusData.put("robotName", robot.getName());
+                        statusData.put("status", shouldBeActive ? "online" : "offline");
+                        statusData.put("statusText", shouldBeActive ? "在线" : "离线");
+                        statusData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                        
+                        webSocketService.pushRobotAction(statusData);
+                        logger.debug("WebSocket机器人状态变化消息推送成功: {}", robot.getName());
+                    } catch (Exception e) {
+                        logger.warn("WebSocket状态变化消息推送失败: {}", e.getMessage());
+                    }
+                }
+            }
+            
+            if (updatedCount > 0) {
+                logger.info("机器人状态刷新完成，共更新 {} 个机器人状态", updatedCount);
+            } else {
+                logger.debug("机器人状态刷新完成，无需更新");
+            }
+            
+        } catch (Exception e) {
+            logger.error("刷新机器人在线状态失败: {}", e.getMessage(), e);
+        }
     }
 } 

@@ -9,7 +9,8 @@ import {
   getRobotDailyStats,
   resetRobotDailyStats,
   startBehaviorScheduler,
-  stopBehaviorScheduler
+  stopBehaviorScheduler,
+  refreshRobotStatus
 } from '@/api/robot'
 
 /**
@@ -230,6 +231,29 @@ export const useRobotStore = defineStore('robot', () => {
     }
   }
 
+  // 刷新机器人在线状态
+  const refreshStatus = async () => {
+    try {
+      loading.value = true
+      error.value = null
+      const response = await refreshRobotStatus()
+      if (response.code === 200) {
+        // 刷新成功后重新获取机器人列表
+        await fetchRobotList()
+        return true
+      } else {
+        error.value = response.message || '刷新机器人在线状态失败'
+        return false
+      }
+    } catch (err) {
+      error.value = err.message || '刷新机器人在线状态失败'
+      console.error('刷新机器人在线状态失败:', err)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   // 清除错误
   const clearError = () => {
     error.value = null
@@ -269,6 +293,7 @@ export const useRobotStore = defineStore('robot', () => {
     resetStats,
     startScheduler,
     stopScheduler,
+    refreshStatus,
     clearError,
     reset
   }

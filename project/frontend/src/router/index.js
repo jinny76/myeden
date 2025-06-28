@@ -100,20 +100,35 @@ router.beforeEach(async (to, from, next) => {
     
     // 检查用户是否已登录
     if (!userStore.isLoggedIn) {
+      // 尝试从本地存储恢复用户状态
+      try {
+        await userStore.initUser()
+        if (userStore.isLoggedIn) {
+          // 状态恢复成功，继续导航
+          next()
+          return
+        }
+      } catch (error) {
+        console.error('用户状态恢复失败:', error)
+      }
+      
+      // 状态恢复失败，重定向到登录页
       ElMessage.warning('请先登录')
       next('/login')
       return
     }
     
-    // 检查用户状态是否有效
-    try {
-      await userStore.checkAuth()
-    } catch (error) {
-      console.error('认证检查失败:', error)
-      ElMessage.error('登录状态已过期，请重新登录')
-      userStore.logout()
-      next('/login')
-      return
+    // 检查用户状态是否有效（只在必要时检查，避免频繁请求）
+    if (!userStore.userInfo) {
+      try {
+        await userStore.checkAuth()
+      } catch (error) {
+        console.error('认证检查失败:', error)
+        ElMessage.error('登录状态已过期，请重新登录')
+        userStore.logout()
+        next('/login')
+        return
+      }
     }
   }
   

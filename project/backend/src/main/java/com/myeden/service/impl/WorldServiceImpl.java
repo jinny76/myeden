@@ -2,6 +2,14 @@ package com.myeden.service.impl;
 
 import com.myeden.config.WorldConfig;
 import com.myeden.config.RobotConfig;
+import com.myeden.entity.Robot;
+import com.myeden.entity.User;
+import com.myeden.entity.Post;
+import com.myeden.entity.Comment;
+import com.myeden.repository.RobotRepository;
+import com.myeden.repository.UserRepository;
+import com.myeden.repository.PostRepository;
+import com.myeden.repository.CommentRepository;
 import com.myeden.service.WorldService;
 import com.myeden.service.ConfigService;
 import org.slf4j.Logger;
@@ -32,6 +40,18 @@ public class WorldServiceImpl implements WorldService {
     
     @Autowired
     private ConfigService configService;
+    
+    @Autowired
+    private RobotRepository robotRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private PostRepository postRepository;
+    
+    @Autowired
+    private CommentRepository commentRepository;
     
     @Override
     public WorldInfo getWorldInfo() {
@@ -146,20 +166,39 @@ public class WorldServiceImpl implements WorldService {
     @Override
     public WorldStatistics getWorldStatistics() {
         try {
-            WorldConfig worldConfig = configService.loadWorldConfig();
-            if (worldConfig == null || worldConfig.getStatistics() == null) {
-                logger.error("世界统计配置加载失败");
-                return null;
+            logger.info("从数据库获取实时世界统计信息...");
+            
+            // 从数据库实时统计
+            long totalUsers = userRepository.count();
+            long totalPosts = postRepository.count();
+            long totalComments = commentRepository.count();
+            long totalRobots = robotRepository.count();
+            long activeRobots = robotRepository.countByIsActiveTrue();
+            
+            // 获取世界创建时间（从配置文件中获取）
+            String worldCreatedAt = "2024-01-01";
+            try {
+                WorldConfig worldConfig = configService.loadWorldConfig();
+                if (worldConfig != null && worldConfig.getStatistics() != null) {
+                    worldCreatedAt = worldConfig.getStatistics().getWorldCreatedAt();
+                }
+            } catch (Exception e) {
+                logger.warn("无法从配置文件获取世界创建时间，使用默认值", e);
             }
             
-            WorldConfig.Statistics statistics = worldConfig.getStatistics();
-            return new WorldStatistics(
-                statistics.getTotalUsers(),
-                statistics.getTotalPosts(),
-                statistics.getTotalComments(),
-                statistics.getTotalRobots(),
-                statistics.getWorldCreatedAt()
+            WorldStatistics statistics = new WorldStatistics(
+                (int) totalUsers,
+                (int) totalPosts,
+                (int) totalComments,
+                (int) totalRobots,
+                (int) activeRobots,
+                worldCreatedAt
             );
+            
+            logger.info("世界统计信息 - 用户: {}, 动态: {}, 评论: {}, 机器人: {} (在线: {})", 
+                totalUsers, totalPosts, totalComments, totalRobots, activeRobots);
+            
+            return statistics;
             
         } catch (Exception e) {
             logger.error("获取世界统计信息失败", e);
@@ -195,23 +234,23 @@ public class WorldServiceImpl implements WorldService {
     @Override
     public List<RobotSummary> getRobotList() {
         try {
-            RobotConfig robotConfig = configService.loadRobotConfig();
-            if (robotConfig == null || robotConfig.getList() == null) {
-                logger.error("机器人配置加载失败");
-                return null;
-            }
+            logger.info("从数据库获取机器人列表...");
+            List<Robot> robots = robotRepository.findAll();
             
-            return robotConfig.getList().stream()
+            List<RobotSummary> robotSummaries = robots.stream()
                 .map(robot -> new RobotSummary(
                     robot.getId(),
                     robot.getName(),
-                    robot.getNickname(),
+                    robot.getName(), // 使用name作为nickname
                     robot.getAvatar(),
                     robot.getPersonality(),
-                    robot.getDescription(),
-                    robot.isActive()
+                    robot.getIntroduction(), // 使用introduction作为description
+                    robot.getIsActive() != null ? robot.getIsActive() : false
                 ))
                 .collect(Collectors.toList());
+            
+            logger.info("成功获取 {} 个机器人信息", robotSummaries.size());
+            return robotSummaries;
                 
         } catch (Exception e) {
             logger.error("获取机器人列表失败", e);
@@ -222,74 +261,38 @@ public class WorldServiceImpl implements WorldService {
     @Override
     public RobotDetail getRobotDetail(String robotId) {
         try {
-            RobotConfig robotConfig = configService.loadRobotConfig();
-            if (robotConfig == null || robotConfig.getList() == null) {
-                logger.error("机器人配置加载失败");
-                return null;
-            }
-            
-            // 查找指定机器人
-            RobotConfig.RobotInfo robotInfo = robotConfig.getList().stream()
-                .filter(robot -> robot.getId().equals(robotId))
-                .findFirst()
-                .orElse(null);
-                
-            if (robotInfo == null) {
+            Robot robot = robotRepository.findById(robotId).orElse(null);
+            if (robot == null) {
                 logger.warn("未找到机器人: {}", robotId);
                 return null;
             }
             
-            // 转换说话风格
-            SpeakingStyle speakingStyle = null;
-            if (robotInfo.getSpeakingStyle() != null) {
-                RobotConfig.SpeakingStyle style = robotInfo.getSpeakingStyle();
-                speakingStyle = new SpeakingStyle(
-                    style.getTone(),
-                    style.getVocabulary(),
-                    style.getEmojiUsage(),
-                    style.getSentenceLength()
-                );
-            }
-            
-            // 转换行为模式
-            BehaviorPatterns behaviorPatterns = null;
-            if (robotInfo.getBehaviorPatterns() != null) {
-                RobotConfig.BehaviorPatterns patterns = robotInfo.getBehaviorPatterns();
-                behaviorPatterns = new BehaviorPatterns(
-                    patterns.getGreetingFrequency(),
-                    patterns.getComfortFrequency(),
-                    patterns.getShareFrequency(),
-                    patterns.getCommentFrequency(),
-                    patterns.getReplyFrequency()
-                );
-            }
-            
-            // 转换活跃时间
+            // 转换活跃时间为ActiveHours格式
             List<ActiveHours> activeHours = null;
-            if (robotInfo.getActiveHours() != null) {
-                activeHours = robotInfo.getActiveHours().stream()
-                    .map(hours -> new ActiveHours(
-                        hours.getStart(),
-                        hours.getEnd(),
-                        hours.getProbability()
+            if (robot.getActiveTimeRanges() != null && !robot.getActiveTimeRanges().isEmpty()) {
+                activeHours = robot.getActiveTimeRanges().stream()
+                    .map(range -> new ActiveHours(
+                        range.getStartTime(),
+                        range.getEndTime(),
+                        1.0 // 默认概率为1.0
                     ))
                     .collect(Collectors.toList());
             }
             
             return new RobotDetail(
-                robotInfo.getId(),
-                robotInfo.getName(),
-                robotInfo.getNickname(),
-                robotInfo.getAvatar(),
-                robotInfo.getPersonality(),
-                robotInfo.getDescription(),
-                robotInfo.getBackground(),
-                robotInfo.getTraits(),
-                robotInfo.getInterests(),
-                speakingStyle,
-                behaviorPatterns,
+                robot.getId(),
+                robot.getName(),
+                robot.getName(), // 使用name作为nickname
+                robot.getAvatar(),
+                robot.getPersonality(),
+                robot.getIntroduction(), // 使用introduction作为description
+                robot.getIntroduction(), // 使用introduction作为background
+                null, // traits - Robot实体中没有对应字段
+                null, // interests - Robot实体中没有对应字段
+                null, // speakingStyle - Robot实体中没有对应字段
+                null, // behaviorPatterns - Robot实体中没有对应字段
                 activeHours,
-                robotInfo.isActive()
+                robot.getIsActive() != null ? robot.getIsActive() : false
             );
             
         } catch (Exception e) {
