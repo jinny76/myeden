@@ -16,28 +16,42 @@ import request from '@/utils/request'
 
 /**
  * 发布动态
- * @param {Object} data - 动态数据
- * @param {string} data.content - 动态内容
- * @param {Array} data.images - 图片文件列表
+ * @param {FormData|Object} data - 动态数据（FormData或对象）
+ * @param {string} data.content - 动态内容（当data为对象时）
+ * @param {Array} data.images - 图片文件列表（当data为对象时）
  * @returns {Promise} 动态发布结果
  */
 export function createPost(data) {
-  const formData = new FormData()
-  formData.append('content', data.content)
+  let formData
+  let headers = {}
   
-  if (data.images && data.images.length > 0) {
-    data.images.forEach((image, index) => {
-      formData.append('images', image)
-    })
+  // 如果传入的是FormData，直接使用
+  if (data instanceof FormData) {
+    formData = data
+    headers = {
+      'Content-Type': 'multipart/form-data'
+    }
+  } else {
+    // 如果传入的是对象，转换为FormData
+    formData = new FormData()
+    formData.append('content', data.content)
+    
+    if (data.images && data.images.length > 0) {
+      data.images.forEach((image, index) => {
+        formData.append('images', image)
+      })
+    }
+    
+    headers = {
+      'Content-Type': 'multipart/form-data'
+    }
   }
   
   return request({
     url: '/posts',
     method: 'post',
     data: formData,
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    headers
   })
 }
 

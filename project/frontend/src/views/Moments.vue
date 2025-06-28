@@ -55,15 +55,13 @@
               resize="none"
             />
             
-            <!-- 图片上传 -->
-            <div class="image-upload">
+            <!-- 图片选择 -->
+            <div class="image-selector">
               <el-upload
                 ref="uploadRef"
-                :action="uploadAction"
-                :headers="uploadHeaders"
-                :on-success="handleImageSuccess"
-                :on-error="handleImageError"
-                :before-upload="beforeImageUpload"
+                :auto-upload="false"
+                :on-change="handleImageChange"
+                :on-remove="handleImageRemove"
                 :file-list="newPost.images"
                 list-type="picture-card"
                 :limit="9"
@@ -147,7 +145,6 @@
                       fit="cover"
                       :preview-src-list="post.images.map(img => buildImageUrl(img))"
                       :initial-index="index"
-                      @error="handleImageError"
                     />
                   </div>
                 </div>
@@ -214,6 +211,60 @@
                       </template>
                     </el-input>
                   </div>
+                  
+                  <!-- 回复列表 -->
+                  <div v-if="comment.replyCount > 0" class="replies-section">
+                    <div class="replies-list">
+                      <div 
+                        v-for="reply in replyStates[comment.commentId]?.replies || []" 
+                        :key="reply.commentId"
+                        class="reply-item"
+                      >
+                        <div class="reply-header">
+                          <el-avatar 
+                            :src="getCommentAuthorAvatarUrl(reply)" 
+                            :size="24"
+                            @error="(event) => handleCommentAvatarError(event, reply)"
+                          />
+                          <div class="reply-info">
+                            <span class="reply-author">{{ reply.authorName }}</span>
+                            <span class="reply-time">{{ formatTime(reply.createdAt) }}</span>
+                          </div>
+                        </div>
+                        <div class="reply-content">
+                          <p>{{ reply.content }}</p>
+                        </div>
+                        <div class="reply-actions">
+                          <span class="action-link" @click="toggleCommentLike(reply)">
+                            ❤️ {{ reply.likeCount }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- 加载更多回复 -->
+                    <div v-if="replyStates[comment.commentId]?.hasMore" class="load-more-replies">
+                      <el-button 
+                        @click="loadMoreReplies(comment.commentId)" 
+                        :loading="replyStates[comment.commentId]?.loading"
+                        size="small"
+                        type="text"
+                      >
+                        加载更多回复
+                      </el-button>
+                    </div>
+                    
+                    <!-- 没有更多回复 -->
+                    <div v-else-if="replyStates[comment.commentId]?.replies.length > 0" class="no-more-replies">
+                      <span class="no-more-text">没有更多回复了</span>
+                    </div>
+                    
+                    <!-- 加载中状态 -->
+                    <div v-if="replyStates[comment.commentId]?.loading && replyStates[comment.commentId]?.replies.length === 0" class="loading-replies">
+                      <el-icon class="is-loading"><Loading /></el-icon>
+                      <span>加载回复中...</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -251,13 +302,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ChatDotRound, MoreFilled, Close } from '@element-plus/icons-vue'
+import { Plus, ChatDotRound, MoreFilled, Close, Loading } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
+import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
+import { createPost } from '@/api/post'
 
 // 响应式数据
 const router = useRouter()
@@ -274,12 +327,8 @@ const newPost = ref({
   images: []
 })
 
-// 上传相关
-const uploadRef = ref()
-const uploadAction = '/api/v1/files/upload'
-const uploadHeaders = computed(() => ({
-  'Authorization': `Bearer ${userStore.token}`
-}))
+// 回复相关状态
+const replyStates = ref({}) // 存储每个评论的回复状态
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -319,10 +368,25 @@ const handleLogout = async () => {
 
 const handleFilterChange = async () => {
   await momentsStore.loadPosts({ authorType: filterType.value }, true)
+  // 为筛选后的动态加载评论和回复
+  await loadAllCommentsAndReplies()
 }
 
 const loadMorePosts = async () => {
+  const currentLength = momentsStore.posts.length
   await momentsStore.loadPosts({ authorType: filterType.value })
+  
+  // 为新加载的动态加载评论和回复
+  const newPosts = momentsStore.posts.slice(currentLength)
+  for (const post of newPosts) {
+    post.showComments = true
+    try {
+      await momentsStore.loadComments(post.postId, {}, true)
+      await loadAllReplies(post.postId)
+    } catch (error) {
+      console.error(`加载动态 ${post.postId} 的评论失败:`, error)
+    }
+  }
 }
 
 const publishPost = async () => {
@@ -334,18 +398,46 @@ const publishPost = async () => {
   try {
     publishing.value = true
     
-    const postData = {
-      content: newPost.value.content,
-      images: newPost.value.images
+    // 创建FormData，包含内容和图片
+    const formData = new FormData()
+    formData.append('content', newPost.value.content)
+    
+    // 添加图片文件，从文件对象中提取原始文件
+    if (newPost.value.images && newPost.value.images.length > 0) {
+      newPost.value.images.forEach((fileObj, index) => {
+        if (fileObj.raw) {
+          formData.append('images', fileObj.raw)
+        }
+      })
     }
     
-    await momentsStore.publishPost(postData)
+    // 直接调用API发布动态
+    const response = await createPost(formData)
     
-    // 清空表单
-    newPost.value.content = ''
-    newPost.value.images = []
-    
-    ElMessage.success('动态发布成功')
+    if (response.code === 200) {
+      // 将新动态添加到列表开头
+      const newPostData = response.data
+      newPostData.showComments = true // 设置评论区域为展开状态
+      momentsStore.posts.unshift(newPostData)
+      
+      // 为新发布的动态加载评论和回复
+      await momentsStore.loadComments(newPostData.postId, {}, true)
+      await loadAllReplies(newPostData.postId)
+      
+      // 清空表单
+      newPost.value.content = ''
+      // 清理URL对象并清空图片列表
+      if (newPost.value.images && newPost.value.images.length > 0) {
+        newPost.value.images.forEach(fileObj => {
+          if (fileObj.url && fileObj.url.startsWith('blob:')) {
+            URL.revokeObjectURL(fileObj.url)
+          }
+        })
+      }
+      newPost.value.images = []
+      
+      ElMessage.success('动态发布成功')
+    }
   } catch (error) {
     ElMessage.error('动态发布失败')
   } finally {
@@ -387,12 +479,80 @@ const toggleLike = async (post) => {
 const showComments = async (post) => {
   post.showComments = !post.showComments
   
+  // 如果评论还没有加载过，则加载评论和回复
   if (post.showComments && (!momentsStore.comments[post.postId] || momentsStore.comments[post.postId].length === 0)) {
     try {
       await momentsStore.loadComments(post.postId, {}, true)
+      // 自动加载所有评论的回复
+      await loadAllReplies(post.postId)
     } catch (error) {
       ElMessage.error('加载评论失败')
     }
+  }
+}
+
+/**
+ * 加载所有评论的回复
+ * @param {string} postId - 动态ID
+ */
+const loadAllReplies = async (postId) => {
+  const commentList = momentsStore.comments[postId]
+  if (!commentList) return
+  
+  for (const comment of commentList) {
+    if (comment.replyCount > 0) {
+      await loadReplies(comment.commentId, true)
+    }
+  }
+}
+
+/**
+ * 加载回复列表
+ * @param {string} commentId - 评论ID
+ * @param {boolean} refresh - 是否刷新
+ */
+const loadReplies = async (commentId, refresh = false) => {
+  // 初始化回复状态
+  if (!replyStates.value[commentId]) {
+    replyStates.value[commentId] = {
+      showReplies: true, // 默认显示回复
+      replies: [],
+      loading: false,
+      hasMore: true,
+      currentPage: 1
+    }
+  }
+  
+  const replyState = replyStates.value[commentId]
+  
+  try {
+    replyState.loading = true
+    
+    const params = {
+      page: refresh ? 1 : replyState.currentPage,
+      size: 10
+    }
+    
+    const response = await getReplyList(commentId, params)
+    
+    if (response.code === 200) {
+      const { comments: newReplies, total, page, size } = response.data
+      
+      if (refresh) {
+        replyState.replies = newReplies
+        replyState.currentPage = 1
+      } else {
+        replyState.replies.push(...newReplies)
+      }
+      
+      replyState.currentPage = page
+      replyState.hasMore = page < Math.ceil(total / size)
+    }
+  } catch (error) {
+    console.error('加载回复列表失败:', error)
+    ElMessage.error('加载回复失败')
+  } finally {
+    replyState.loading = false
   }
 }
 
@@ -418,6 +578,14 @@ const showReplyInput = (comment) => {
   }
 }
 
+const loadMoreReplies = async (commentId) => {
+  const replyState = replyStates.value[commentId]
+  if (replyState && replyState.hasMore && !replyState.loading) {
+    replyState.currentPage++
+    await loadReplies(commentId, false)
+  }
+}
+
 const submitReply = async (comment) => {
   if (!comment.replyContent.trim()) {
     ElMessage.warning('请输入回复内容')
@@ -427,6 +595,13 @@ const submitReply = async (comment) => {
   try {
     await momentsStore.replyCommentAction(comment.commentId, { content: comment.replyContent })
     comment.showReplyInput = false
+    
+    // 刷新回复列表
+    await loadReplies(comment.commentId, true)
+    
+    // 更新评论的回复数量
+    comment.replyCount++
+    
     ElMessage.success('回复发表成功')
   } catch (error) {
     ElMessage.error('回复发表失败')
@@ -445,32 +620,32 @@ const toggleCommentLike = async (comment) => {
   }
 }
 
-const handleImageSuccess = (response, file) => {
-  if (response.code === 200) {
-    newPost.value.images.push(file)
-    ElMessage.success('图片上传成功')
-  } else {
-    ElMessage.error('图片上传失败')
-  }
-}
-
-const handleImageError = () => {
-  ElMessage.error('图片上传失败')
-}
-
-const beforeImageUpload = (file) => {
-  const isImage = file.type.startsWith('image/')
-  const isLt10M = file.size / 1024 / 1024 < 10
+const handleImageChange = (file, fileList) => {
+  // 验证图片类型和大小
+  const isImage = file.raw.type.startsWith('image/')
+  const isLt10M = file.raw.size / 1024 / 1024 < 10
 
   if (!isImage) {
-    ElMessage.error('只能上传图片文件')
+    ElMessage.error('只能选择图片文件')
     return false
   }
   if (!isLt10M) {
     ElMessage.error('图片大小不能超过 10MB')
     return false
   }
-  return true
+  
+  // 为文件对象添加URL用于预览
+  if (file.raw && !file.url) {
+    file.url = URL.createObjectURL(file.raw)
+  }
+  
+  // 更新图片列表，保持完整的文件对象结构
+  newPost.value.images = fileList
+}
+
+const handleImageRemove = (file, fileList) => {
+  // 更新图片列表
+  newPost.value.images = fileList
 }
 
 const getImageGridClass = (count) => {
@@ -553,10 +728,42 @@ const buildImageUrl = (imageUrl) => {
 onMounted(async () => {
   try {
     await momentsStore.loadPosts({}, true)
+    // 自动加载所有动态的评论和回复
+    await loadAllCommentsAndReplies()
   } catch (error) {
     ElMessage.error('加载动态列表失败')
   }
 })
+
+onUnmounted(() => {
+  // 清理创建的URL对象，避免内存泄漏
+  if (newPost.value.images && newPost.value.images.length > 0) {
+    newPost.value.images.forEach(fileObj => {
+      if (fileObj.url && fileObj.url.startsWith('blob:')) {
+        URL.revokeObjectURL(fileObj.url)
+      }
+    })
+  }
+})
+
+/**
+ * 加载所有动态的评论和回复
+ */
+const loadAllCommentsAndReplies = async () => {
+  for (const post of momentsStore.posts) {
+    // 设置评论区域为展开状态
+    post.showComments = true
+    
+    try {
+      // 加载评论
+      await momentsStore.loadComments(post.postId, {}, true)
+      // 加载回复
+      await loadAllReplies(post.postId)
+    } catch (error) {
+      console.error(`加载动态 ${post.postId} 的评论失败:`, error)
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -641,7 +848,7 @@ onMounted(async () => {
   gap: 16px;
 }
 
-.image-upload {
+.image-selector {
   margin-top: 8px;
 }
 
@@ -838,6 +1045,98 @@ onMounted(async () => {
 
 .no-more {
   color: #999;
+  font-size: 14px;
+}
+
+.replies-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.replies-list {
+  margin-bottom: 8px;
+}
+
+.reply-item {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #e9ecef;
+}
+
+.reply-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.reply-info {
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.reply-author {
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+}
+
+.reply-time {
+  color: #999;
+  font-size: 11px;
+  margin-left: 8px;
+}
+
+.reply-content {
+  margin-bottom: 6px;
+}
+
+.reply-content p {
+  margin: 0;
+  color: #333;
+  line-height: 1.4;
+  font-size: 13px;
+}
+
+.reply-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.reply-actions .action-link {
+  font-size: 11px;
+}
+
+.load-more-replies {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.no-more-replies {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.no-more-text {
+  color: #999;
+  font-size: 12px;
+}
+
+.loading-replies {
+  text-align: center;
+  margin-top: 8px;
+  color: #999;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.loading-replies .el-icon {
   font-size: 14px;
 }
 </style> 

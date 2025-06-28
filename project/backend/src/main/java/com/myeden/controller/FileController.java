@@ -37,16 +37,6 @@ public class FileController {
     private String uploadPath;
     
     /**
-     * 测试文件访问权限
-     * GET /api/v1/files/test
-     */
-    @GetMapping("/test")
-    public ResponseEntity<String> testAccess() {
-        logger.info("文件访问测试接口被调用");
-        return ResponseEntity.ok("文件访问接口正常工作");
-    }
-    
-    /**
      * 获取文件
      * GET /api/v1/files/{subDirectory}/{filename}
      * 
