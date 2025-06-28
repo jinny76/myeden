@@ -430,6 +430,32 @@ a, .el-button--primary, .el-tag--success {
   border-color: #16a34a !important;
 }
 
+// 移动端按钮优化
+@media (max-width: 768px) {
+  .el-button {
+    padding: 8px 16px !important;
+    font-size: 0.9rem !important;
+    height: auto !important;
+    line-height: 1.2 !important;
+    min-height: unset !important;
+  }
+  
+  .el-button--large {
+    padding: 10px 20px !important;
+    font-size: 1rem !important;
+  }
+  
+  .el-button--small {
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .el-button--mini {
+    padding: 4px 8px !important;
+    font-size: 0.75rem !important;
+  }
+}
+
 // 纯文本按钮（如点赞、评论）
 .el-button--text,
 .el-button--text:not(.is-disabled) {

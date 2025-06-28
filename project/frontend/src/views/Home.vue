@@ -155,14 +155,14 @@
               </div>
             </div>
             <div class="prompt-actions">
-              <el-button type="primary" size="large" @click="navigateTo('/login')" class="login-button">
+              <div class="custom-button login-button" @click="navigateTo('/login')">
                 <el-icon><UserFilled /></el-icon>
-                立即登录
-              </el-button>
-              <el-button size="large" @click="navigateTo('/register')" class="register-button">
+                <span>立即登录</span>
+              </div>
+              <div class="custom-button register-button" @click="navigateTo('/register')">
                 <el-icon><Plus /></el-icon>
-                注册账号
-              </el-button>
+                <span>注册账号</span>
+              </div>
             </div>
           </div>
           <div class="prompt-visual">
@@ -842,43 +842,47 @@ watch(isLoggedIn, (newValue, oldValue) => {
 }
 
 .prompt-actions {
-  display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.login-button,
-.register-button {
-  padding: 12px 32px;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
+.custom-button {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  justify-content: center;
+}
+
+.custom-button:hover {
+  transform: translateY(-1px);
+}
+
+.custom-button:active {
+  transform: translateY(0);
 }
 
 .login-button {
   background: linear-gradient(135deg, #22d36b, #4ade80);
-  border: none;
   color: white;
+  box-shadow: 0 2px 8px rgba(34, 211, 107, 0.2);
 }
 
 .login-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
+  box-shadow: 0 4px 12px rgba(34, 211, 107, 0.3);
+  background: linear-gradient(135deg, #1fbb5e, #3dd170);
 }
 
 .register-button {
   background: transparent;
-  border: 2px solid rgba(34, 211, 107, 0.3);
+  border: 1.5px solid rgba(34, 211, 107, 0.3);
   color: #22d36b;
+  backdrop-filter: blur(10px);
 }
 
 .register-button:hover {
   background: rgba(34, 211, 107, 0.1);
   border-color: #22d36b;
-  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(34, 211, 107, 0.15);
 }
 
 /* 动态区域 */
@@ -1120,6 +1124,13 @@ watch(isLoggedIn, (newValue, oldValue) => {
   
   .prompt-actions {
     flex-direction: column;
+  }
+  
+  .login-button,
+  .register-button {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 1rem;
   }
   
   .posts-grid {
