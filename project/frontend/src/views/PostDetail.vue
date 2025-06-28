@@ -82,7 +82,7 @@
               <span>{{ post.likeCount }}</span>
             </span>
             <span class="stat-item">
-              <el-icon><Message /></el-icon>
+              <el-icon><ChatDotRound /></el-icon>
               <span>{{ post.commentCount }}</span>
             </span>
           </div>
@@ -782,10 +782,6 @@ onMounted(() => {
   font-size: 12px;
 }
 
-.action-link:hover {
-  text-decoration: underline;
-}
-
 .action-link .el-icon {
   font-size: 14px;
   color: #22d36b;
@@ -907,12 +903,35 @@ onMounted(() => {
     padding: 8px 16px;
   }
   
+  .back-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+  
+  .back-button .el-icon {
+    font-size: 16px;
+  }
+  
   .main-content {
     padding: 16px;
+    padding-top: 80px;
   }
   
   .post-detail-section {
     gap: 16px;
+  }
+  
+  .post-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .post-actions {
+    align-self: flex-end;
   }
   
   .post-content p {
@@ -950,12 +969,35 @@ onMounted(() => {
     padding: 6px 12px;
   }
   
+  .back-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+  
+  .back-button .el-icon {
+    font-size: 14px;
+  }
+  
   .main-content {
     padding: 12px;
+    padding-top: 70px;
   }
   
   .post-detail-section {
     gap: 12px;
+  }
+  
+  .post-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .post-actions {
+    align-self: flex-end;
   }
   
   .post-content p {
