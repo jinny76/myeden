@@ -20,7 +20,7 @@
               type="textarea"
               :rows="3"
               placeholder="分享你的想法... (Ctrl+Enter 发送)"
-              :maxlength="500"
+              :maxlength="5000"
               show-word-limit
               resize="none"
               @keydown.ctrl.enter="publishPost"
@@ -174,7 +174,7 @@
                     <el-input
                       v-model="comment.replyContent"
                       placeholder="回复评论..."
-                      :maxlength="200"
+                      :maxlength="2000"
                       show-word-limit
                       @keyup.enter="submitReply(comment)"
                     >
@@ -213,29 +213,29 @@
                         </div>
                       </div>
                     </div>
-                    
-                    <!-- 加载更多回复 -->
-                    <div v-if="replyStates[comment.commentId]?.hasMore" class="load-more-replies">
-                      <el-button 
-                        @click="loadMoreReplies(comment.commentId)" 
-                        :loading="replyStates[comment.commentId]?.loading"
-                        size="small"
-                        type="text"
-                      >
-                        加载更多回复
-                      </el-button>
-                    </div>
-                    
-                    <!-- 没有更多回复 -->
-                    <div v-else-if="replyStates[comment.commentId]?.replies.length > 0" class="no-more-replies">
-                      <span class="no-more-text">没有更多回复了</span>
-                    </div>
-                    
-                    <!-- 加载中状态 -->
-                    <div v-if="replyStates[comment.commentId]?.loading && replyStates[comment.commentId]?.replies.length === 0" class="loading-replies">
-                      <el-icon class="is-loading"><Loading /></el-icon>
-                      <span>加载回复中...</span>
-                    </div>
+                  </div>
+                  
+                  <!-- 加载更多回复 -->
+                  <div v-if="replyStates[comment.commentId]?.hasMore" class="load-more-replies">
+                    <el-button 
+                      @click="loadMoreReplies(comment.commentId)" 
+                      :loading="replyStates[comment.commentId]?.loading"
+                      size="small"
+                      type="text"
+                    >
+                      加载更多回复
+                    </el-button>
+                  </div>
+                  
+                  <!-- 没有更多回复 -->
+                  <div v-else-if="replyStates[comment.commentId]?.replies.length > 0" class="no-more-replies">
+                    <span class="no-more-text">没有更多回复了</span>
+                  </div>
+                  
+                  <!-- 加载中状态 -->
+                  <div v-if="replyStates[comment.commentId]?.loading && replyStates[comment.commentId]?.replies.length === 0" class="loading-replies">
+                    <el-icon class="is-loading"><Loading /></el-icon>
+                    <span>加载回复中...</span>
                   </div>
                 </div>
               </div>
@@ -245,7 +245,7 @@
                 <el-input
                   v-model="post.newComment"
                   placeholder="写下你的评论..."
-                  :maxlength="200"
+                  :maxlength="2000"
                   show-word-limit
                   @keyup.enter="submitComment(post)"
                 >
@@ -258,16 +258,20 @@
           </el-card>
         </div>
         
-        <!-- 加载更多 -->
-        <div class="load-more">
-          <el-button 
-            v-if="momentsStore.hasMore" 
-            @click="loadMorePosts" 
-            :loading="momentsStore.loading"
-          >
-            加载更多
-          </el-button>
-          <p v-else class="no-more">没有更多动态了</p>
+        <!-- 滚动加载指示器 -->
+        <div v-if="isLoadingMore" class="scroll-loading-indicator">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          <span>正在加载更多动态...</span>
+        </div>
+        
+        <!-- 没有更多内容提示 -->
+        <div v-else-if="!momentsStore.hasMore && momentsStore.posts.length > 0" class="no-more-content">
+          <span>没有更多动态了 (共 {{ momentsStore.posts.length }} 条)</span>
+        </div>
+        
+        <!-- 空状态提示 -->
+        <div v-else-if="momentsStore.posts.length === 0 && !momentsStore.loading" class="empty-state">
+          <el-empty description="暂无动态" />
         </div>
       </div>
     </div>
@@ -294,6 +298,10 @@ const activeMenu = ref('/moments')
 const filterType = ref('')
 const publishing = ref(false)
 const isMobileMenuOpen = ref(false)
+
+// 滚动加载相关状态
+const isLoadingMore = ref(false)
+const scrollThreshold = 100 // 距离底部多少像素时触发加载
 
 // 新动态数据
 const newPost = ref({
@@ -346,20 +354,92 @@ const handleFilterChange = async () => {
   await loadAllCommentsAndReplies()
 }
 
-const loadMorePosts = async () => {
-  const currentLength = momentsStore.posts.length
-  await momentsStore.loadPosts({ authorType: filterType.value })
+/**
+ * 滚动事件处理函数
+ * 监听页面滚动，当接近底部时自动加载更多内容
+ */
+const handleScroll = async () => {
+  // 如果正在加载或没有更多数据，则不处理
+  if (isLoadingMore.value || !momentsStore.hasMore) {
+    return
+  }
   
-  // 为新加载的动态加载评论和回复
-  const newPosts = momentsStore.posts.slice(currentLength)
-  for (const post of newPosts) {
-    post.showComments = true
-    try {
-      await momentsStore.loadComments(post.postId, {}, true)
-      await loadAllReplies(post.postId)
-    } catch (error) {
-      console.error(`加载动态 ${post.postId} 的评论失败:`, error)
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+  const windowHeight = window.innerHeight
+  const documentHeight = document.documentElement.scrollHeight
+  
+  // 当滚动到距离底部指定像素时触发加载
+  if (scrollTop + windowHeight >= documentHeight - scrollThreshold) {
+    await loadMorePosts()
+  }
+}
+
+/**
+ * 节流函数，限制滚动事件的触发频率
+ * @param {Function} func - 要节流的函数
+ * @param {number} delay - 延迟时间（毫秒）
+ * @returns {Function} 节流后的函数
+ */
+const throttle = (func, delay) => {
+  let timeoutId
+  let lastExecTime = 0
+  return function (...args) {
+    const currentTime = Date.now()
+    
+    if (currentTime - lastExecTime > delay) {
+      func.apply(this, args)
+      lastExecTime = currentTime
+    } else {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        func.apply(this, args)
+        lastExecTime = Date.now()
+      }, delay - (currentTime - lastExecTime))
     }
+  }
+}
+
+// 创建节流后的滚动处理函数
+const throttledHandleScroll = throttle(handleScroll, 200)
+
+const loadMorePosts = async () => {
+  // 防止重复加载
+  if (isLoadingMore.value || !momentsStore.hasMore) {
+    return
+  }
+  
+  try {
+    isLoadingMore.value = true
+    const currentLength = momentsStore.posts.length
+    console.log(`开始加载更多动态，当前动态数量: ${currentLength}`)
+    
+    // 调用store的loadPosts方法，它会自动处理排重
+    await momentsStore.loadPosts({ authorType: filterType.value })
+    
+    // 获取新加载的动态（排重后的）
+    const newPosts = momentsStore.posts.slice(currentLength)
+    console.log(`加载完成，新增动态数量: ${newPosts.length}`)
+    
+    // 为新加载的动态加载评论和回复
+    for (const post of newPosts) {
+      post.showComments = true
+      try {
+        await momentsStore.loadComments(post.postId, {}, true)
+        await loadAllReplies(post.postId)
+      } catch (error) {
+        console.error(`加载动态 ${post.postId} 的评论失败:`, error)
+      }
+    }
+    
+    // 如果没有加载到新内容，但hasMore仍然为true，可能是后端数据问题
+    if (newPosts.length === 0 && momentsStore.hasMore) {
+      console.warn('滚动加载未获取到新内容，可能存在数据重复或分页问题')
+    }
+  } catch (error) {
+    console.error('加载更多动态失败:', error)
+    ElMessage.error('加载更多动态失败')
+  } finally {
+    isLoadingMore.value = false
   }
 }
 
@@ -751,6 +831,9 @@ onMounted(async () => {
     ElMessage.error('加载动态列表失败')
   }
   
+  // 添加滚动事件监听器
+  window.addEventListener('scroll', throttledHandleScroll, { passive: true })
+  
   // 添加点击外部关闭移动端菜单的监听
   document.addEventListener('click', handleClickOutside)
 })
@@ -766,6 +849,8 @@ onUnmounted(() => {
     })
   }
   
+  // 移除滚动事件监听器
+  window.removeEventListener('scroll', throttledHandleScroll)
   document.removeEventListener('click', handleClickOutside)
 })
 
@@ -1074,14 +1159,43 @@ const loadAllCommentsAndReplies = async () => {
   margin-top: 12px;
 }
 
-.load-more {
+/* 滚动加载指示器样式 */
+.scroll-loading-indicator {
   text-align: center;
-  margin-top: 20px;
-}
-
-.no-more {
+  margin: 20px 0;
+  padding: 16px;
   color: var(--color-text);
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--color-card);
+  border-radius: 8px;
+}
+
+.scroll-loading-indicator .el-icon {
+  font-size: 16px;
+}
+
+/* 没有更多内容提示样式 */
+.no-more-content {
+  text-align: center;
+  margin: 20px 0;
+  padding: 16px;
+  color: var(--color-text);
+  font-size: 14px;
+  background: var(--color-card);
+  border-radius: 8px;
+}
+
+/* 空状态样式 */
+.empty-state {
+  text-align: center;
+  margin: 40px 0;
+  padding: 40px 20px;
+  background: var(--color-card);
+  border-radius: 12px;
 }
 
 .replies-section {
@@ -1330,6 +1444,30 @@ const loadAllCommentsAndReplies = async () => {
   .reply-content p {
     font-size: 12px;
   }
+  
+  /* 移动端滚动加载指示器样式 */
+  .scroll-loading-indicator {
+    margin: 16px 0;
+    padding: 12px;
+    font-size: 13px;
+  }
+  
+  .scroll-loading-indicator .el-icon {
+    font-size: 14px;
+  }
+  
+  /* 移动端没有更多内容提示样式 */
+  .no-more-content {
+    margin: 16px 0;
+    padding: 12px;
+    font-size: 13px;
+  }
+  
+  /* 移动端空状态样式 */
+  .empty-state {
+    margin: 30px 0;
+    padding: 30px 16px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1400,6 +1538,30 @@ const loadAllCommentsAndReplies = async () => {
   
   .reply-content p {
     font-size: 11px;
+  }
+  
+  /* 小屏幕滚动加载指示器样式 */
+  .scroll-loading-indicator {
+    margin: 12px 0;
+    padding: 10px;
+    font-size: 12px;
+  }
+  
+  .scroll-loading-indicator .el-icon {
+    font-size: 13px;
+  }
+  
+  /* 小屏幕没有更多内容提示样式 */
+  .no-more-content {
+    margin: 12px 0;
+    padding: 10px;
+    font-size: 12px;
+  }
+  
+  /* 小屏幕空状态样式 */
+  .empty-state {
+    margin: 20px 0;
+    padding: 20px 12px;
   }
 }
 </style> 

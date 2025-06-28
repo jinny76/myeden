@@ -26,7 +26,7 @@
               <div class="feature-icon">
                 <el-icon size="40"><ChatDotRound /></el-icon>
               </div>
-              <h3>朋友圈</h3>
+              <h3>动态</h3>
               <p>查看和发布动态，与朋友和天使互动</p>
             </el-card>
           </el-col>
@@ -35,7 +35,7 @@
               <div class="feature-icon">
                 <el-icon size="40"><Compass /></el-icon>
               </div>
-              <h3>伊甸园</h3>
+              <h3>介绍</h3>
               <p>探索伊甸园，了解天使的设定和背景</p>
             </el-card>
           </el-col>

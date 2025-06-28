@@ -402,13 +402,89 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     if (randomValue < 0.3) {
                         triggerRobotPost(robot.getRobotId());
                     } else if (randomValue < 0.6) {
-                        // 随机选择一个动态进行评论
-                        // 这里需要实现动态选择逻辑
+                        // 随机选择一个近三天的动态进行评论
+                        triggerRobotCommentOnRecentPosts(robot.getRobotId());
                     }
                 }
             }
         } catch (Exception e) {
             logger.error("定时机器人行为执行失败: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 为指定机器人触发对近三天帖子的评论
+     * 只对机器人没有回复过的帖子进行评论
+     * 
+     * @param robotId 机器人ID
+     */
+    private void triggerRobotCommentOnRecentPosts(String robotId) {
+        try {
+            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
+            if (robot == null || !robot.getIsActive()) {
+                return;
+            }
+            
+            // 检查是否在活跃时间段
+            if (!isRobotActive(robot)) {
+                return;
+            }
+            
+            // 检查今日评论数量限制
+            RobotDailyStats stats = getDailyStats(robotId);
+            if (stats.getCommentCount() >= 20) { // 每日最多20条评论
+                return;
+            }
+            
+            // 获取近三天的帖子
+            LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
+            List<Post> recentPosts = postRepository.findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(threeDaysAgo);
+            
+            if (recentPosts.isEmpty()) {
+                logger.debug("机器人 {} 没有找到近三天的帖子", robot.getName());
+                return;
+            }
+            
+            // 过滤出机器人没有评论过的帖子
+            List<Post> uncommentedPosts = new ArrayList<>();
+            for (Post post : recentPosts) {
+                // 跳过机器人自己发布的帖子
+                if (robotId.equals(post.getAuthorId())) {
+                    continue;
+                }
+                
+                // 检查机器人是否已经评论过这个帖子
+                boolean hasCommented = commentService.hasRobotCommentedOnPost(robotId, post.getPostId());
+                if (!hasCommented) {
+                    uncommentedPosts.add(post);
+                }
+            }
+            
+            if (uncommentedPosts.isEmpty()) {
+                logger.debug("机器人 {} 已经评论过所有近三天的帖子", robot.getName());
+                return;
+            }
+            
+            // 随机选择一个未评论的帖子
+            Post selectedPost = uncommentedPosts.get(random.nextInt(uncommentedPosts.size()));
+            
+            // 计算触发概率
+            double probability = calculateBehaviorProbability(robot, "comment", "对动态发表评论");
+            if (random.nextDouble() > probability) {
+                logger.debug("机器人 {} 评论概率未触发，概率: {}", robot.getName(), probability);
+                return;
+            }
+            
+            // 触发机器人评论
+            boolean success = triggerRobotComment(robotId, selectedPost.getPostId());
+            if (success) {
+                logger.info("机器人 {} 成功对帖子 {} 触发评论", robot.getName(), selectedPost.getPostId());
+            } else {
+                logger.debug("机器人 {} 对帖子 {} 触发评论失败", robot.getName(), selectedPost.getPostId());
+            }
+            
+        } catch (Exception e) {
+            logger.error("为机器人 {} 触发近三天帖子评论失败: {}", robotId, e.getMessage(), e);
         }
     }
     

@@ -39,7 +39,7 @@ export const useMomentsStore = defineStore('moments', () => {
       loading.value = true
       
       const queryParams = {
-        page: refresh ? 1 : currentPage.value,
+        page: refresh ? 1 : currentPage.value + 1,
         size: pageSize.value,
         ...params
       }

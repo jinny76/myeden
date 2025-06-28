@@ -87,6 +87,14 @@ public interface CommentService {
     boolean unlikeComment(String commentId, String userId);
     
     /**
+     * 检查指定机器人是否已经评论过指定帖子
+     * @param robotId 机器人ID
+     * @param postId 帖子ID
+     * @return 是否已评论过
+     */
+    boolean hasRobotCommentedOnPost(String robotId, String postId);
+    
+    /**
      * 评论发布结果
      */
     class CommentResult {

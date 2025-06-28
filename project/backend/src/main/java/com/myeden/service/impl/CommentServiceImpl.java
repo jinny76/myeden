@@ -648,4 +648,26 @@ public class CommentServiceImpl implements CommentService {
     private String generateCommentLikeId() {
         return "comment_like_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
+    
+    @Override
+    public boolean hasRobotCommentedOnPost(String robotId, String postId) {
+        try {
+            logger.debug("检查机器人 {} 是否已评论过帖子 {}", robotId, postId);
+            
+            // 查询该机器人在指定帖子下的评论数量
+            long commentCount = commentRepository.countByPostIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(
+                postId, robotId, "robot");
+            
+            boolean hasCommented = commentCount > 0;
+            logger.debug("机器人 {} 在帖子 {} 下的评论数量: {}, 已评论: {}", 
+                        robotId, postId, commentCount, hasCommented);
+            
+            return hasCommented;
+            
+        } catch (Exception e) {
+            logger.error("检查机器人评论状态失败: robotId={}, postId={}, error={}", 
+                        robotId, postId, e.getMessage(), e);
+            return false;
+        }
+    }
 } 

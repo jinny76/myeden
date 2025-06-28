@@ -356,4 +356,15 @@ public interface CommentRepository extends MongoRepository<Comment, String> {
      * @return 评论信息
      */
     Optional<Comment> findByCommentIdAndIsDeletedFalse(String commentId);
+    
+    /**
+     * 根据动态ID、作者ID、作者类型和未删除统计评论数量
+     * 用于检查指定机器人是否已评论过指定帖子
+     * @param postId 动态ID
+     * @param authorId 作者ID
+     * @param authorType 作者类型
+     * @return 评论数量
+     */
+    @Query(value = "{'postId': ?0, 'authorId': ?1, 'authorType': ?2, 'isDeleted': false}", count = true)
+    long countByPostIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(String postId, String authorId, String authorType);
 } 

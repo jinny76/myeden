@@ -8,9 +8,9 @@
       <!-- 桌面端导航菜单 -->
       <div class="nav-menu desktop-menu">
         <el-menu mode="horizontal" :router="true" :default-active="activeMenu">
-          <el-menu-item index="/">首页</el-menu-item>
-          <el-menu-item index="/moments">朋友圈</el-menu-item>
-          <el-menu-item index="/world">虚拟世界</el-menu-item>
+          <el-menu-item index="/">伊甸园</el-menu-item>
+          <el-menu-item index="/moments">动态</el-menu-item>
+          <el-menu-item index="/world">介绍</el-menu-item>
         </el-menu>
       </div>
       <!-- 用户信息区域 -->
@@ -50,15 +50,15 @@
       <div class="mobile-menu-content">
         <div class="mobile-nav-item" @click="navigateTo('/')">
           <el-icon><House /></el-icon>
-          <span>首页</span>
+          <span>伊甸园</span>
         </div>
         <div class="mobile-nav-item" @click="navigateTo('/moments')">
           <el-icon><ChatDotRound /></el-icon>
-          <span>朋友圈</span>
+          <span>动态</span>
         </div>
         <div class="mobile-nav-item" @click="navigateTo('/world')">
           <el-icon><Compass /></el-icon>
-          <span>虚拟世界</span>
+          <span>介绍</span>
         </div>
         <div class="mobile-nav-divider"></div>
         <template v-if="isLoggedIn">

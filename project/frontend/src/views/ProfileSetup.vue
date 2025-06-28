@@ -55,13 +55,13 @@
           />
         </el-form-item>
         
-        <el-form-item label="介绍你自己给天使们" prop="bio">
+        <el-form-item label="背景" prop="bio">
           <el-input
             v-model="formData.bio"
             type="textarea"
             :rows="3"
-            placeholder="介绍一下自己吧..."
-            maxlength="200"
+            placeholder="介绍你自己给天使们..."
+            maxlength="5000"
             show-word-limit
           />
         </el-form-item>

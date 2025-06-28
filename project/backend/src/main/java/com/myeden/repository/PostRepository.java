@@ -311,4 +311,12 @@ public interface PostRepository extends MongoRepository<Post, String> {
      * @return 动态分页结果
      */
     Page<Post> findByIsDeletedFalse(Pageable pageable);
+    
+    /**
+     * 根据创建时间查找指定时间之后的未删除动态，按创建时间倒序排列
+     * @param createdAt 创建时间
+     * @return 动态列表
+     */
+    @Query("{'createdAt': {$gte: ?0}, 'isDeleted': false}")
+    List<Post> findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(LocalDateTime createdAt);
 } 
