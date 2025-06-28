@@ -94,8 +94,8 @@ export default defineConfig({
           'vue-vendor': ['vue', 'vue-router', 'pinia'],
           // Element Plus UI库
           'element-plus': ['element-plus'],
-          // Socket.io客户端
-          'socket-io': ['socket.io-client'],
+          // STOMP客户端
+          'stomp-client': ['@stomp/stompjs'],
           // 工具库
           'utils': ['axios', 'dayjs']
         },
@@ -129,20 +129,6 @@ export default defineConfig({
       scss: {
         additionalData: `@import "@/styles/variables.scss";`
       }
-    },
-    // CSS优化配置
-    postcss: {
-      plugins: [
-        require('autoprefixer'),
-        require('cssnano')({
-          preset: ['default', {
-            discardComments: {
-              removeAll: true
-            },
-            normalizeWhitespace: true
-          }]
-        })
-      ]
     }
   },
   
@@ -159,7 +145,7 @@ export default defineConfig({
       'pinia',
       'element-plus',
       'axios',
-      'socket.io-client',
+      '@stomp/stompjs',
       'dayjs'
     ],
     exclude: []

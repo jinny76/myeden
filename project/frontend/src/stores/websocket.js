@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { io } from 'socket.io-client'
+import { Client } from '@stomp/stompjs'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
@@ -12,6 +12,7 @@ import { ElMessage } from 'element-plus'
  * - 处理实时消息推送
  * - 管理连接重连机制
  * - 处理消息队列和去重
+ * - 使用Spring WebSocket + STOMP协议
  * 
  * @author MyEden Team
  * @version 1.0.0
@@ -20,7 +21,7 @@ import { ElMessage } from 'element-plus'
 
 export const useWebSocketStore = defineStore('websocket', () => {
   // 状态定义
-  const socket = ref(null)
+  const stompClient = ref(null)
   const isConnected = ref(false)
   const isConnecting = ref(false)
   const reconnectAttempts = ref(0)
@@ -29,6 +30,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
   const messageQueue = ref([])
   const messageHistory = ref([])
   const maxMessageHistory = ref(100)
+  const subscriptions = ref(new Map())
 
   // 计算属性
   const connectionStatus = computed(() => {
@@ -58,31 +60,45 @@ export const useWebSocketStore = defineStore('websocket', () => {
         throw new Error('用户未登录，无法建立WebSocket连接')
       }
 
-      // 创建Socket.io连接
-      socket.value = io(import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws', {
-        auth: {
-          token: userStore.token
+      // 根据当前访问的网址推算WebSocket URL
+      const wsUrl = getWebSocketUrl()
+      console.log('🔌 正在连接WebSocket...', wsUrl)
+
+      // 创建STOMP客户端
+      stompClient.value = new Client({
+        brokerURL: wsUrl,
+        connectHeaders: {
+          'Authorization': `Bearer ${userStore.token}`
         },
-        transports: ['websocket', 'polling'],
-        timeout: 20000,
-        reconnection: false, // 手动控制重连
-        autoConnect: false
+        debug: function (str) {
+          console.log('STOMP Debug:', str)
+        },
+        reconnectDelay: 5000,
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000
       })
 
-      // 连接事件监听
-      socket.value.on('connect', handleConnect)
-      socket.value.on('disconnect', handleDisconnect)
-      socket.value.on('connect_error', handleConnectError)
-      socket.value.on('message', handleMessage)
-      socket.value.on('notification', handleNotification)
-      socket.value.on('post_update', handlePostUpdate)
-      socket.value.on('comment_update', handleCommentUpdate)
-      socket.value.on('robot_action', handleRobotAction)
+      // 连接成功回调
+      stompClient.value.onConnect = (frame) => {
+        console.log('✅ STOMP连接成功:', frame)
+        handleConnect()
+      }
 
-      // 建立连接
-      socket.value.connect()
-      
-      console.log('🔌 正在连接WebSocket...')
+      // 连接错误回调
+      stompClient.value.onStompError = (frame) => {
+        console.error('❌ STOMP连接错误:', frame)
+        handleConnectError(new Error(frame.headers.message || 'STOMP连接错误'))
+      }
+
+      // 连接断开回调
+      stompClient.value.onDisconnect = () => {
+        console.log('🔌 STOMP连接断开')
+        handleDisconnect('STOMP disconnected')
+      }
+
+      // 启动连接
+      stompClient.value.activate()
+
     } catch (error) {
       console.error('❌ WebSocket连接失败:', error)
       isConnecting.value = false
@@ -92,37 +108,130 @@ export const useWebSocketStore = defineStore('websocket', () => {
   }
 
   /**
+   * 根据当前访问的网址推算WebSocket URL
+   */
+  const getWebSocketUrl = () => {
+    // 优先使用环境变量配置
+    if (import.meta.env.VITE_WS_URL) {
+      return import.meta.env.VITE_WS_URL
+    }
+
+    // 根据当前页面URL推算WebSocket URL
+    const currentUrl = window.location
+    const protocol = currentUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = currentUrl.hostname
+    const port = currentUrl.port || (currentUrl.protocol === 'https:' ? '443' : '80')
+    
+    // 如果是开发环境，使用默认的WebSocket端口
+    if (import.meta.env.DEV) {
+      return `${protocol}//${host}:38080/ws`
+    }
+    
+    // 生产环境使用相同的主机和端口
+    return `${protocol}//${host}:${port}/ws`
+  }
+
+  // 开发环境下添加测试函数
+  if (import.meta.env.DEV) {
+    window.testWebSocketUrl = () => {
+      console.log('=== WebSocket URL 测试 ===')
+      console.log('当前页面URL:', window.location.href)
+      console.log('推算的WebSocket URL:', getWebSocketUrl())
+      console.log('环境变量 VITE_WS_URL:', import.meta.env.VITE_WS_URL)
+      console.log('STOMP客户端是否可用:', !!Client)
+      console.log('=== 测试结束 ===')
+    }
+  }
+
+  /**
    * 断开WebSocket连接
    */
   const disconnect = () => {
-    if (socket.value) {
-      socket.value.disconnect()
-      socket.value = null
+    if (stompClient.value && isConnected.value) {
+      stompClient.value.deactivate()
+      stompClient.value = null
     }
     isConnected.value = false
     isConnecting.value = false
     reconnectAttempts.value = 0
+    
+    // 清理订阅
+    subscriptions.value.clear()
+    
     console.log('🔌 WebSocket连接已断开')
   }
 
   /**
    * 发送消息
-   * @param {string} event - 事件名称
+   * @param {string} destination - 目标地址
    * @param {any} data - 消息数据
+   * @param {object} headers - 消息头
    */
-  const sendMessage = (event, data) => {
-    if (!isConnected.value || !socket.value) {
+  const sendMessage = (destination, data, headers = {}) => {
+    if (!isConnected.value || !stompClient.value) {
       console.warn('WebSocket未连接，消息已加入队列')
-      messageQueue.value.push({ event, data, timestamp: Date.now() })
+      messageQueue.value.push({ destination, data, headers, timestamp: Date.now() })
       return
     }
 
     try {
-      socket.value.emit(event, data)
-      console.log('📤 发送消息:', event, data)
+      stompClient.value.publish({
+        destination: destination,
+        headers: headers,
+        body: JSON.stringify(data)
+      })
+      console.log('📤 发送消息:', destination, data)
     } catch (error) {
       console.error('❌ 发送消息失败:', error)
       ElMessage.error('消息发送失败')
+    }
+  }
+
+  /**
+   * 订阅主题
+   * @param {string} destination - 订阅地址
+   * @param {function} callback - 回调函数
+   * @param {string} id - 订阅ID
+   */
+  const subscribe = (destination, callback, id = null) => {
+    if (!isConnected.value || !stompClient.value) {
+      console.warn('WebSocket未连接，无法订阅')
+      return null
+    }
+
+    try {
+      const subscription = stompClient.value.subscribe(destination, (message) => {
+        try {
+          const data = JSON.parse(message.body)
+          console.log('📥 收到消息:', destination, data)
+          addToMessageHistory('message', { destination, data })
+          callback(data, message)
+        } catch (error) {
+          console.error('❌ 解析消息失败:', error)
+        }
+      })
+
+      const subscriptionId = id || `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      subscriptions.value.set(subscriptionId, subscription)
+      
+      console.log('📡 订阅成功:', destination, subscriptionId)
+      return subscriptionId
+    } catch (error) {
+      console.error('❌ 订阅失败:', error)
+      return null
+    }
+  }
+
+  /**
+   * 取消订阅
+   * @param {string} subscriptionId - 订阅ID
+   */
+  const unsubscribe = (subscriptionId) => {
+    const subscription = subscriptions.value.get(subscriptionId)
+    if (subscription) {
+      subscription.unsubscribe()
+      subscriptions.value.delete(subscriptionId)
+      console.log('📡 取消订阅:', subscriptionId)
     }
   }
 
@@ -140,6 +249,9 @@ export const useWebSocketStore = defineStore('websocket', () => {
     
     // 处理消息队列
     processMessageQueue()
+    
+    // 重新订阅之前的主题
+    resubscribeTopics()
   }
 
   /**
@@ -168,6 +280,14 @@ export const useWebSocketStore = defineStore('websocket', () => {
     } else {
       ElMessage.error('WebSocket连接失败，请刷新页面重试')
     }
+  }
+
+  /**
+   * 重新订阅主题
+   */
+  const resubscribeTopics = () => {
+    // 这里可以保存和恢复之前的订阅
+    console.log('🔄 重新订阅主题')
   }
 
   /**
@@ -215,8 +335,8 @@ export const useWebSocketStore = defineStore('websocket', () => {
     console.log('📝 动态更新:', post)
     addToMessageHistory('post_update', post)
     
-    // 触发动态更新事件
-    window.dispatchEvent(new CustomEvent('post-update', { detail: post }))
+    // 这里可以触发动态列表更新
+    // 例如：刷新动态列表、更新特定动态等
   }
 
   /**
@@ -226,43 +346,43 @@ export const useWebSocketStore = defineStore('websocket', () => {
     console.log('💬 评论更新:', comment)
     addToMessageHistory('comment_update', comment)
     
-    // 触发评论更新事件
-    window.dispatchEvent(new CustomEvent('comment-update', { detail: comment }))
+    // 这里可以触发评论列表更新
+    // 例如：刷新评论列表、更新评论数量等
   }
 
   /**
-   * 处理机器人行为
+   * 处理机器人动作
    */
   const handleRobotAction = (action) => {
-    console.log('🤖 机器人行为:', action)
+    console.log('🤖 机器人动作:', action)
     addToMessageHistory('robot_action', action)
     
-    // 触发机器人行为事件
-    window.dispatchEvent(new CustomEvent('robot-action', { detail: action }))
+    // 这里可以处理机器人相关的实时更新
+    // 例如：机器人状态变化、动作执行结果等
   }
 
   /**
    * 处理动态消息
    */
   const handlePostMessage = (message) => {
-    // 可以在这里添加特定的动态消息处理逻辑
-    console.log('处理动态消息:', message)
+    console.log('📝 处理动态消息:', message)
+    // 处理动态相关的消息
   }
 
   /**
    * 处理评论消息
    */
   const handleCommentMessage = (message) => {
-    // 可以在这里添加特定的评论消息处理逻辑
-    console.log('处理评论消息:', message)
+    console.log('💬 处理评论消息:', message)
+    // 处理评论相关的消息
   }
 
   /**
    * 处理通知消息
    */
   const handleNotificationMessage = (message) => {
-    // 可以在这里添加特定的通知消息处理逻辑
-    console.log('处理通知消息:', message)
+    console.log('📢 处理通知消息:', message)
+    // 处理通知相关的消息
   }
 
   /**
@@ -270,7 +390,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
    */
   const scheduleReconnect = () => {
     if (!canReconnect.value) {
-      console.log('已达到最大重连次数')
+      console.log('❌ 已达到最大重连次数')
       return
     }
 
@@ -281,7 +401,9 @@ export const useWebSocketStore = defineStore('websocket', () => {
     
     setTimeout(() => {
       if (!isConnected.value) {
-        connect()
+        connect().catch(error => {
+          console.error('❌ 重连失败:', error)
+        })
       }
     }, delay)
   }
@@ -294,10 +416,12 @@ export const useWebSocketStore = defineStore('websocket', () => {
     
     console.log(`📤 处理消息队列 (${messageQueue.value.length}条消息)`)
     
-    while (messageQueue.value.length > 0) {
-      const { event, data } = messageQueue.value.shift()
-      sendMessage(event, data)
-    }
+    const queue = [...messageQueue.value]
+    messageQueue.value = []
+    
+    queue.forEach(({ destination, data, headers }) => {
+      sendMessage(destination, data, headers)
+    })
   }
 
   /**
@@ -305,7 +429,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
    */
   const addToMessageHistory = (type, data) => {
     const message = {
-      id: Date.now() + Math.random(),
+      id: Date.now() + Math.random().toString(36).substr(2, 9),
       type,
       data,
       timestamp: Date.now()
@@ -324,19 +448,20 @@ export const useWebSocketStore = defineStore('websocket', () => {
    */
   const clearMessageHistory = () => {
     messageHistory.value = []
+    console.log('🗑️ 消息历史已清空')
   }
 
   /**
    * 获取消息历史
    */
   const getMessageHistory = (type = null, limit = 50) => {
-    let messages = messageHistory.value
+    let history = messageHistory.value
     
     if (type) {
-      messages = messages.filter(msg => msg.type === type)
+      history = history.filter(msg => msg.type === type)
     }
     
-    return messages.slice(0, limit)
+    return history.slice(0, limit)
   }
 
   /**
@@ -345,25 +470,28 @@ export const useWebSocketStore = defineStore('websocket', () => {
   const setReconnectConfig = (maxAttempts, delay) => {
     maxReconnectAttempts.value = maxAttempts
     reconnectDelay.value = delay
+    console.log(`⚙️ 重连配置已更新: 最大次数=${maxAttempts}, 延迟=${delay}ms`)
   }
 
   /**
    * 检查连接状态
    */
   const checkConnection = () => {
-    return isConnected.value && socket.value && socket.value.connected
+    return {
+      isConnected: isConnected.value,
+      isConnecting: isConnecting.value,
+      reconnectAttempts: reconnectAttempts.value,
+      maxReconnectAttempts: maxReconnectAttempts.value,
+      messageQueueLength: messageQueue.value.length,
+      messageHistoryLength: messageHistory.value.length,
+      subscriptionsCount: subscriptions.value.size
+    }
   }
 
   return {
     // 状态
-    socket,
     isConnected,
     isConnecting,
-    reconnectAttempts,
-    messageQueue,
-    messageHistory,
-    
-    // 计算属性
     connectionStatus,
     canReconnect,
     
@@ -371,9 +499,11 @@ export const useWebSocketStore = defineStore('websocket', () => {
     connect,
     disconnect,
     sendMessage,
-    clearMessageHistory,
-    getMessageHistory,
+    subscribe,
+    unsubscribe,
     setReconnectConfig,
-    checkConnection
+    checkConnection,
+    clearMessageHistory,
+    getMessageHistory
   }
 }) 
