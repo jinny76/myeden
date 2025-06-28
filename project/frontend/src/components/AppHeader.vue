@@ -38,7 +38,7 @@
         </template>
       </div>
       <!-- 移动端菜单按钮 -->
-      <div class="mobile-menu-toggle" @click="toggleMobileMenu">
+      <div class="mobile-menu-toggle" @click="toggleMobileMenu($event)">
         <el-icon size="24">
           <Menu v-if="!isMobileMenuOpen" />
           <Close v-else />
@@ -46,7 +46,7 @@
       </div>
     </div>
     <!-- 移动端导航菜单 -->
-    <div class="mobile-menu" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
+    <div class="mobile-menu" :class="{ 'mobile-menu-open': isMobileMenuOpen }" @click.stop>
       <div class="mobile-menu-content">
         <div class="mobile-nav-item" @click="navigateTo('/')">
           <el-icon><House /></el-icon>
@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -137,8 +137,9 @@ const handleLogout = async () => {
   }
 }
 
-const toggleMobileMenu = () => {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value
+const toggleMobileMenu = (event) => {
+  if (event) event.stopPropagation();
+  isMobileMenuOpen.value = !isMobileMenuOpen.value;
 }
 
 const handleClickOutside = (event) => {
@@ -266,9 +267,9 @@ onUnmounted(() => {
   top: 100%;
   left: 0;
   right: 0;
-  z-index: 999;
+  z-index: 2000;
 }
-.mobile-menu-open {
+.mobile-menu.mobile-menu-open {
   display: block;
 }
 .mobile-menu-content {

@@ -1,96 +1,5 @@
 <template>
   <div class="home-container">
-    <!-- 顶部导航栏 -->
-    <el-header class="header">
-      <div class="header-content">
-        <!-- Logo区域 -->
-        <div class="logo">
-          <h1>我的伊甸园</h1>
-        </div>
-        
-        <!-- 桌面端导航菜单 -->
-        <div class="nav-menu desktop-menu">
-          <el-menu mode="horizontal" :router="true" :default-active="activeMenu">
-            <el-menu-item index="/">首页</el-menu-item>
-            <el-menu-item index="/moments">朋友圈</el-menu-item>
-            <el-menu-item index="/world">虚拟世界</el-menu-item>
-          </el-menu>
-        </div>
-        
-        <!-- 用户信息区域 -->
-        <div class="user-info">
-          <template v-if="isLoggedIn">
-            <el-dropdown @command="handleUserCommand">
-              <span class="user-avatar">
-                <el-avatar :src="getUserAvatarUrl(userStore.userInfo)" />
-                <span class="username">{{ userStore.userInfo?.nickname || '用户' }}</span>
-              </span>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="profile-setup">个人资料</el-dropdown-item>
-                  <el-dropdown-item command="settings">设置</el-dropdown-item>
-                  <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </template>
-          <template v-else>
-            <div class="auth-buttons">
-              <el-button type="primary" size="small" @click="navigateTo('/login')">登录</el-button>
-              <el-button size="small" @click="navigateTo('/register')">注册</el-button>
-            </div>
-          </template>
-        </div>
-        
-        <!-- 移动端菜单按钮 -->
-        <div class="mobile-menu-toggle" @click="toggleMobileMenu">
-          <el-icon size="24">
-            <Menu v-if="!isMobileMenuOpen" />
-            <Close v-else />
-          </el-icon>
-        </div>
-      </div>
-      
-      <!-- 移动端导航菜单 -->
-      <div class="mobile-menu" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
-        <div class="mobile-menu-content">
-          <div class="mobile-nav-item" @click="navigateTo('/')">
-            <el-icon><House /></el-icon>
-            <span>首页</span>
-          </div>
-          <div class="mobile-nav-item" @click="navigateTo('/moments')">
-            <el-icon><ChatDotRound /></el-icon>
-            <span>朋友圈</span>
-          </div>
-          <div class="mobile-nav-item" @click="navigateTo('/world')">
-            <el-icon><Compass /></el-icon>
-            <span>虚拟世界</span>
-          </div>
-          <div class="mobile-nav-divider"></div>
-          <template v-if="isLoggedIn">
-            <div class="mobile-nav-item" @click="navigateTo('/profile-setup')">
-              <el-icon><User /></el-icon>
-              <span>个人资料</span>
-            </div>
-            <div class="mobile-nav-item" @click="handleLogout">
-              <el-icon><SwitchButton /></el-icon>
-              <span>退出登录</span>
-            </div>
-          </template>
-          <template v-else>
-            <div class="mobile-nav-item" @click="navigateTo('/login')">
-              <el-icon><UserFilled /></el-icon>
-              <span>登录</span>
-            </div>
-            <div class="mobile-nav-item" @click="navigateTo('/register')">
-              <el-icon><UserFilled /></el-icon>
-              <span>注册</span>
-            </div>
-          </template>
-        </div>
-      </div>
-    </el-header>
-
     <!-- 主要内容区域 -->
     <div class="main-content">
       <!-- 欢迎区域 -->
@@ -155,8 +64,8 @@
               <li>探索虚拟世界</li>
             </ul>
             <div class="prompt-actions">
-              <el-button type="primary" size="large" @click="navigateTo('/login')">立即登录</el-button>
-              <el-button size="large" @click="navigateTo('/register')" style="margin-left: 15px;">注册账号</el-button>
+              <el-button type="primary" size="small" @click="navigateTo('/login')" class="login-button">立即登录</el-button>
+              <el-button size="small" @click="navigateTo('/register')" style="margin-left: 15px;" class="register-button">注册账号</el-button>
             </div>
           </div>
         </el-card>
@@ -771,6 +680,20 @@ watch(isLoggedIn, (newValue, oldValue) => {
   margin: 0 8px;
 }
 
+.login-button,
+.register-button {
+  width: 100px !important;
+  height: 36px !important;
+  font-size: 15px !important;
+  padding: 0 10px !important;
+  border-radius: 6px !important;
+  min-width: 0 !important;
+}
+
+.prompt-actions {
+  gap: 10px;
+}
+
 @media (max-width: 768px) {
   .header-content {
     padding: 0 16px;
@@ -934,6 +857,10 @@ watch(isLoggedIn, (newValue, oldValue) => {
   .prompt-actions .el-button {
     margin: 0;
     width: 100%;
+    height: 36px;
+    font-size: 15px;
+    padding: 0 10px;
+    border-radius: 6px;
   }
   
   .recent-posts-section h3 {
