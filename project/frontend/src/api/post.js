@@ -74,9 +74,9 @@ export function getPostList(params) {
 /**
  * 获取动态详情
  * @param {string} postId - 动态ID
- * @returns {Promise} 动态详细信息
+ * @returns {Promise} API响应
  */
-export function getPostDetail(postId) {
+export const getPostDetail = (postId) => {
   return request({
     url: `/posts/${postId}`,
     method: 'get'

@@ -88,6 +88,7 @@
               />
               <span class="author-name">{{ post.authorName }}</span>
               <span class="post-time">{{ formatTime(post.createdAt) }}</span>
+              <el-icon class="click-hint"><ArrowRight /></el-icon>
             </div>
             <div class="post-content">
               <p>{{ post.content }}</p>
@@ -95,6 +96,7 @@
             <div class="post-footer">
               <span class="like-count">❤️ {{ post.likeCount }}</span>
               <span class="comment-count">💬 {{ post.commentCount }}</span>
+              <span class="view-detail">点击查看详情 →</span>
             </div>
           </el-card>
         </div>
@@ -109,7 +111,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChatDotRound, Compass, User, Menu, Close, House, SwitchButton, UserFilled } from '@element-plus/icons-vue'
+import { ChatDotRound, Compass, User, Menu, Close, House, SwitchButton, UserFilled, ArrowRight } from '@element-plus/icons-vue'
 import { getPostList } from '@/api/post'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 
@@ -253,8 +255,8 @@ const loadRecentPosts = async () => {
 }
 
 const navigateToPost = (postId) => {
-  // 跳转到朋友圈页面，并传递动态ID参数
-  router.push({ path: '/moments', query: { postId: postId } })
+  // 跳转到动态详情页
+  router.push(`/post/${postId}`)
 }
 
 const getAuthorAvatarUrl = (post) => {
@@ -586,6 +588,26 @@ watch(isLoggedIn, (newValue, oldValue) => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: all 0.3s ease;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.post-preview-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(102, 126, 234, 0.02) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.post-preview-card:hover::before {
+  opacity: 1;
 }
 
 .post-preview-card:hover {
@@ -593,10 +615,21 @@ watch(isLoggedIn, (newValue, oldValue) => {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
 }
 
+.post-preview-card:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.post-preview-card:active::before {
+  opacity: 0.5;
+}
+
 .post-header {
   display: flex;
   align-items: center;
   margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .author-name {
@@ -611,8 +644,23 @@ watch(isLoggedIn, (newValue, oldValue) => {
   font-size: 12px;
 }
 
+.click-hint {
+  margin-left: 8px;
+  color: var(--color-primary);
+  font-size: 14px;
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.post-preview-card:hover .click-hint {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
 .post-content {
   margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .post-content p {
@@ -626,12 +674,27 @@ watch(isLoggedIn, (newValue, oldValue) => {
   gap: 16px;
   color: var(--color-text);
   font-size: 14px;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
 }
 
 .like-count, .comment-count {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.view-detail {
+  color: var(--color-primary);
+  font-size: 12px;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.post-preview-card:hover .view-detail {
+  opacity: 1;
 }
 
 .login-prompt {
@@ -784,12 +847,21 @@ watch(isLoggedIn, (newValue, oldValue) => {
     font-size: 11px;
   }
   
+  .click-hint {
+    font-size: 12px;
+  }
+  
   .post-content p {
-    font-size: 14px;
+    font-size: 13px;
   }
   
   .post-footer {
-    font-size: 12px;
+    font-size: 11px;
+    gap: 12px;
+  }
+  
+  .view-detail {
+    font-size: 10px;
   }
 }
 
@@ -883,9 +955,17 @@ watch(isLoggedIn, (newValue, oldValue) => {
     font-size: 13px;
   }
   
+  .click-hint {
+    font-size: 11px;
+  }
+  
   .post-footer {
     font-size: 11px;
     gap: 12px;
+  }
+  
+  .view-detail {
+    font-size: 10px;
   }
 }
 </style> 

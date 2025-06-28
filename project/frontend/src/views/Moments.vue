@@ -69,6 +69,7 @@
             v-for="post in momentsStore.posts" 
             :key="post.postId" 
             class="post-card"
+            @click="goToPostDetail(post)"
           >
             <!-- 动态头部 -->
             <div class="post-header">
@@ -83,7 +84,7 @@
                 </div>
               </div>
               <div class="post-actions" v-if="post.authorId === userStore.userInfo?.userId">
-                <el-dropdown @command="(command) => handlePostAction(command, post)">
+                <el-dropdown @command="(command) => handlePostAction(command, post)" @click.stop>
                   <el-button type="text">
                     <el-icon><MoreFilled /></el-icon>
                   </el-button>
@@ -129,7 +130,7 @@
             </div>
             
             <!-- 动态操作 -->
-            <div class="post-actions-bar">
+            <div class="post-actions-bar" @click.stop>
               <el-button type="text" @click="toggleLike(post)">
                 {{ post.isLiked ? '❤️ 取消点赞' : '🤍 点赞' }}
               </el-button>
@@ -140,7 +141,7 @@
             </div>
             
             <!-- 评论区域 -->
-            <div v-if="post.showComments" class="comments-section">
+            <div v-if="post.showComments" class="comments-section" @click.stop>
               <!-- 评论列表 -->
               <div class="comments-list">
                 <div 
@@ -821,6 +822,10 @@ const navigateTo = (path) => {
   isMobileMenuOpen.value = false
 }
 
+const goToPostDetail = (post) => {
+  router.push(`/post/${post.postId}`)
+}
+
 // 生命周期
 onMounted(async () => {
   try {
@@ -993,6 +998,17 @@ const loadAllCommentsAndReplies = async () => {
   border-radius: 12px;
   background: var(--color-card);
   color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.post-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.post-card:active {
+  transform: translateY(0);
 }
 
 .post-header {
