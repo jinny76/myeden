@@ -183,7 +183,7 @@ const loadRecentPosts = async () => {
     // 调用API获取最近动态
     const response = await getPostList({
       page: 1,
-      size: 5
+      size: 9
     })
     if (response.code === 200 && response.data) {
       recentPosts.value = response.data.posts.map(post => ({

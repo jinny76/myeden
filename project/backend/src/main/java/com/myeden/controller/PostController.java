@@ -220,7 +220,7 @@ public class PostController {
                 ));
             } else {
                 return ResponseEntity.badRequest().body(new EventResponse(
-                    400,
+                    200,
                     "点赞失败",
                     null
                 ));

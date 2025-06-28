@@ -530,6 +530,66 @@ a, .el-button--primary, .el-tag--success {
     opacity: 0.6;
   }
   
+  /* 下拉框完整配色优化 */
+  .el-select {
+    .el-input__wrapper {
+      background: #2d2e2f !important;
+      border-color: #3a3b3c !important;
+      color: var(--color-text) !important;
+    }
+    .el-input__inner {
+      color: var(--color-text) !important;
+    }
+    .el-select__caret {
+      color: var(--color-text) !important;
+    }
+  }
+  
+  /* 下拉框选项容器 */
+  .el-select-dropdown {
+    background: #2d2e2f !important;
+    border-color: #3a3b3c !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  }
+  
+  /* 下拉框选项 */
+  .el-select-dropdown__item {
+    background: #2d2e2f !important;
+    color: var(--color-text) !important;
+    border: none !important;
+  }
+  
+  /* 下拉框选项悬停状态 */
+  .el-select-dropdown__item:hover {
+    background: #3a3b3c !important;
+    color: var(--color-text) !important;
+  }
+  
+  /* 下拉框选项选中状态 */
+  .el-select-dropdown__item.selected {
+    background: var(--color-primary) !important;
+    color: #fff !important;
+  }
+  
+  /* 下拉框选项禁用状态 */
+  .el-select-dropdown__item.is-disabled {
+    background: #2d2e2f !important;
+    color: #666 !important;
+    cursor: not-allowed;
+  }
+  
+  /* 下拉框空状态 */
+  .el-select-dropdown__empty {
+    background: #2d2e2f !important;
+    color: #a0a0a0 !important;
+  }
+  
+  /* 下拉框加载状态 */
+  .el-select-dropdown__loading {
+    background: #2d2e2f !important;
+    color: #a0a0a0 !important;
+  }
+  
   /* 日期选择器边框优化 */
   .el-date-editor.el-input,
   .el-date-editor.el-input__wrapper {
@@ -583,4 +643,493 @@ body[data-theme='dark'] .el-input__wrapper .el-input__count {
   opacity: 0.85;
   border-radius: 4px;
   box-shadow: none;
+}
+
+/* 额外的下拉框样式确保兼容性 */
+[data-theme='dark'] {
+  /* 确保下拉框选项在任何情况下都有正确的背景色 */
+  .el-select-dropdown.el-popper {
+    background: #2d2e2f !important;
+    border-color: #3a3b3c !important;
+  }
+  
+  /* 下拉框选项的完整样式覆盖 */
+  .el-select-dropdown .el-select-dropdown__item {
+    background: #2d2e2f !important;
+    color: var(--color-text) !important;
+  }
+  
+  .el-select-dropdown .el-select-dropdown__item:hover {
+    background: #3a3b3c !important;
+    color: var(--color-text) !important;
+  }
+  
+  .el-select-dropdown .el-select-dropdown__item.selected {
+    background: var(--color-primary) !important;
+    color: #fff !important;
+  }
+  
+  /* 下拉框的箭头图标 */
+  .el-select .el-input .el-select__caret {
+    color: var(--color-text) !important;
+  }
+  
+  /* 下拉框的占位符文本 */
+  .el-select .el-input__inner::placeholder {
+    color: #a0a0a0 !important;
+    opacity: 0.6;
+  }
+  
+  /* 下拉框的输入框背景 */
+  .el-select .el-input__wrapper {
+    background: #2d2e2f !important;
+    border-color: #3a3b3c !important;
+  }
+  
+  /* 下拉框焦点状态 */
+  .el-select .el-input__wrapper.is-focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.2) !important;
+  }
+}
+
+/* 强制覆盖暗色主题下拉框样式 - 使用更高优先级 */
+body[data-theme='dark'] {
+  /* 下拉框容器 */
+  .el-select-dropdown {
+    background-color: #232425 !important;
+    border-color: #3a3b3c !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  }
+  
+  /* 下拉框选项 */
+  .el-select-dropdown__item {
+    background-color: #232425 !important;
+    color: #f5f5f5 !important;
+    border: none !important;
+  }
+  
+  /* 下拉框选项悬停 */
+  .el-select-dropdown__item:hover {
+    background-color: #3a3b3c !important;
+    color: #f5f5f5 !important;
+  }
+  
+  /* 下拉框选项选中 */
+  .el-select-dropdown__item.selected {
+    background-color: #22d36b !important;
+    color: #ffffff !important;
+  }
+  
+  /* 下拉框选项禁用 */
+  .el-select-dropdown__item.is-disabled {
+    background-color: #232425 !important;
+    color: #666666 !important;
+  }
+  
+  /* 下拉框输入框 */
+  .el-select .el-input__wrapper {
+    background-color: #232425 !important;
+    border-color: #3a3b3c !important;
+    color: #f5f5f5 !important;
+  }
+  
+  /* 下拉框输入框文字 */
+  .el-select .el-input__inner {
+    background-color: #232425 !important;
+    color: #f5f5f5 !important;
+  }
+  
+  /* 下拉框箭头 */
+  .el-select .el-select__caret {
+    color: #f5f5f5 !important;
+  }
+  
+  /* 下拉框占位符 */
+  .el-select .el-input__inner::placeholder {
+    color: #a0a0a0 !important;
+  }
+  
+  /* 下拉框焦点状态 */
+  .el-select .el-input__wrapper.is-focus {
+    border-color: #22d36b !important;
+    box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.2) !important;
+  }
+  
+  /* 下拉框空状态 */
+  .el-select-dropdown__empty {
+    background-color: #232425 !important;
+    color: #a0a0a0 !important;
+  }
+  
+  /* 下拉框加载状态 */
+  .el-select-dropdown__loading {
+    background-color: #232425 !important;
+    color: #a0a0a0 !important;
+  }
+}
+
+/* 最终的下拉框样式覆盖 - 使用最具体的选择器 */
+body[data-theme='dark'] .el-select-dropdown,
+body[data-theme='dark'] .el-popper.el-select__popper {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+body[data-theme='dark'] .el-select-dropdown .el-select-dropdown__item {
+  background-color: #232425 !important;
+  color: #f5f5f5 !important;
+  border: none !important;
+}
+
+body[data-theme='dark'] .el-select-dropdown .el-select-dropdown__item:hover {
+  background-color: #3a3b3c !important;
+  color: #f5f5f5 !important;
+}
+
+body[data-theme='dark'] .el-select-dropdown .el-select-dropdown__item.selected {
+  background-color: #22d36b !important;
+  color: #ffffff !important;
+}
+
+body[data-theme='dark'] .el-select .el-input__wrapper {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+}
+
+body[data-theme='dark'] .el-select .el-input__inner {
+  background-color: #232425 !important;
+  color: #f5f5f5 !important;
+}
+
+body[data-theme='dark'] .el-select .el-select__caret {
+  color: #f5f5f5 !important;
+}
+
+/* 确保下拉框在全局范围内都能正确显示 */
+html[data-theme='dark'] .el-select-dropdown,
+html[data-theme='dark'] .el-popper.el-select__popper {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+}
+
+html[data-theme='dark'] .el-select-dropdown .el-select-dropdown__item {
+  background-color: #232425 !important;
+  color: #f5f5f5 !important;
+}
+
+html[data-theme='dark'] .el-select-dropdown .el-select-dropdown__item:hover {
+  background-color: #3a3b3c !important;
+  color: #f5f5f5 !important;
+}
+
+html[data-theme='dark'] .el-select-dropdown .el-select-dropdown__item.selected {
+  background-color: #22d36b !important;
+  color: #ffffff !important;
+}
+
+/* 专门修复下拉框主体部分的配色问题 */
+body[data-theme='dark'] .el-select {
+  /* 下拉框输入框容器 */
+  .el-input__wrapper {
+    background-color: #232425 !important;
+    border-color: #3a3b3c !important;
+    box-shadow: none !important;
+  }
+  
+  /* 下拉框输入框内部 */
+  .el-input__inner {
+    background-color: #232425 !important;
+    color: #f5f5f5 !important;
+    border: none !important;
+  }
+  
+  /* 下拉框占位符 */
+  .el-input__inner::placeholder {
+    color: #a0a0a0 !important;
+    opacity: 0.6;
+  }
+  
+  /* 下拉框箭头图标 */
+  .el-select__caret {
+    color: #f5f5f5 !important;
+  }
+  
+  /* 下拉框焦点状态 */
+  .el-input__wrapper.is-focus {
+    border-color: #22d36b !important;
+    box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.2) !important;
+  }
+  
+  /* 下拉框悬停状态 */
+  .el-input__wrapper:hover {
+    border-color: #3a3b3c !important;
+  }
+}
+
+/* 更强制性的下拉框主体样式覆盖 */
+html[data-theme='dark'] .el-select .el-input__wrapper {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] .el-select .el-input__inner {
+  background-color: #232425 !important;
+  color: #f5f5f5 !important;
+  border: none !important;
+}
+
+html[data-theme='dark'] .el-select .el-select__caret {
+  color: #f5f5f5 !important;
+}
+
+html[data-theme='dark'] .el-select .el-input__inner::placeholder {
+  color: #a0a0a0 !important;
+  opacity: 0.6;
+}
+
+html[data-theme='dark'] .el-select .el-input__wrapper.is-focus {
+  border-color: #22d36b !important;
+  box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.2) !important;
+}
+
+/* 确保所有下拉框相关元素都使用正确的颜色 */
+[data-theme='dark'] .el-select,
+[data-theme='dark'] .el-select .el-input,
+[data-theme='dark'] .el-select .el-input__wrapper {
+  background-color: #232425 !important;
+  color: #f5f5f5 !important;
+}
+
+[data-theme='dark'] .el-select .el-input__inner {
+  background-color: #232425 !important;
+  color: #f5f5f5 !important;
+  border: none !important;
+}
+
+[data-theme='dark'] .el-select .el-select__caret {
+  color: #f5f5f5 !important;
+}
+
+/* 专门修复 el-select__wrapper 的配色问题 */
+[data-theme='dark'] .el-select__wrapper {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+  color: #f5f5f5 !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .el-select__wrapper.el-tooltip__trigger {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+  color: #f5f5f5 !important;
+}
+
+[data-theme='dark'] .el-select__wrapper.el-tooltip__trigger.el-tooltip__trigger {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+  color: #f5f5f5 !important;
+}
+
+/* 更具体的选择器确保覆盖 */
+body[data-theme='dark'] .el-select__wrapper,
+html[data-theme='dark'] .el-select__wrapper {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+  color: #f5f5f5 !important;
+  box-shadow: none !important;
+}
+
+body[data-theme='dark'] .el-select__wrapper.el-tooltip__trigger,
+html[data-theme='dark'] .el-select__wrapper.el-tooltip__trigger {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+  color: #f5f5f5 !important;
+}
+
+/* 确保所有状态都正确 */
+[data-theme='dark'] .el-select__wrapper:hover {
+  border-color: #3a3b3c !important;
+  background-color: #232425 !important;
+}
+
+[data-theme='dark'] .el-select__wrapper.is-focus {
+  border-color: #22d36b !important;
+  box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.2) !important;
+  background-color: #232425 !important;
+}
+
+[data-theme='dark'] .el-select__wrapper.is-disabled {
+  background-color: #1a1b1c !important;
+  border-color: #2a2b2c !important;
+  color: #666666 !important;
+}
+
+/* PC端专用下拉框文字颜色修复 */
+/* 确保下拉框选项文字在所有设备上都可见 */
+.el-select-dropdown__item {
+  color: #f5f5f5 !important;
+}
+
+.el-select-dropdown__item:hover {
+  color: #f5f5f5 !important;
+}
+
+.el-select-dropdown__item.selected {
+  color: #ffffff !important;
+}
+
+/* 强制覆盖所有可能的下拉框文字颜色 */
+[data-theme='dark'] .el-select-dropdown__item,
+[data-theme='dark'] .el-select-dropdown .el-select-dropdown__item,
+[data-theme='dark'] .el-popper .el-select-dropdown__item,
+[data-theme='dark'] .el-select__popper .el-select-dropdown__item {
+  color: #f5f5f5 !important;
+  background-color: #232425 !important;
+}
+
+[data-theme='dark'] .el-select-dropdown__item:hover,
+[data-theme='dark'] .el-select-dropdown .el-select-dropdown__item:hover,
+[data-theme='dark'] .el-popper .el-select-dropdown__item:hover,
+[data-theme='dark'] .el-select__popper .el-select-dropdown__item:hover {
+  color: #f5f5f5 !important;
+  background-color: #3a3b3c !important;
+}
+
+[data-theme='dark'] .el-select-dropdown__item.selected,
+[data-theme='dark'] .el-select-dropdown .el-select-dropdown__item.selected,
+[data-theme='dark'] .el-popper .el-select-dropdown__item.selected,
+[data-theme='dark'] .el-select__popper .el-select-dropdown__item.selected {
+  color: #ffffff !important;
+  background-color: #22d36b !important;
+}
+
+/* 使用更高优先级的选择器 */
+body[data-theme='dark'] .el-select-dropdown__item,
+html[data-theme='dark'] .el-select-dropdown__item {
+  color: #f5f5f5 !important;
+  background-color: #232425 !important;
+}
+
+body[data-theme='dark'] .el-select-dropdown__item:hover,
+html[data-theme='dark'] .el-select-dropdown__item:hover {
+  color: #f5f5f5 !important;
+  background-color: #3a3b3c !important;
+}
+
+body[data-theme='dark'] .el-select-dropdown__item.selected,
+html[data-theme='dark'] .el-select-dropdown__item.selected {
+  color: #ffffff !important;
+  background-color: #22d36b !important;
+}
+
+/* 确保下拉框容器本身也有正确的背景色 */
+[data-theme='dark'] .el-select-dropdown,
+[data-theme='dark'] .el-popper.el-select__popper,
+[data-theme='dark'] .el-select__popper {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+}
+
+body[data-theme='dark'] .el-select-dropdown,
+body[data-theme='dark'] .el-popper.el-select__popper,
+body[data-theme='dark'] .el-select__popper {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+}
+
+html[data-theme='dark'] .el-select-dropdown,
+html[data-theme='dark'] .el-popper.el-select__popper,
+html[data-theme='dark'] .el-select__popper {
+  background-color: #232425 !important;
+  border-color: #3a3b3c !important;
+}
+
+/* 专门修复文本框字数统计的配色问题 */
+[data-theme='dark'] .el-input .el-input__count,
+[data-theme='dark'] .el-textarea .el-input__count {
+  background-color: #232425 !important;
+  color: #a0a0a0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .el-input .el-input__count .el-input__count-inner,
+[data-theme='dark'] .el-textarea .el-input__count .el-input__count-inner {
+  background-color: #232425 !important;
+  color: #a0a0a0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 更具体的选择器确保覆盖 */
+body[data-theme='dark'] .el-input .el-input__count,
+body[data-theme='dark'] .el-textarea .el-input__count {
+  background-color: #232425 !important;
+  color: #a0a0a0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+body[data-theme='dark'] .el-input .el-input__count .el-input__count-inner,
+body[data-theme='dark'] .el-textarea .el-input__count .el-input__count-inner {
+  background-color: #232425 !important;
+  color: #a0a0a0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] .el-input .el-input__count,
+html[data-theme='dark'] .el-textarea .el-input__count {
+  background-color: #232425 !important;
+  color: #a0a0a0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] .el-input .el-input__count .el-input__count-inner,
+html[data-theme='dark'] .el-textarea .el-input__count .el-input__count-inner {
+  background-color: #232425 !important;
+  color: #a0a0a0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 确保所有字数统计相关元素都使用正确的颜色 */
+[data-theme='dark'] .el-input__count,
+[data-theme='dark'] .el-input__count-inner,
+[data-theme='dark'] .el-textarea__count,
+[data-theme='dark'] .el-textarea__count-inner {
+  background-color: #232425 !important;
+  color: #a0a0a0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 强制覆盖所有可能的情况 */
+[data-theme='dark'] * .el-input__count,
+[data-theme='dark'] * .el-input__count-inner {
+  background-color: #232425 !important;
+  color: #a0a0a0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 确保字数统计在输入框内部也能正确显示 */
+[data-theme='dark'] .el-input__wrapper .el-input__count,
+[data-theme='dark'] .el-textarea__inner + .el-input__count {
+  background-color: #232425 !important;
+  color: #a0a0a0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .el-input__wrapper .el-input__count .el-input__count-inner,
+[data-theme='dark'] .el-textarea__inner + .el-input__count .el-input__count-inner {
+  background-color: #232425 !important;
+  color: #a0a0a0 !important;
+  border: none !important;
+  box-shadow: none !important;
 } 
