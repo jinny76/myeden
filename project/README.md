@@ -2,6 +2,10 @@
 
 <div align="center">
 
+  <a href="https://github.com/jinny76/myeden/">
+    <img src="resources/icon.png" alt="Logo">
+  </a>
+
 ![Logo](https://img.shields.io/badge/My--Eden-虚拟社交世界-blue?style=for-the-badge&logo=vue.js)
 ![Version](https://img.shields.io/badge/version-1.0.0-green?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-MIT-yellow?style=for-the-badge)
