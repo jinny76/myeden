@@ -56,12 +56,46 @@
         <div class="section-header">
           <h3>最新动态</h3>
           <div class="filter-options">
+            <!-- 搜索功能 -->
+            <div class="search-container">
+              <el-input
+                v-model="searchKeyword"
+                placeholder="搜索动态内容或发帖人..."
+                clearable
+                @input="handleSearchInput"
+                @clear="handleSearchClear"
+                class="search-input"
+              >
+                <template #prefix>
+                  <el-icon><Search /></el-icon>
+                </template>
+              </el-input>
+              
+              <el-select 
+                v-model="searchType" 
+                placeholder="搜索类型" 
+                @change="handleSearchTypeChange"
+                class="search-type-select"
+              >
+                <el-option label="全部" value="all" />
+                <el-option label="内容" value="content" />
+                <el-option label="发帖人" value="author" />
+              </el-select>
+            </div>
+            
             <el-select v-model="filterType" placeholder="筛选类型" @change="handleFilterChange">
               <el-option label="全部" value="" />
               <el-option label="用户动态" value="user" />
               <el-option label="机器人动态" value="robot" />
             </el-select>
           </div>
+        </div>
+        
+        <!-- 搜索结果提示 -->
+        <div v-if="searchKeyword && !momentsStore.loading" class="search-result-info">
+          <el-tag type="info" closable @close="clearSearch">
+            搜索"{{ searchKeyword }}"的结果 ({{ momentsStore.posts.length }} 条)
+          </el-tag>
         </div>
         
         <div class="posts-list">
@@ -285,10 +319,10 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton } from '@element-plus/icons-vue'
+import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
-import { createPost } from '@/api/post'
+import { createPost, searchPosts } from '@/api/post'
 
 // 响应式数据
 const router = useRouter()
@@ -312,6 +346,12 @@ const newPost = ref({
 
 // 回复相关状态
 const replyStates = ref({}) // 存储每个评论的回复状态
+
+// 搜索相关状态
+const searchKeyword = ref('')
+const searchType = ref('all')
+const searchTimeout = ref(null)
+const isSearching = ref(false)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -350,9 +390,14 @@ const handleLogout = async () => {
 }
 
 const handleFilterChange = async () => {
-  await momentsStore.loadPosts({ authorType: filterType.value }, true)
-  // 为筛选后的动态加载评论和回复
-  await loadAllCommentsAndReplies()
+  // 如果有搜索关键字，优先使用搜索
+  if (searchKeyword.value.trim()) {
+    await performSearch()
+  } else {
+    await momentsStore.loadPosts({ authorType: filterType.value }, true)
+    // 为筛选后的动态加载评论和回复
+    await loadAllCommentsAndReplies()
+  }
 }
 
 /**
@@ -885,6 +930,119 @@ const loadAllCommentsAndReplies = async () => {
     }
   }
 }
+
+// 搜索相关方法
+/**
+ * 处理搜索输入，实现防抖搜索
+ */
+const handleSearchInput = () => {
+  // 清除之前的定时器
+  if (searchTimeout.value) {
+    clearTimeout(searchTimeout.value)
+  }
+  
+  // 如果搜索关键字为空，恢复显示所有动态
+  if (!searchKeyword.value.trim()) {
+    clearSearch()
+    return
+  }
+  
+  // 设置防抖延迟，500ms后执行搜索
+  searchTimeout.value = setTimeout(() => {
+    performSearch()
+  }, 500)
+}
+
+/**
+ * 处理搜索输入框清除
+ */
+const handleSearchClear = () => {
+  clearSearch()
+}
+
+/**
+ * 处理搜索类型变化
+ */
+const handleSearchTypeChange = async () => {
+  if (searchKeyword.value.trim()) {
+    await performSearch()
+  }
+}
+
+/**
+ * 执行搜索
+ */
+const performSearch = async () => {
+  if (!searchKeyword.value.trim()) {
+    return
+  }
+  
+  try {
+    isSearching.value = true
+    
+    const params = {
+      keyword: searchKeyword.value.trim(),
+      searchType: searchType.value,
+      page: 1,
+      size: 10
+    }
+    
+    // 调用搜索API
+    const response = await searchPosts(params)
+    
+    if (response.code === 200) {
+      const { posts, total } = response.data
+      
+      // 清空现有动态列表
+      momentsStore.posts = []
+      
+      // 添加搜索结果
+      if (posts && posts.length > 0) {
+        momentsStore.posts = posts.map(post => ({
+          ...post,
+          showComments: true // 设置评论区域为展开状态
+        }))
+        
+        // 为搜索结果的动态加载评论和回复
+        await loadAllCommentsAndReplies()
+        
+        ElMessage.success(`找到 ${total} 条相关动态`)
+      } else {
+        ElMessage.info('没有找到相关动态')
+      }
+      
+      // 更新hasMore状态
+      momentsStore.hasMore = total > posts.length
+    }
+  } catch (error) {
+    console.error('搜索失败:', error)
+    ElMessage.error('搜索失败，请重试')
+  } finally {
+    isSearching.value = false
+  }
+}
+
+/**
+ * 清除搜索
+ */
+const clearSearch = async () => {
+  searchKeyword.value = ''
+  searchType.value = 'all'
+  
+  // 清除定时器
+  if (searchTimeout.value) {
+    clearTimeout(searchTimeout.value)
+    searchTimeout.value = null
+  }
+  
+  // 恢复显示所有动态
+  try {
+    await momentsStore.loadPosts({ authorType: filterType.value }, true)
+    await loadAllCommentsAndReplies()
+  } catch (error) {
+    ElMessage.error('恢复动态列表失败')
+  }
+}
 </script>
 
 <style scoped>
@@ -940,6 +1098,7 @@ const loadAllCommentsAndReplies = async () => {
 }
 
 .post-editor-card {
+  margin-bottom: 16px;
   border-radius: 12px;
   background: var(--color-card);
   color: var(--color-text);
@@ -948,7 +1107,7 @@ const loadAllCommentsAndReplies = async () => {
 .editor-header {
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .editor-info {
@@ -969,7 +1128,7 @@ const loadAllCommentsAndReplies = async () => {
 .editor-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .image-selector {
@@ -993,8 +1152,36 @@ const loadAllCommentsAndReplies = async () => {
   color: var(--color-text);
 }
 
-.post-card {
+.filter-options {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.search-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.search-type-select {
+  width: 100px;
+}
+
+.search-result-info {
   margin-bottom: 16px;
+}
+
+.search-result-info .el-tag {
+  cursor: pointer;
+}
+
+.post-card {
+  margin-bottom: 12px;
   border-radius: 12px;
   background: var(--color-card);
   color: var(--color-text);
@@ -1015,7 +1202,7 @@ const loadAllCommentsAndReplies = async () => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .post-author {
@@ -1035,7 +1222,7 @@ const loadAllCommentsAndReplies = async () => {
 
 .post-time {
   color: var(--color-text);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .post-content {
@@ -1046,6 +1233,7 @@ const loadAllCommentsAndReplies = async () => {
   margin: 0 0 12px 0;
   line-height: 1.6;
   color: var(--color-text);
+  font-size: 14px;
 }
 
 .post-images {
@@ -1093,15 +1281,15 @@ const loadAllCommentsAndReplies = async () => {
 
 .post-stats {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 8px;
   color: var(--color-text);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .post-actions-bar {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   padding-top: 8px;
   border-top: 1px solid var(--color-border);
 }
@@ -1118,7 +1306,7 @@ const loadAllCommentsAndReplies = async () => {
 
 .comment-item {
   margin-bottom: 12px;
-  padding: 12px;
+  padding: 8px;
   background: var(--color-card);
   border-radius: 8px;
 }
@@ -1136,19 +1324,24 @@ const loadAllCommentsAndReplies = async () => {
 .comment-author {
   font-weight: 600;
   color: var(--color-text);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .comment-time {
   color: var(--color-text);
-  font-size: 12px;
+  font-size: 11px;
   margin-left: 8px;
+}
+
+.comment-content {
+  margin-bottom: 8px;
 }
 
 .comment-content p {
   margin: 0;
   color: var(--color-text);
   line-height: 1.5;
+  font-size: 13px;
 }
 
 .comment-actions {
@@ -1178,10 +1371,10 @@ const loadAllCommentsAndReplies = async () => {
 /* 滚动加载指示器样式 */
 .scroll-loading-indicator {
   text-align: center;
-  margin: 20px 0;
-  padding: 16px;
+  margin: 16px 0;
+  padding: 12px;
   color: var(--color-text);
-  font-size: 14px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1191,16 +1384,16 @@ const loadAllCommentsAndReplies = async () => {
 }
 
 .scroll-loading-indicator .el-icon {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 /* 没有更多内容提示样式 */
 .no-more-content {
   text-align: center;
-  margin: 20px 0;
-  padding: 16px;
+  margin: 16px 0;
+  padding: 12px;
   color: var(--color-text);
-  font-size: 14px;
+  font-size: 13px;
   background: var(--color-card);
   border-radius: 8px;
 }
@@ -1208,8 +1401,8 @@ const loadAllCommentsAndReplies = async () => {
 /* 空状态样式 */
 .empty-state {
   text-align: center;
-  margin: 40px 0;
-  padding: 40px 20px;
+  margin: 30px 0;
+  padding: 30px 16px;
   background: var(--color-card);
   border-radius: 12px;
 }
@@ -1226,7 +1419,7 @@ const loadAllCommentsAndReplies = async () => {
 
 .reply-item {
   margin-bottom: 8px;
-  padding: 8px 12px;
+  padding: 6px 8px;
   background: var(--color-card);
   border-radius: 6px;
   border-left: 3px solid var(--color-border);
@@ -1247,12 +1440,12 @@ const loadAllCommentsAndReplies = async () => {
 .reply-author {
   font-weight: 600;
   color: var(--color-text);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .reply-time {
   color: var(--color-text);
-  font-size: 11px;
+  font-size: 10px;
   margin-left: 8px;
 }
 
@@ -1264,7 +1457,7 @@ const loadAllCommentsAndReplies = async () => {
   margin: 0;
   color: var(--color-text);
   line-height: 1.4;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .reply-actions {
@@ -1397,92 +1590,34 @@ const loadAllCommentsAndReplies = async () => {
     padding-right: 16px;
   }
   
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .filter-options {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .search-container {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .search-type-select {
+    width: 100%;
+  }
+  
   .post-editor-card {
     margin-bottom: 16px;
-  }
-  
-  .editor-header {
-    margin-bottom: 12px;
-  }
-  
-  .editor-content {
-    gap: 12px;
-  }
-  
-  .post-card {
-    margin-bottom: 12px;
-  }
-  
-  .post-header {
-    margin-bottom: 8px;
-  }
-  
-  .post-content p {
-    font-size: 14px;
-  }
-  
-  .post-stats {
-    font-size: 12px;
-  }
-  
-  .post-actions-bar {
-    gap: 12px;
-  }
-  
-  .comment-item {
-    padding: 8px;
-  }
-  
-  .comment-author {
-    font-size: 13px;
-  }
-  
-  .comment-time {
-    font-size: 11px;
-  }
-  
-  .comment-content p {
-    font-size: 13px;
-  }
-  
-  .reply-item {
-    padding: 6px 8px;
-  }
-  
-  .reply-author {
-    font-size: 12px;
-  }
-  
-  .reply-time {
-    font-size: 10px;
-  }
-  
-  .reply-content p {
-    font-size: 12px;
-  }
-  
-  /* 移动端滚动加载指示器样式 */
-  .scroll-loading-indicator {
-    margin: 16px 0;
-    padding: 12px;
-    font-size: 13px;
-  }
-  
-  .scroll-loading-indicator .el-icon {
-    font-size: 14px;
-  }
-  
-  /* 移动端没有更多内容提示样式 */
-  .no-more-content {
-    margin: 16px 0;
-    padding: 12px;
-    font-size: 13px;
-  }
-  
-  /* 移动端空状态样式 */
-  .empty-state {
-    margin: 30px 0;
-    padding: 30px 16px;
   }
 }
 

@@ -114,6 +114,51 @@ public interface PostRepository extends MongoRepository<Post, String> {
     List<Post> findByContentContaining(String content);
     
     /**
+     * 根据内容模糊查询动态（分页）
+     * @param content 内容关键词
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    @Query("{'content': {$regex: ?0, $options: 'i'}, 'isDeleted': false}")
+    Page<Post> findByContentContainingAndIsDeletedFalse(String content, Pageable pageable);
+    
+    /**
+     * 根据作者ID模糊查询动态（分页）
+     * @param authorId 作者ID关键词
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    @Query("{'authorId': {$regex: ?0, $options: 'i'}, 'isDeleted': false}")
+    Page<Post> findByAuthorIdContainingAndIsDeletedFalse(String authorId, Pageable pageable);
+    
+    /**
+     * 根据关键字搜索动态（内容和作者ID）
+     * @param keyword 搜索关键字
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    @Query("{$or: [{'content': {$regex: ?0, $options: 'i'}}, {'authorId': {$regex: ?0, $options: 'i'}}], 'isDeleted': false}")
+    Page<Post> findByKeywordAndIsDeletedFalse(String keyword, Pageable pageable);
+    
+    /**
+     * 根据内容关键字搜索动态（分页）
+     * @param keyword 内容关键字
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    @Query("{'content': {$regex: ?0, $options: 'i'}, 'isDeleted': false}")
+    Page<Post> findByContentKeywordAndIsDeletedFalse(String keyword, Pageable pageable);
+    
+    /**
+     * 根据作者关键字搜索动态（分页）
+     * @param keyword 作者关键字
+     * @param pageable 分页参数
+     * @return 动态分页结果
+     */
+    @Query("{'authorId': {$regex: ?0, $options: 'i'}, 'isDeleted': false}")
+    Page<Post> findByAuthorKeywordAndIsDeletedFalse(String keyword, Pageable pageable);
+    
+    /**
      * 查找有图片的动态
      * @return 动态列表
      */

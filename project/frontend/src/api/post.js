@@ -133,4 +133,21 @@ export function getUserPosts(authorId, params) {
     method: 'get',
     params
   })
+}
+
+/**
+ * 搜索动态
+ * @param {Object} params - 搜索参数
+ * @param {string} params.keyword - 搜索关键字
+ * @param {string} params.searchType - 搜索类型：content(内容)、author(发帖人)、all(全部)
+ * @param {number} params.page - 页码（从1开始）
+ * @param {number} params.size - 每页大小
+ * @returns {Promise} 搜索结果和分页信息
+ */
+export function searchPosts(params) {
+  return request({
+    url: '/posts/search',
+    method: 'get',
+    params
+  })
 } 

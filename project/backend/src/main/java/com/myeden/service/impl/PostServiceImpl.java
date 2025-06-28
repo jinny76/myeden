@@ -423,6 +423,52 @@ public class PostServiceImpl implements PostService {
         }
     }
     
+    @Override
+    public PostListResult searchPosts(String keyword, String searchType, int page, int size) {
+        try {
+            logger.info("搜索动态，关键字: {}, 搜索类型: {}, 页码: {}, 大小: {}", keyword, searchType, page, size);
+            
+            // 创建分页请求
+            Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+            
+            // 根据搜索类型执行不同的查询
+            Page<Post> postPage;
+            switch (searchType.toLowerCase()) {
+                case "content":
+                    // 只搜索内容
+                    postPage = postRepository.findByContentKeywordAndIsDeletedFalse(keyword, pageable);
+                    break;
+                case "author":
+                    // 只搜索作者
+                    postPage = postRepository.findByAuthorKeywordAndIsDeletedFalse(keyword, pageable);
+                    break;
+                case "all":
+                default:
+                    // 搜索内容和作者
+                    postPage = postRepository.findByKeywordAndIsDeletedFalse(keyword, pageable);
+                    break;
+            }
+            
+            // 转换为摘要信息
+            List<PostSummary> postSummaries = postPage.getContent().stream()
+                .map(this::convertToPostSummary)
+                .collect(Collectors.toList());
+            
+            logger.info("搜索动态成功，关键字: {}, 结果数量: {}", keyword, postPage.getTotalElements());
+            
+            return new PostListResult(
+                postSummaries,
+                (int) postPage.getTotalElements(),
+                page,
+                size
+            );
+            
+        } catch (Exception e) {
+            logger.error("搜索动态失败", e);
+            throw e;
+        }
+    }
+    
     /**
      * 将Post实体转换为PostSummary
      */

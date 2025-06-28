@@ -323,4 +323,64 @@ public class PostController {
             ));
         }
     }
+    
+    /**
+     * 根据关键字搜索动态
+     * @param keyword 搜索关键字
+     * @param searchType 搜索类型：content(内容)、author(发帖人)、all(全部)
+     * @param page 页码（从1开始）
+     * @param size 每页大小
+     * @return 搜索结果和分页信息
+     */
+    @GetMapping("/search")
+    public ResponseEntity<EventResponse> searchPosts(
+            @RequestParam("keyword") String keyword,
+            @RequestParam(value = "searchType", defaultValue = "all") String searchType,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        
+        try {
+            logger.info("搜索动态，关键字: {}, 搜索类型: {}, 页码: {}, 大小: {}", keyword, searchType, page, size);
+            
+            // 参数验证
+            if (keyword == null || keyword.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(new EventResponse(
+                    400,
+                    "搜索关键字不能为空",
+                    null
+                ));
+            }
+            
+            if (page < 1) {
+                page = 1;
+            }
+            if (size < 1 || size > 50) {
+                size = 10;
+            }
+            
+            // 验证搜索类型
+            if (!searchType.equals("content") && !searchType.equals("author") && !searchType.equals("all")) {
+                searchType = "all";
+            }
+            
+            // 搜索动态
+            PostService.PostListResult result = postService.searchPosts(keyword.trim(), searchType, page, size);
+            
+            logger.info("搜索动态成功，关键字: {}, 结果数量: {}", keyword, result.getTotal());
+            
+            return ResponseEntity.ok(new EventResponse(
+                200,
+                "搜索动态成功",
+                result
+            ));
+            
+        } catch (Exception e) {
+            logger.error("搜索动态失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "搜索动态失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
 } 

@@ -78,6 +78,16 @@ public interface PostService {
     PostListResult getUserPosts(String authorId, int page, int size);
     
     /**
+     * 根据关键字搜索动态
+     * @param keyword 搜索关键字
+     * @param searchType 搜索类型：content(内容)、author(发帖人)、all(全部)
+     * @param page 页码（从1开始）
+     * @param size 每页大小
+     * @return 搜索结果和分页信息
+     */
+    PostListResult searchPosts(String keyword, String searchType, int page, int size);
+    
+    /**
      * 动态发布结果
      */
     class PostResult {
