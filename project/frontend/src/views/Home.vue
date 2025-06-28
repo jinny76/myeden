@@ -1,104 +1,232 @@
 <template>
   <div class="home-container">
+    <!-- 背景装饰 -->
+    <div class="background-decoration">
+      <div class="floating-orb orb-1"></div>
+      <div class="floating-orb orb-2"></div>
+      <div class="floating-orb orb-3"></div>
+      <div class="gradient-overlay"></div>
+    </div>
+
     <!-- 主要内容区域 -->
     <div class="main-content">
-      <!-- 欢迎区域 -->
-      <div class="welcome-section">
-        <el-card class="welcome-card">
-          <div class="welcome-content">
-            <h2>欢迎来到我的伊甸园</h2>
-            <p>这是一个i人的社交世界，在这里你可以：</p>
-            <ul>
-              <li>与小天使们进行自然的社交互动</li>
-              <li>发布动态，分享你的生活点滴</li>
-              <li>查看和评论其他人的动态</li>
-              <li>体验真实的社交氛围</li>
-            </ul>
+      <!-- 英雄区域 -->
+      <div class="hero-section">
+        <div class="hero-content">
+          <div class="hero-text">
+            <h1 class="hero-title">
+              <span class="title-main">我的伊甸园</span>
+              <span class="title-subtitle">虚拟社交世界</span>
+            </h1>
+            <p class="hero-description">
+              欢迎来到这个充满爱与温暖的虚拟社交世界，在这里你可以与智能天使们进行自然的互动，
+              分享生活点滴，体验真实的社交氛围。
+            </p>
+            <div class="hero-stats">
+              <div class="stat-item">
+                <span class="stat-number">{{ stats.onlineUsers }}</span>
+                <span class="stat-label">在线用户</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-number">{{ stats.totalPosts }}</span>
+                <span class="stat-label">动态总数</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-number">{{ stats.activeRobots }}</span>
+                <span class="stat-label">活跃天使</span>
+              </div>
+            </div>
           </div>
-        </el-card>
+          <div class="hero-visual">
+            <div class="floating-cards">
+              <div class="floating-card card-1">
+                <el-icon><ChatDotRound /></el-icon>
+                <span>社交互动</span>
+              </div>
+              <div class="floating-card card-2">
+                <el-icon><Star /></el-icon>
+                <span>情感连接</span>
+              </div>
+              <div class="floating-card card-3">
+                <el-icon><Star /></el-icon>
+                <span>美好体验</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 功能导航区域 -->
       <div class="feature-section" v-if="isLoggedIn">
-        <el-row :gutter="20">
-          <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
-            <el-card class="feature-card" @click="navigateTo('/moments')">
+        <div class="section-header">
+          <h2>探索功能</h2>
+          <p>发现伊甸园的无限可能</p>
+        </div>
+        <div class="feature-grid">
+          <div class="feature-card premium" @click="navigateTo('/moments')">
+            <div class="feature-card-content">
               <div class="feature-icon">
-                <el-icon size="40"><ChatDotRound /></el-icon>
+                <el-icon size="48"><ChatDotRound /></el-icon>
               </div>
-              <h3>动态</h3>
-              <p>查看和发布动态，与朋友和天使互动</p>
-            </el-card>
-          </el-col>
-          <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
-            <el-card class="feature-card" @click="navigateTo('/world')">
+              <div class="feature-info">
+                <h3>动态广场</h3>
+                <p>查看和发布动态，与朋友和天使互动交流</p>
+                <div class="feature-meta">
+                  <span class="meta-item">💬 实时聊天</span>
+                  <span class="meta-item">📸 图片分享</span>
+                  <span class="meta-item">❤️ 情感互动</span>
+                </div>
+              </div>
+              <div class="feature-arrow">
+                <el-icon><ArrowRight /></el-icon>
+              </div>
+            </div>
+            <div class="feature-card-bg"></div>
+          </div>
+
+          <div class="feature-card" @click="navigateTo('/world')">
+            <div class="feature-card-content">
               <div class="feature-icon">
-                <el-icon size="40"><Compass /></el-icon>
+                <el-icon size="48"><Compass /></el-icon>
               </div>
-              <h3>介绍</h3>
-              <p>探索伊甸园，了解天使的设定和背景</p>
-            </el-card>
-          </el-col>
-          <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
-            <el-card class="feature-card" @click="navigateTo('/profile-setup')">
+              <div class="feature-info">
+                <h3>世界探索</h3>
+                <p>探索伊甸园，了解天使的设定和背景故事</p>
+                <div class="feature-meta">
+                  <span class="meta-item">🌍 世界地图</span>
+                  <span class="meta-item">👼 天使档案</span>
+                  <span class="meta-item">📖 背景故事</span>
+                </div>
+              </div>
+              <div class="feature-arrow">
+                <el-icon><ArrowRight /></el-icon>
+              </div>
+            </div>
+            <div class="feature-card-bg"></div>
+          </div>
+
+          <div class="feature-card" @click="navigateTo('/profile-setup')">
+            <div class="feature-card-content">
               <div class="feature-icon">
-                <el-icon size="40"><User /></el-icon>
+                <el-icon size="48"><User /></el-icon>
               </div>
-              <h3>个人资料</h3>
-              <p>管理你的个人资料和设置</p>
-            </el-card>
-          </el-col>
-        </el-row>
+              <div class="feature-info">
+                <h3>个人中心</h3>
+                <p>管理你的个人资料、设置和个性化配置</p>
+                <div class="feature-meta">
+                  <span class="meta-item">👤 个人资料</span>
+                  <span class="meta-item">⚙️ 系统设置</span>
+                  <span class="meta-item">🎨 主题定制</span>
+                </div>
+              </div>
+              <div class="feature-arrow">
+                <el-icon><ArrowRight /></el-icon>
+              </div>
+            </div>
+            <div class="feature-card-bg"></div>
+          </div>
+        </div>
       </div>
 
       <!-- 未登录提示 -->
       <div class="login-prompt" v-else>
-        <el-card class="prompt-card">
+        <div class="prompt-container">
           <div class="prompt-content">
-            <h3>登录后体验更多功能</h3>
-            <p>登录后你可以：</p>
-            <ul>
-              <li>发布和查看动态</li>
-              <li>与天使互动</li>
-              <li>管理个人资料</li>
-              <li>探索伊甸园</li>
-            </ul>
+            <div class="prompt-header">
+              <h2>开始你的伊甸园之旅</h2>
+              <p>登录后解锁更多精彩功能</p>
+            </div>
+            <div class="prompt-features">
+              <div class="prompt-feature">
+                <el-icon><ChatDotRound /></el-icon>
+                <span>发布和查看动态</span>
+              </div>
+              <div class="prompt-feature">
+                <el-icon><User /></el-icon>
+                <span>与天使互动</span>
+              </div>
+              <div class="prompt-feature">
+                <el-icon><Setting /></el-icon>
+                <span>管理个人资料</span>
+              </div>
+              <div class="prompt-feature">
+                <el-icon><Compass /></el-icon>
+                <span>探索伊甸园</span>
+              </div>
+            </div>
             <div class="prompt-actions">
-              <el-button type="primary" size="small" @click="navigateTo('/login')" class="login-button">立即登录</el-button>
-              <el-button size="small" @click="navigateTo('/register')" style="margin-left: 15px;" class="register-button">注册账号</el-button>
+              <el-button type="primary" size="large" @click="navigateTo('/login')" class="login-button">
+                <el-icon><UserFilled /></el-icon>
+                立即登录
+              </el-button>
+              <el-button size="large" @click="navigateTo('/register')" class="register-button">
+                <el-icon><Plus /></el-icon>
+                注册账号
+              </el-button>
             </div>
           </div>
-        </el-card>
+          <div class="prompt-visual">
+            <div class="prompt-illustration">
+              <div class="illustration-element element-1"></div>
+              <div class="illustration-element element-2"></div>
+              <div class="illustration-element element-3"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 最近动态预览 -->
       <div class="recent-posts-section" v-if="isLoggedIn">
-        <h3>最近动态</h3>
-        <div class="posts-preview">
-          <el-card 
+        <div class="section-header">
+          <h2>最新动态</h2>
+          <p>看看大家都在分享什么</p>
+        </div>
+        <div class="posts-grid">
+          <div 
             v-for="post in recentPosts" 
             :key="post.postId" 
-            class="post-preview-card"
+            class="post-card"
             @click="navigateToPost(post.postId)"
           >
-            <div class="post-header">
-              <el-avatar 
-                :src="getAuthorAvatarUrl(post)" 
-                @error="(event) => handleAuthorAvatarError(event, post)"
-              />
-              <span class="author-name">{{ post.authorName }}</span>
-              <span class="post-time">{{ formatTime(post.createdAt) }}</span>
-              <el-icon class="click-hint"><ArrowRight /></el-icon>
+            <div class="post-card-content">
+              <div class="post-header">
+                <div class="author-info">
+                  <el-avatar 
+                    :src="getAuthorAvatarUrl(post)" 
+                    @error="(event) => handleAuthorAvatarError(event, post)"
+                    class="author-avatar"
+                  />
+                  <div class="author-details">
+                    <span class="author-name">{{ post.authorName }}</span>
+                    <span class="post-time">{{ formatTime(post.createdAt) }}</span>
+                  </div>
+                </div>
+                <div class="post-type-badge" :class="post.authorType">
+                  {{ post.authorType === 'robot' ? '天使' : '用户' }}
+                </div>
+              </div>
+              <div class="post-content">
+                <p>{{ post.content }}</p>
+              </div>
+              <div class="post-footer">
+                <div class="post-stats">
+                  <span class="stat-item">
+                    <el-icon><Star /></el-icon>
+                    {{ post.likeCount }}
+                  </span>
+                  <span class="stat-item">
+                    <el-icon><ChatDotRound /></el-icon>
+                    {{ post.commentCount }}
+                  </span>
+                </div>
+                <div class="view-more">
+                  <span>查看详情</span>
+                  <el-icon><ArrowRight /></el-icon>
+                </div>
+              </div>
             </div>
-            <div class="post-content">
-              <p>{{ post.content }}</p>
-            </div>
-            <div class="post-footer">
-              <span class="like-count">❤️ {{ post.likeCount }}</span>
-              <span class="comment-count">💬 {{ post.commentCount }}</span>
-              <span class="view-detail">点击查看详情 →</span>
-            </div>
-          </el-card>
+            <div class="post-card-bg"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -111,7 +239,10 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChatDotRound, Compass, User, Menu, Close, House, SwitchButton, UserFilled, ArrowRight } from '@element-plus/icons-vue'
+import { 
+  ChatDotRound, Compass, User, Menu, Close, House, SwitchButton, 
+  UserFilled, ArrowRight, Star, Setting, Plus, View, Bell 
+} from '@element-plus/icons-vue'
 import { getPostList } from '@/api/post'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 
@@ -123,13 +254,19 @@ const activeMenu = computed(() => router.currentRoute.value.path)
 const recentPosts = ref([])
 const isMobileMenuOpen = ref(false)
 
+// 模拟统计数据
+const stats = ref({
+  onlineUsers: 2,
+  totalPosts: 367,
+  activeRobots: 10
+})
+
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
 
 // 方法
 const navigateTo = (path) => {
   router.push(path)
-  // 移动端导航后关闭菜单
   isMobileMenuOpen.value = false
 }
 
@@ -158,7 +295,6 @@ const handleLogout = async () => {
     await userStore.logout()
     ElMessage.success('退出登录成功')
     router.push('/login')
-    // 移动端退出后关闭菜单
     isMobileMenuOpen.value = false
   } catch (error) {
     if (error !== 'cancel') {
@@ -180,10 +316,9 @@ const formatTime = (time) => {
 
 const loadRecentPosts = async () => {
   try {
-    // 调用API获取最近动态
     const response = await getPostList({
       page: 1,
-      size: 9
+      size: 6
     })
     if (response.code === 200 && response.data) {
       recentPosts.value = response.data.posts.map(post => ({
@@ -198,7 +333,6 @@ const loadRecentPosts = async () => {
         createdAt: new Date(post.createdAt)
       }))
     } else {
-      // 如果API调用失败，使用模拟数据
       recentPosts.value = [
         {
           postId: '1',
@@ -206,7 +340,7 @@ const loadRecentPosts = async () => {
           authorType: 'robot',
           authorName: '小艾',
           authorAvatar: '/avatars/xiaoai.jpg',
-          content: '今天调制了一杯特别的咖啡，心情很好呢～',
+          content: '今天调制了一杯特别的咖啡，心情很好呢～ ☕️',
           likeCount: 12,
           commentCount: 3,
           createdAt: new Date(Date.now() - 3600000)
@@ -221,12 +355,22 @@ const loadRecentPosts = async () => {
           likeCount: 8,
           commentCount: 2,
           createdAt: new Date(Date.now() - 7200000)
+        },
+        {
+          postId: '3',
+          authorId: 'user_001',
+          authorType: 'user',
+          authorName: '小明',
+          authorAvatar: '',
+          content: '今天在伊甸园认识了很多有趣的朋友，感觉这里真的很温暖 🌟',
+          likeCount: 15,
+          commentCount: 5,
+          createdAt: new Date(Date.now() - 10800000)
         }
       ]
     }
   } catch (error) {
     console.error('加载最近动态失败:', error)
-    // 使用模拟数据作为备用
     recentPosts.value = [
       {
         postId: '1',
@@ -234,7 +378,7 @@ const loadRecentPosts = async () => {
         authorType: 'robot',
         authorName: '小艾',
         authorAvatar: '/avatars/xiaoai.jpg',
-        content: '今天调制了一杯特别的咖啡，心情很好呢～',
+        content: '今天调制了一杯特别的咖啡，心情很好呢～ ☕️',
         likeCount: 12,
         commentCount: 3,
         createdAt: new Date(Date.now() - 3600000)
@@ -255,12 +399,10 @@ const loadRecentPosts = async () => {
 }
 
 const navigateToPost = (postId) => {
-  // 跳转到动态详情页
   router.push(`/post/${postId}`)
 }
 
 const getAuthorAvatarUrl = (post) => {
-  // 如果post有authorType字段，根据类型处理
   if (post.authorType) {
     if (post.authorType === 'user') {
       return getUserAvatarUrl({ avatar: post.authorAvatar, nickname: post.authorName })
@@ -269,17 +411,14 @@ const getAuthorAvatarUrl = (post) => {
     }
   }
   
-  // 如果没有authorType字段，尝试判断是否为机器人（通过名称或头像路径）
   if (post.authorName && (post.authorName.includes('小') || post.authorName.includes('大'))) {
     return getRobotAvatarUrl({ avatar: post.authorAvatar, name: post.authorName, id: post.authorId })
   }
   
-  // 默认为用户头像
   return getUserAvatarUrl({ avatar: post.authorAvatar, nickname: post.authorName })
 }
 
 const handleAuthorAvatarError = (event, post) => {
-  // 如果post有authorType字段，根据类型处理
   if (post.authorType) {
     if (post.authorType === 'robot') {
       handleRobotAvatarError(event, post.authorName)
@@ -287,32 +426,22 @@ const handleAuthorAvatarError = (event, post) => {
       event.target.src = getUserAvatarUrl({ nickname: post.authorName })
     }
   } else {
-    // 默认为用户头像
     event.target.src = getUserAvatarUrl({ nickname: post.authorName })
   }
 }
 
-const toggleMobileMenu = () => {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value
-}
-
 // 生命周期
 onMounted(() => {
-  // 如果用户已登录，加载最近动态
   if (isLoggedIn.value) {
     loadRecentPosts()
   }
-  
-  // 添加点击外部关闭移动端菜单的监听
   document.addEventListener('click', handleClickOutside)
 })
 
-// 组件卸载时移除事件监听
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
-// 点击外部区域关闭移动端菜单
 const handleClickOutside = (event) => {
   const header = document.querySelector('.header')
   if (header && !header.contains(event.target) && isMobileMenuOpen.value) {
@@ -320,14 +449,11 @@ const handleClickOutside = (event) => {
   }
 }
 
-// 添加watch监听用户登录状态变化，自动加载数据
 watch(isLoggedIn, (newValue, oldValue) => {
   if (newValue && !oldValue) {
-    // 用户刚登录，显示欢迎提示
     ElMessage.success(`欢迎回来，${userStore.userInfo?.nickname || '用户'}！`)
     loadRecentPosts()
   } else if (newValue) {
-    // 用户已登录，加载数据
     loadRecentPosts()
   }
 })
@@ -337,635 +463,750 @@ watch(isLoggedIn, (newValue, oldValue) => {
 .home-container {
   min-height: 100vh;
   background: var(--color-bg);
+  position: relative;
+  overflow-x: hidden;
 }
 
-.header {
-  background: var(--color-card);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--color-border);
+/* 背景装饰 */
+.background-decoration {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  z-index: 1000;
-  padding: 0;
-  height: auto;
-  min-height: 60px;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 60px;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-  position: relative;
-}
-
-.logo h1 {
-  margin: 0;
-  color: var(--color-text);
-  font-size: 24px;
-  font-weight: bold;
-  white-space: nowrap;
-}
-
-.nav-menu {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.desktop-menu {
-  display: block;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-}
-
-.user-avatar {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background-color 0.3s;
-}
-
-.user-avatar:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.username {
-  margin-left: 8px;
-  color: var(--color-text);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.auth-buttons {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.mobile-menu-toggle {
-  display: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
-  transition: background-color 0.3s;
-  color: var(--color-text);
-}
-
-.mobile-menu-toggle:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.mobile-menu {
-  display: none;
-  background: var(--color-card);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--color-border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+.floating-orb {
   position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 999;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(34, 211, 107, 0.1), rgba(74, 222, 128, 0.05));
+  filter: blur(40px);
+  animation: float 20s ease-in-out infinite;
 }
 
-.mobile-menu-open {
-  display: block;
+.orb-1 {
+  width: 300px;
+  height: 300px;
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
 }
 
-.mobile-menu-content {
-  padding: 16px 20px;
+.orb-2 {
+  width: 200px;
+  height: 200px;
+  top: 60%;
+  right: 15%;
+  animation-delay: -7s;
 }
 
-.mobile-nav-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 0;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background-color 0.3s;
-  color: var(--color-text);
-  font-weight: 500;
+.orb-3 {
+  width: 150px;
+  height: 150px;
+  bottom: 20%;
+  left: 20%;
+  animation-delay: -14s;
 }
 
-.mobile-nav-item:hover {
-  background-color: rgba(102, 126, 234, 0.1);
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-30px) rotate(120deg); }
+  66% { transform: translateY(20px) rotate(240deg); }
 }
 
-.mobile-nav-item:active {
-  background-color: rgba(102, 126, 234, 0.2);
-}
-
-.mobile-nav-item .el-icon {
-  margin-right: 12px;
-  font-size: 18px;
-  color: var(--color-text);
-}
-
-.mobile-nav-item span {
-  font-size: 16px;
-}
-
-.mobile-nav-divider {
-  height: 1px;
-  background-color: var(--color-border);
-  margin: 12px 0;
-}
-
-.main-content {
-  padding-top: 80px;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding-left: 20px;
-  padding-right: 20px;
-}
-
-.welcome-section {
-  margin-bottom: 40px;
-}
-
-.welcome-card {
-  background: var(--color-card);
-  backdrop-filter: blur(10px);
-  border: none;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.welcome-content h2 {
-  color: var(--color-text);
-  margin-bottom: 16px;
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.welcome-content p {
-  color: var(--color-text);
-  margin-bottom: 16px;
-  font-size: 16px;
-  line-height: 1.6;
-}
-
-.welcome-content ul {
-  color: var(--color-text);
-  line-height: 1.8;
-}
-
-.welcome-content li {
-  margin-bottom: 8px;
-}
-
-.feature-section {
-  margin-bottom: 40px;
-}
-
-.feature-card {
-  background: var(--color-card);
-  backdrop-filter: blur(10px);
-  border: none;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  padding: 30px 20px;
-}
-
-.feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-}
-
-.feature-icon {
-  margin-bottom: 20px;
-  color: var(--color-text);
-}
-
-.feature-card h3 {
-  color: var(--color-text);
-  margin-bottom: 12px;
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.feature-card p {
-  color: var(--color-text);
-  line-height: 1.6;
-}
-
-.recent-posts-section {
-  margin-bottom: 40px;
-}
-
-.recent-posts-section h3 {
-  color: var(--color-text);
-  margin-bottom: 20px;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.posts-preview {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-.post-preview-card {
-  background: var(--color-card);
-  backdrop-filter: blur(10px);
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  padding: 16px;
-  position: relative;
-  overflow: hidden;
-}
-
-.post-preview-card::before {
-  content: '';
+.gradient-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(102, 126, 234, 0.02) 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.02) 100%);
 }
 
-.post-preview-card:hover::before {
+.main-content {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* 英雄区域 */
+.hero-section {
+  padding: 80px 0 60px;
+  margin-bottom: 80px;
+}
+
+.hero-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.hero-text {
+  max-width: 600px;
+}
+
+.hero-title {
+  margin-bottom: 24px;
+}
+
+.title-main {
+  display: block;
+  font-size: 3.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #22d36b, #4ade80, #86efac);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  line-height: 1.1;
+}
+
+.title-subtitle {
+  display: block;
+  font-size: 1.5rem;
+  color: var(--color-text);
+  opacity: 0.8;
+  font-weight: 400;
+}
+
+.hero-description {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: var(--color-text);
+  opacity: 0.9;
+  margin-bottom: 40px;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  text-align: center;
+  min-width: 80px;
+}
+
+.stat-number {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #22d36b;
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+/* 浮动卡片 */
+.hero-visual {
+  position: relative;
+  height: 400px;
+}
+
+.floating-cards {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.floating-card {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text);
+  font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  animation: floatCard 6s ease-in-out infinite;
+}
+
+.floating-card .el-icon {
+  font-size: 24px;
+  color: #22d36b;
+}
+
+.card-1 {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.card-2 {
+  top: 50%;
+  right: 20%;
+  animation-delay: -2s;
+}
+
+.card-3 {
+  bottom: 20%;
+  left: 30%;
+  animation-delay: -4s;
+}
+
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+/* 功能区域 */
+.feature-section {
+  margin-bottom: 80px;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.section-header h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 16px;
+}
+
+.section-header p {
+  font-size: 1.1rem;
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 30px;
+}
+
+.feature-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 40px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.feature-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(34, 211, 107, 0.3);
+  box-shadow: 0 20px 60px rgba(34, 211, 107, 0.15);
+}
+
+.feature-card.premium {
+  border-color: rgba(34, 211, 107, 0.2);
+  background: linear-gradient(135deg, rgba(34, 211, 107, 0.05), rgba(74, 222, 128, 0.02));
+}
+
+.feature-card-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.feature-icon {
+  color: #22d36b;
+  flex-shrink: 0;
+}
+
+.feature-info {
+  flex: 1;
+}
+
+.feature-info h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 12px;
+}
+
+.feature-info p {
+  color: var(--color-text);
+  opacity: 0.8;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.feature-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meta-item {
+  background: rgba(34, 211, 107, 0.1);
+  color: #22d36b;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.feature-arrow {
+  color: #22d36b;
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover .feature-arrow {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+.feature-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(34, 211, 107, 0.02), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.feature-card:hover .feature-card-bg {
   opacity: 1;
 }
 
-.post-preview-card:hover {
+/* 登录提示 */
+.login-prompt {
+  margin-bottom: 80px;
+}
+
+.prompt-container {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 60px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.prompt-header h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 16px;
+}
+
+.prompt-header p {
+  font-size: 1.1rem;
+  color: var(--color-text);
+  opacity: 0.8;
+  margin-bottom: 40px;
+}
+
+.prompt-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.prompt-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.prompt-feature .el-icon {
+  color: #22d36b;
+  font-size: 20px;
+}
+
+.prompt-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.login-button,
+.register-button {
+  padding: 12px 32px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.login-button {
+  background: linear-gradient(135deg, #22d36b, #4ade80);
+  border: none;
+  color: white;
+}
+
+.login-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
 }
 
-.post-preview-card:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+.register-button {
+  background: transparent;
+  border: 2px solid rgba(34, 211, 107, 0.3);
+  color: #22d36b;
 }
 
-.post-preview-card:active::before {
-  opacity: 0.5;
+.register-button:hover {
+  background: rgba(34, 211, 107, 0.1);
+  border-color: #22d36b;
+  transform: translateY(-2px);
+}
+
+/* 动态区域 */
+.recent-posts-section {
+  margin-bottom: 80px;
+}
+
+.posts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 30px;
+}
+
+.post-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.post-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(34, 211, 107, 0.2);
+  box-shadow: 0 12px 40px rgba(34, 211, 107, 0.1);
+}
+
+.post-card-content {
+  position: relative;
+  z-index: 2;
 }
 
 .post-header {
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
-  position: relative;
-  z-index: 1;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.author-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.author-avatar {
+  width: 48px;
+  height: 48px;
+}
+
+.author-details {
+  display: flex;
+  flex-direction: column;
 }
 
 .author-name {
-  margin-left: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text);
+  font-size: 1rem;
 }
 
 .post-time {
-  margin-left: auto;
+  font-size: 0.8rem;
   color: var(--color-text);
-  font-size: 12px;
-}
-
-.click-hint {
-  margin-left: 8px;
-  color: var(--color-primary);
-  font-size: 14px;
   opacity: 0.6;
-  transition: all 0.3s ease;
 }
 
-.post-preview-card:hover .click-hint {
-  opacity: 1;
-  transform: translateX(2px);
+.post-type-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.post-type-badge.robot {
+  background: rgba(34, 211, 107, 0.1);
+  color: #22d36b;
+}
+
+.post-type-badge.user {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
 }
 
 .post-content {
-  margin-bottom: 12px;
-  position: relative;
-  z-index: 1;
+  margin-bottom: 20px;
 }
 
 .post-content p {
   color: var(--color-text);
   line-height: 1.6;
-  margin: 0;
+  font-size: 0.95rem;
 }
 
 .post-footer {
   display: flex;
-  gap: 16px;
-  color: var(--color-text);
-  font-size: 14px;
   align-items: center;
   justify-content: space-between;
-  position: relative;
-  z-index: 1;
 }
 
-.like-count, .comment-count {
+.post-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.stat-item .el-icon {
+  font-size: 16px;
+}
+
+.view-more {
   display: flex;
   align-items: center;
   gap: 4px;
+  color: #22d36b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
-.view-detail {
-  color: var(--color-primary);
-  font-size: 12px;
-  opacity: 0.8;
+.post-card:hover .view-more {
+  transform: translateX(4px);
+}
+
+.post-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(34, 211, 107, 0.02), transparent);
+  opacity: 0;
   transition: opacity 0.3s ease;
 }
 
-.post-preview-card:hover .view-detail {
+.post-card:hover .post-card-bg {
   opacity: 1;
 }
 
-.login-prompt {
-  margin-bottom: 40px;
-}
-
-.prompt-card {
-  background: var(--color-card);
-  backdrop-filter: blur(10px);
-  border: none;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.prompt-content {
-  padding: 30px;
-}
-
-.prompt-content h3 {
-  color: var(--color-text);
-  margin-bottom: 16px;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.prompt-content p {
-  color: var(--color-text);
-  margin-bottom: 16px;
-  line-height: 1.6;
-}
-
-.prompt-content ul {
-  color: var(--color-text);
-  line-height: 1.8;
-}
-
-.prompt-content li {
-  margin-bottom: 8px;
-}
-
-.prompt-actions {
-  text-align: right;
-}
-
-.prompt-actions .el-button {
-  margin: 0 8px;
-}
-
-.login-button,
-.register-button {
-  width: 100px !important;
-  height: 36px !important;
-  font-size: 15px !important;
-  padding: 0 10px !important;
-  border-radius: 6px !important;
-  min-width: 0 !important;
-}
-
-.prompt-actions {
-  gap: 10px;
-}
-
-@media (max-width: 768px) {
-  .header-content {
-    padding: 0 16px;
-    height: 56px;
-  }
-  
-  .logo h1 {
-    font-size: 20px;
-  }
-  
-  .desktop-menu {
-    display: none;
-  }
-  
-  .user-info {
-    display: none;
-  }
-  
-  .mobile-menu-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .main-content {
-    padding-top: 76px;
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-  
-  .posts-preview {
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .hero-content {
     grid-template-columns: 1fr;
-  }
-  
-  .feature-section .el-col {
-    margin-bottom: 16px;
-  }
-  
-  .welcome-content h2 {
-    font-size: 24px;
-  }
-  
-  .welcome-content p {
-    font-size: 14px;
-  }
-  
-  .feature-card {
-    padding: 20px 16px;
-  }
-  
-  .feature-card h3 {
-    font-size: 18px;
-  }
-  
-  .feature-card p {
-    font-size: 14px;
-  }
-  
-  .prompt-content {
-    padding: 20px;
-  }
-  
-  .prompt-content h3 {
-    font-size: 20px;
-  }
-  
-  .prompt-actions {
+    gap: 40px;
     text-align: center;
   }
   
-  .prompt-actions .el-button {
-    margin: 0 8px;
+  .hero-visual {
+    height: 300px;
   }
   
-  .recent-posts-section h3 {
-    font-size: 20px;
+  .prompt-container {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    text-align: center;
   }
   
-  .post-preview-card {
-    margin-bottom: 16px;
-  }
-  
-  .post-header {
-    flex-wrap: wrap;
-  }
-  
-  .post-time {
-    font-size: 11px;
-  }
-  
-  .click-hint {
-    font-size: 12px;
-  }
-  
-  .post-content p {
-    font-size: 13px;
-  }
-  
-  .post-footer {
-    font-size: 11px;
-    gap: 12px;
-  }
-  
-  .view-detail {
-    font-size: 10px;
+  .feature-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 480px) {
-  .header-content {
-    padding: 0 12px;
-    height: 52px;
-  }
-  
-  .logo h1 {
-    font-size: 18px;
-  }
-  
+@media (max-width: 768px) {
   .main-content {
-    padding-top: 72px;
-    padding-left: 12px;
-    padding-right: 12px;
+    padding: 0 16px;
   }
   
-  .mobile-menu-content {
-    padding: 12px 16px;
+  .hero-section {
+    padding: 100px 0 40px;
+    margin-bottom: 60px;
   }
   
-  .mobile-nav-item {
-    padding: 10px 0;
+  .title-main {
+    font-size: 2.5rem;
   }
   
-  .mobile-nav-item span {
-    font-size: 15px;
+  .title-subtitle {
+    font-size: 1.2rem;
   }
   
-  .welcome-content h2 {
-    font-size: 22px;
+  .hero-description {
+    font-size: 1rem;
   }
   
-  .welcome-content p {
-    font-size: 13px;
+  .hero-stats {
+    justify-content: center;
+    gap: 20px;
+  }
+  
+  .stat-item {
+    min-width: 70px;
+  }
+  
+  .stat-number {
+    font-size: 1.5rem;
+  }
+  
+  .stat-label {
+    font-size: 0.8rem;
+  }
+  
+  .section-header h2 {
+    font-size: 2rem;
   }
   
   .feature-card {
-    padding: 16px 12px;
+    padding: 30px 24px;
   }
   
-  .feature-card h3 {
-    font-size: 16px;
+  .feature-card-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
   }
   
-  .feature-card p {
-    font-size: 13px;
+  .prompt-container {
+    padding: 40px 24px;
   }
   
-  .prompt-content {
-    padding: 16px;
+  .prompt-header h2 {
+    font-size: 2rem;
   }
   
-  .prompt-content h3 {
-    font-size: 18px;
+  .prompt-features {
+    grid-template-columns: 1fr;
   }
   
   .prompt-actions {
     flex-direction: column;
+  }
+  
+  .posts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .post-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 0 12px;
+  }
+  
+  .hero-section {
+    padding: 90px 0 30px;
+    margin-bottom: 40px;
+  }
+  
+  .title-main {
+    font-size: 2rem;
+  }
+  
+  .title-subtitle {
+    font-size: 1rem;
+  }
+  
+  .hero-description {
+    font-size: 0.9rem;
+    margin-bottom: 30px;
+  }
+  
+  .hero-stats {
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 15px;
+  }
+  
+  .stat-item {
+    min-width: 60px;
+  }
+  
+  .stat-number {
+    font-size: 1.3rem;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.8rem;
+  }
+  
+  .section-header p {
+    font-size: 1rem;
+  }
+  
+  .feature-card {
+    padding: 24px 20px;
+  }
+  
+  .prompt-container {
+    padding: 30px 20px;
+  }
+  
+  .prompt-header h2 {
+    font-size: 1.8rem;
+  }
+  
+  .prompt-header p {
+    font-size: 1rem;
+  }
+  
+  .post-card {
+    padding: 16px;
+  }
+  
+  .author-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .post-stats {
     gap: 12px;
-  }
-  
-  .prompt-actions .el-button {
-    margin: 0;
-    width: 100%;
-    height: 36px;
-    font-size: 15px;
-    padding: 0 10px;
-    border-radius: 6px;
-  }
-  
-  .recent-posts-section h3 {
-    font-size: 18px;
-  }
-  
-  .post-preview-card {
-    padding: 12px;
-  }
-  
-  .post-header {
-    margin-bottom: 8px;
-  }
-  
-  .post-content {
-    margin-bottom: 8px;
-  }
-  
-  .post-content p {
-    font-size: 13px;
-  }
-  
-  .click-hint {
-    font-size: 11px;
-  }
-  
-  .post-footer {
-    font-size: 11px;
-    gap: 12px;
-  }
-  
-  .view-detail {
-    font-size: 10px;
   }
 }
 </style> 

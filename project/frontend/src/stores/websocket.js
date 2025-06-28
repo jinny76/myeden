@@ -124,7 +124,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
     
     // 如果是开发环境，使用默认的WebSocket端口
     if (import.meta.env.DEV) {
-      return `${protocol}//${host}:38080/ws`
+      return `${protocol}//${host}/ws`
     }
     
     // 生产环境使用相同的主机和端口
