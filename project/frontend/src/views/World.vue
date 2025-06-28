@@ -303,13 +303,13 @@ const navigateTo = (path) => {
 <style scoped>
 .world-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-bg);
 }
 
 .header {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid var(--color-border);
   position: fixed;
   top: 0;
   left: 0;
@@ -329,7 +329,7 @@ const navigateTo = (path) => {
 
 .logo h1 {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 24px;
   font-weight: bold;
 }
@@ -360,7 +360,7 @@ const navigateTo = (path) => {
 
 .username {
   margin-left: 8px;
-  color: #333;
+  color: var(--color-text);
   font-weight: 500;
 }
 
@@ -370,7 +370,7 @@ const navigateTo = (path) => {
   padding: 8px;
   border-radius: 6px;
   transition: background-color 0.3s;
-  color: #333;
+  color: var(--color-text);
 }
 
 .mobile-menu-toggle:hover {
@@ -379,9 +379,9 @@ const navigateTo = (path) => {
 
 .mobile-menu {
   display: none;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--color-border);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   position: absolute;
   top: 100%;
@@ -405,7 +405,7 @@ const navigateTo = (path) => {
   cursor: pointer;
   border-radius: 8px;
   transition: background-color 0.3s;
-  color: #333;
+  color: var(--color-text);
   font-weight: 500;
 }
 
@@ -420,7 +420,7 @@ const navigateTo = (path) => {
 .mobile-nav-item .el-icon {
   margin-right: 12px;
   font-size: 18px;
-  color: #667eea;
+  color: var(--color-primary);
 }
 
 .mobile-nav-item span {
@@ -429,7 +429,7 @@ const navigateTo = (path) => {
 
 .mobile-nav-divider {
   height: 1px;
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: var(--color-border);
   margin: 12px 0;
 }
 
@@ -459,7 +459,7 @@ const navigateTo = (path) => {
 }
 
 .world-info-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
   border: none;
   border-radius: 16px;
@@ -472,14 +472,14 @@ const navigateTo = (path) => {
 }
 
 .world-header h2 {
-  color: #333;
+  color: var(--color-text);
   font-size: 28px;
   font-weight: bold;
   margin-bottom: 12px;
 }
 
 .world-description {
-  color: #666;
+  color: var(--color-text);
   font-size: 16px;
   line-height: 1.6;
   margin: 0;
@@ -503,14 +503,14 @@ const navigateTo = (path) => {
 }
 
 .section-header h3 {
-  color: #333;
+  color: var(--color-text);
   font-size: 24px;
   font-weight: bold;
   margin: 0;
 }
 
 .section-header p {
-  color: #666;
+  color: var(--color-text);
   font-size: 14px;
   margin: 0;
 }
@@ -524,7 +524,7 @@ const navigateTo = (path) => {
 .robot-card {
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--color-border);
 }
 
 .robot-card:hover {
@@ -547,7 +547,7 @@ const navigateTo = (path) => {
   position: absolute;
   bottom: -2px;
   right: -2px;
-  background: #f56c6c;
+  background: var(--color-error);
   color: white;
   padding: 2px 6px;
   border-radius: 8px;
@@ -559,7 +559,7 @@ const navigateTo = (path) => {
 }
 
 .robot-status.active {
-  background: #67c23a;
+  background: var(--color-success);
 }
 
 .status-icon {
@@ -575,13 +575,13 @@ const navigateTo = (path) => {
   padding: 8px;
   background: rgba(64, 158, 255, 0.1);
   border-radius: 4px;
-  border: 1px dashed #409eff;
+  border: 1px dashed var(--color-primary);
 }
 
 .debug-text {
   display: block;
   margin-top: 4px;
-  color: #409eff;
+  color: var(--color-primary);
   font-size: 11px;
   font-family: monospace;
 }
@@ -592,7 +592,7 @@ const navigateTo = (path) => {
 }
 
 .robot-info h4 {
-  color: #333;
+  color: var(--color-text);
   font-size: 18px;
   font-weight: bold;
   margin-bottom: 6px;
@@ -602,7 +602,7 @@ const navigateTo = (path) => {
 }
 
 .robot-intro {
-  color: #666;
+  color: var(--color-text);
   font-size: 14px;
   line-height: 1.4;
   margin-bottom: 12px;
@@ -622,7 +622,7 @@ const navigateTo = (path) => {
 }
 
 .stats-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
   border: none;
   border-radius: 12px;
@@ -639,14 +639,14 @@ const navigateTo = (path) => {
 }
 
 .stat-number {
-  color: #409eff;
+  color: var(--color-primary);
   font-size: 28px;
   font-weight: bold;
   margin-bottom: 4px;
 }
 
 .stat-label {
-  color: #666;
+  color: var(--color-text);
   font-size: 14px;
 }
 

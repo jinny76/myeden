@@ -128,12 +128,12 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-bg);
   padding: 20px;
 }
 
 .login-card {
-  background: white;
+  background: var(--color-card);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   padding: 40px;
@@ -146,14 +146,14 @@ const handleLogin = async () => {
   margin-bottom: 30px;
   
   h2 {
-    color: #333;
+    color: var(--color-text);
     margin-bottom: 8px;
     font-size: 24px;
     font-weight: 600;
   }
   
   p {
-    color: #666;
+    color: var(--color-text);
     font-size: 14px;
     margin: 0;
   }
@@ -167,15 +167,17 @@ const handleLogin = async () => {
   .el-input {
     .el-input__wrapper {
       border-radius: 8px;
-      border: 1px solid #e4e7ed;
+      border: 1px solid var(--color-border);
+      background: var(--color-card);
+      color: var(--color-text);
       
       &:hover {
-        border-color: #409eff;
+        border-color: var(--color-primary);
       }
       
       &.is-focus {
-        border-color: #409eff;
-        box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.2);
       }
     }
   }
@@ -187,11 +189,12 @@ const handleLogin = async () => {
   border-radius: 8px;
   font-size: 16px;
   font-weight: 500;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-primary);
   border: none;
+  color: #fff;
   
   &:hover {
-    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    background: #1db35b;
   }
 }
 
@@ -200,12 +203,12 @@ const handleLogin = async () => {
   margin-top: 20px;
   
   p {
-    color: #666;
+    color: var(--color-text);
     font-size: 14px;
     margin: 0;
     
     a {
-      color: #409eff;
+      color: var(--color-primary);
       text-decoration: none;
       
       &:hover {

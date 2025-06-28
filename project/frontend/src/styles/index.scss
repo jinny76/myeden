@@ -27,10 +27,11 @@ html, body {
   font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
   font-size: 14px;
   line-height: 1.6;
-  color: $text-color;
-  background-color: $bg-color;
+  color: var(--color-text) !important;
+  background: var(--color-bg) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background 0.3s, color 0.3s;
 }
 
 // 滚动条样式
@@ -55,9 +56,11 @@ html, body {
 
 // 链接样式
 a {
-  color: $link-color;
+  color: #fff !important;
   text-decoration: none;
   transition: color 0.3s ease;
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
   
   &:hover {
     color: $link-hover-color;
@@ -84,6 +87,8 @@ input, textarea {
   padding: 8px 12px;
   font-size: 14px;
   transition: border-color 0.3s ease;
+  background-color: $dark-input-bg;
+  color: $dark-text-color;
   
   &:focus {
     outline: none;
@@ -327,4 +332,16 @@ input, textarea {
   
   --el-box-shadow-base: #{$card-shadow};
   --el-box-shadow-light: #{$card-shadow};
+}
+
+.el-card, .el-header, .el-menu, .el-dropdown-menu, .el-input, .el-select, .el-dialog {
+  background: var(--color-card) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+}
+
+a, .el-button--primary, .el-tag--success {
+  color: #fff !important;
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
 } 

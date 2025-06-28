@@ -870,12 +870,12 @@ const loadAllCommentsAndReplies = async () => {
 <style scoped>
 .moments-container {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background: var(--color-bg);
 }
 
 .header {
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: var(--color-card);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -893,7 +893,7 @@ const loadAllCommentsAndReplies = async () => {
 
 .logo h1 {
   margin: 0;
-  color: #409eff;
+  color: var(--color-text);
   font-size: 24px;
 }
 

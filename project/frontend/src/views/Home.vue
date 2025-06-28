@@ -425,13 +425,13 @@ watch(isLoggedIn, (newValue, oldValue) => {
 <style scoped>
 .home-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-bg);
 }
 
 .header {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid var(--color-border);
   position: fixed;
   top: 0;
   left: 0;
@@ -455,7 +455,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 
 .logo h1 {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 24px;
   font-weight: bold;
   white-space: nowrap;
@@ -491,7 +491,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 
 .username {
   margin-left: 8px;
-  color: #333;
+  color: var(--color-text);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -508,7 +508,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
   padding: 8px;
   border-radius: 6px;
   transition: background-color 0.3s;
-  color: #333;
+  color: var(--color-text);
 }
 
 .mobile-menu-toggle:hover {
@@ -517,9 +517,9 @@ watch(isLoggedIn, (newValue, oldValue) => {
 
 .mobile-menu {
   display: none;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--color-border);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   position: absolute;
   top: 100%;
@@ -543,7 +543,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
   cursor: pointer;
   border-radius: 8px;
   transition: background-color 0.3s;
-  color: #333;
+  color: var(--color-text);
   font-weight: 500;
 }
 
@@ -558,7 +558,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 .mobile-nav-item .el-icon {
   margin-right: 12px;
   font-size: 18px;
-  color: #667eea;
+  color: var(--color-text);
 }
 
 .mobile-nav-item span {
@@ -567,7 +567,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 
 .mobile-nav-divider {
   height: 1px;
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: var(--color-border);
   margin: 12px 0;
 }
 
@@ -584,7 +584,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 }
 
 .welcome-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
   border: none;
   border-radius: 16px;
@@ -592,21 +592,21 @@ watch(isLoggedIn, (newValue, oldValue) => {
 }
 
 .welcome-content h2 {
-  color: #333;
+  color: var(--color-text);
   margin-bottom: 16px;
   font-size: 28px;
   font-weight: bold;
 }
 
 .welcome-content p {
-  color: #666;
+  color: var(--color-text);
   margin-bottom: 16px;
   font-size: 16px;
   line-height: 1.6;
 }
 
 .welcome-content ul {
-  color: #666;
+  color: var(--color-text);
   line-height: 1.8;
 }
 
@@ -619,7 +619,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 }
 
 .feature-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
   border: none;
   border-radius: 16px;
@@ -637,18 +637,18 @@ watch(isLoggedIn, (newValue, oldValue) => {
 
 .feature-icon {
   margin-bottom: 20px;
-  color: #667eea;
+  color: var(--color-text);
 }
 
 .feature-card h3 {
-  color: #333;
+  color: var(--color-text);
   margin-bottom: 12px;
   font-size: 20px;
   font-weight: bold;
 }
 
 .feature-card p {
-  color: #666;
+  color: var(--color-text);
   line-height: 1.6;
 }
 
@@ -657,7 +657,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 }
 
 .recent-posts-section h3 {
-  color: #333;
+  color: var(--color-text);
   margin-bottom: 20px;
   font-size: 24px;
   font-weight: bold;
@@ -670,7 +670,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 }
 
 .post-preview-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
   border: none;
   border-radius: 12px;
@@ -693,12 +693,12 @@ watch(isLoggedIn, (newValue, oldValue) => {
 .author-name {
   margin-left: 12px;
   font-weight: 500;
-  color: #333;
+  color: var(--color-text);
 }
 
 .post-time {
   margin-left: auto;
-  color: #999;
+  color: var(--color-text);
   font-size: 12px;
 }
 
@@ -707,7 +707,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 }
 
 .post-content p {
-  color: #333;
+  color: var(--color-text);
   line-height: 1.6;
   margin: 0;
 }
@@ -715,7 +715,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 .post-footer {
   display: flex;
   gap: 16px;
-  color: #666;
+  color: var(--color-text);
   font-size: 14px;
 }
 
@@ -730,7 +730,7 @@ watch(isLoggedIn, (newValue, oldValue) => {
 }
 
 .prompt-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
   border: none;
   border-radius: 16px;
@@ -742,20 +742,20 @@ watch(isLoggedIn, (newValue, oldValue) => {
 }
 
 .prompt-content h3 {
-  color: #333;
+  color: var(--color-text);
   margin-bottom: 16px;
   font-size: 24px;
   font-weight: bold;
 }
 
 .prompt-content p {
-  color: #666;
+  color: var(--color-text);
   margin-bottom: 16px;
   line-height: 1.6;
 }
 
 .prompt-content ul {
-  color: #666;
+  color: var(--color-text);
   line-height: 1.8;
 }
 

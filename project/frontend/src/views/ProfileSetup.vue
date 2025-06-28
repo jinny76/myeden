@@ -77,6 +77,14 @@
           </el-button>
         </el-form-item>
       </el-form>
+      <el-divider style="margin: 32px 0 16px 0;" />
+      <div class="theme-setting">
+        <span>主题配色：</span>
+        <el-radio-group v-model="theme" @change="onThemeChange">
+          <el-radio label="light">亮色</el-radio>
+          <el-radio label="dark">暗色</el-radio>
+        </el-radio-group>
+      </div>
     </div>
   </div>
 </template>
@@ -89,6 +97,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { userApi } from '@/api/user'
 import { getUserAvatarUrl, buildAvatarUrl, generateDefaultAvatar, handleAvatarError as handleAvatarErrorUtil } from '@/utils/avatar'
+import { setTheme, getTheme } from '@/utils/theme'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -126,6 +135,10 @@ const profileRules = {
     { max: 200, message: '个性签名不能超过200个字符', trigger: 'blur' }
   ]
 }
+
+// 主题
+const theme = ref(getTheme())
+const onThemeChange = (val) => { setTheme(val) }
 
 // 初始化头像URL
 const initAvatarUrl = () => {
@@ -170,6 +183,7 @@ onMounted(() => {
   setTimeout(() => {
     initUserProfile()
   }, 100)
+  theme.value = getTheme()
 })
 
 // 头像上传前的验证
@@ -289,12 +303,12 @@ const handleAvatarError = (event) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-bg);
   padding: 20px;
 }
 
 .profile-setup-card {
-  background: white;
+  background: var(--color-card);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   padding: 40px;
@@ -307,14 +321,14 @@ const handleAvatarError = (event) => {
   margin-bottom: 30px;
   
   h2 {
-    color: #333;
+    color: var(--color-text);
     margin-bottom: 8px;
     font-size: 24px;
     font-weight: 600;
   }
   
   p {
-    color: #666;
+    color: var(--color-text);
     font-size: 14px;
     margin: 0;
   }
@@ -329,15 +343,17 @@ const handleAvatarError = (event) => {
   .el-textarea {
     .el-input__wrapper {
       border-radius: 8px;
-      border: 1px solid #e4e7ed;
+      border: 1px solid var(--color-border);
+      background: var(--color-card);
+      color: var(--color-text);
       
       &:hover {
-        border-color: #409eff;
+        border-color: var(--color-primary);
       }
       
       &.is-focus {
-        border-color: #409eff;
-        box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.2);
       }
     }
   }
@@ -358,13 +374,13 @@ const handleAvatarError = (event) => {
     height: 100px;
     line-height: 100px;
     text-align: center;
-    border: 1px dashed #d9d9d9;
+    border: 1px dashed var(--color-border);
     border-radius: 50%;
     cursor: pointer;
     
     &:hover {
-      border-color: #409eff;
-      color: #409eff;
+      border-color: var(--color-primary);
+      color: var(--color-primary);
     }
   }
   
@@ -376,7 +392,7 @@ const handleAvatarError = (event) => {
   }
   
   .upload-tip {
-    color: #666;
+    color: var(--color-text);
     font-size: 12px;
     margin: 0;
   }
@@ -388,11 +404,12 @@ const handleAvatarError = (event) => {
   border-radius: 8px;
   font-size: 16px;
   font-weight: 500;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-primary);
   border: none;
+  color: #fff;
   
   &:hover {
-    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    background: #1db35b;
   }
 }
 
@@ -410,6 +427,17 @@ const handleAvatarError = (event) => {
     .el-form-item__label {
       width: 60px !important;
     }
+  }
+}
+
+.theme-setting {
+  text-align: center;
+  margin-top: 16px;
+  
+  span {
+    color: #666;
+    font-size: 14px;
+    margin-right: 10px;
   }
 }
 </style> 
