@@ -2,8 +2,10 @@ package com.myeden.service.impl;
 
 import com.myeden.entity.Robot;
 import com.myeden.entity.Post;
+import com.myeden.entity.Comment;
 import com.myeden.repository.RobotRepository;
 import com.myeden.repository.PostRepository;
+import com.myeden.repository.CommentRepository;
 import com.myeden.service.DifyService;
 import com.myeden.service.PostService;
 import com.myeden.service.CommentService;
@@ -44,6 +46,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     
     @Autowired
     private PostRepository postRepository;
+    
+    @Autowired
+    private CommentRepository commentRepository;
     
     @Autowired
     private DifyService difyService;
@@ -124,12 +129,12 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 检查今日发布数量限制
             RobotDailyStats stats = getDailyStats(robotId);
             if (stats.getPostCount() >= 10) { // 每日最多10条动态
-                logger.info("机器人今日发布数量已达上限: {}", robotId);
+                logger.info("机器人今日发布数量已达上限, 最多10条: {}", robotId);
                 return false;
             }
             
             // 计算触发概率
-            double probability = calculateBehaviorProbability(robot, "post", "自动发布动态");
+            double probability = calculateBehaviorProbability(robot, "post", "自动发布动态", true);
             if (random.nextDouble() > probability) {
                 logger.info("机器人发布动态概率未触发: {}, 概率: {}", robotId, probability);
                 return false;
@@ -201,20 +206,24 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 检查今日评论数量限制
             RobotDailyStats stats = getDailyStats(robotId);
             if (stats.getCommentCount() >= 20) { // 每日最多20条评论
+                logger.info("机器人评论超限: 每天最多20次 {}", robotId);
                 return false;
             }
-            
-            // 计算触发概率
-            double probability = calculateBehaviorProbability(robot, "comment", "对动态发表评论");
-            if (random.nextDouble() > probability) {
-                return false;
-            }
-            
+
             // 获取动态内容
             PostService.PostDetail postDetail = postService.getPostDetail(postId);
+
+            // 计算触发概率
+            double probability = calculateBehaviorProbability(robot, "comment", "对动态发表评论", "robot".equals(postDetail.getAuthorType()));
+            if (random.nextDouble() > probability) {
+                logger.info("机器人评论概率未触发: {}, 概率: {}", robotId, probability);
+                return false;
+            }
+            
+
             String postContent = postDetail.getContent();
             String context = buildCommentContext(postContent);
-            String content = difyService.generateCommentContent(robot, postContent, context);
+            String content = difyService.generateCommentContent(robot, postDetail, context);
             
             // 发表评论
             CommentService.CommentResult commentResult = commentService.createComment(postId, robotId, "robot", content);
@@ -265,22 +274,26 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 检查今日回复数量限制
             RobotDailyStats stats = getDailyStats(robotId);
             if (stats.getReplyCount() >= 15) { // 每日最多15条回复
+                logger.info("机器人回复超限: 每天最多15次 {}", robotId);
                 return false;
             }
-            
-            // 计算触发概率
-            double probability = calculateBehaviorProbability(robot, "reply", "回复评论");
-            if (random.nextDouble() > probability) {
-                return false;
-            }
-            
+
             // 获取评论内容
             CommentService.CommentDetail commentDetail = commentService.getCommentDetail(commentId);
+            PostService.PostDetail postDetail = postService.getPostDetail(commentDetail.getPostId());
+            
+            // 计算触发概率
+            double probability = calculateBehaviorProbability(robot, "reply", "回复评论", "robot".equals(commentDetail.getAuthorType()));
+            if (random.nextDouble() > probability) {
+                logger.info("机器人回复评论概率未触发: {}, 概率: {}", robotId, probability);
+                return false;
+            }
+
             String commentContent = commentDetail.getContent();
             String context = buildReplyContext(commentContent);
             
             // 生成回复内容和内心活动
-            String content = difyService.generateReplyContent(robot, commentContent, context);
+            String content = difyService.generateReplyContent(robot, commentDetail, postDetail, context);
             String innerThoughts = difyService.generateInnerThoughts(robot, "回复评论: " + commentContent);
             
             // 回复评论
@@ -331,25 +344,31 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
      * 计算行为触发概率 - 增加随机性和情绪影响
      */
     @Override
-    public double calculateBehaviorProbability(Robot robot, String behaviorType, String context) {
+    public double calculateBehaviorProbability(Robot robot, String behaviorType, String contex, Boolean isRobot) {
         try {
-            double baseProbability = 0.3;
+            double baseProbability = 1;
             
             // 根据行为类型调整基础概率
             switch (behaviorType) {
                 case "post":
-                    baseProbability = 0.25;
+                    baseProbability = 0.05;
                     break;
                 case "comment":
-                    baseProbability = 0.35;
+                    baseProbability = 0.6;
+                    if (!isRobot) {
+                        baseProbability = 0.75;
+                    }
                     break;
                 case "reply":
-                    baseProbability = 0.45;
+                    baseProbability = 0.6;
+                    if (!isRobot) {
+                        baseProbability = 0.75;
+                    }
                     break;
                 default:
                     baseProbability = 0.3;
             }
-            
+
             // 时间因素
             LocalTime currentTime = LocalTime.now();
             double timeMultiplier = getTimeMultiplier(robot, currentTime);
@@ -472,11 +491,14 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 if (isRobotActive(robot)) {
                     // 随机触发机器人行为
                     double randomValue = random.nextDouble();
-                    if (randomValue < 0.3) {
+                    if (randomValue < 0.25) {
                         triggerRobotPost(robot.getRobotId());
-                    } else if (randomValue < 0.6) {
+                    } else if (randomValue < 0.5) {
                         // 随机选择一个近三天的动态进行评论
                         triggerRobotCommentOnRecentPosts(robot.getRobotId());
+                    } else if (randomValue < 0.75) {
+                        // 随机选择一个近三天的评论进行回复
+                        triggerRobotReplyOnRecentComments(robot.getRobotId());
                     }
                 }
             }
@@ -541,13 +563,6 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 随机选择一个未评论的帖子
             Post selectedPost = uncommentedPosts.get(random.nextInt(uncommentedPosts.size()));
             
-            // 计算触发概率
-            double probability = calculateBehaviorProbability(robot, "comment", "对动态发表评论");
-            if (random.nextDouble() > probability) {
-                logger.debug("机器人 {} 评论概率未触发，概率: {}", robot.getName(), probability);
-                return;
-            }
-            
             // 触发机器人评论
             boolean success = triggerRobotComment(robotId, selectedPost.getPostId());
             if (success) {
@@ -558,6 +573,75 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             
         } catch (Exception e) {
             logger.error("为机器人 {} 触发近三天帖子评论失败: {}", robotId, e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 为指定机器人触发对近三天评论的回复
+     * 只对机器人没有回复过的评论进行回复
+     * 
+     * @param robotId 机器人ID
+     */
+    private void triggerRobotReplyOnRecentComments(String robotId) {
+        try {
+            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
+            if (robot == null || !robot.getIsActive()) {
+                return;
+            }
+            
+            // 检查是否在活跃时间段
+            if (!isRobotActive(robot)) {
+                return;
+            }
+            
+            // 检查今日回复数量限制
+            RobotDailyStats stats = getDailyStats(robotId);
+            if (stats.getReplyCount() >= 15) { // 每日最多15条回复
+                return;
+            }
+            
+            // 获取近三天的评论
+            LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
+            List<Comment> recentComments = commentService.findRecentComments(threeDaysAgo);
+            
+            if (recentComments.isEmpty()) {
+                logger.debug("机器人 {} 没有找到近三天的评论", robot.getName());
+                return;
+            }
+            
+            // 过滤出机器人没有回复过的评论
+            List<Comment> unrepliedComments = new ArrayList<>();
+            for (Comment comment : recentComments) {
+                // 跳过机器人自己发布的评论
+                if (robotId.equals(comment.getAuthorId())) {
+                    continue;
+                }
+                
+                // 检查机器人是否已经回复过这个评论
+                boolean hasReplied = commentService.hasRobotRepliedToComment(robotId, comment.getCommentId());
+                if (!hasReplied) {
+                    unrepliedComments.add(comment);
+                }
+            }
+            
+            if (unrepliedComments.isEmpty()) {
+                logger.debug("机器人 {} 已经回复过所有近三天的评论", robot.getName());
+                return;
+            }
+            
+            // 随机选择一个未回复的评论
+            Comment selectedComment = unrepliedComments.get(random.nextInt(unrepliedComments.size()));
+            
+            // 触发机器人回复
+            boolean success = triggerRobotReply(robotId, selectedComment.getCommentId());
+            if (success) {
+                logger.info("机器人 {} 成功对评论 {} 触发回复", robot.getName(), selectedComment.getCommentId());
+            } else {
+                logger.debug("机器人 {} 对评论 {} 触发回复失败", robot.getName(), selectedComment.getCommentId());
+            }
+            
+        } catch (Exception e) {
+            logger.error("为机器人 {} 触发近三天评论回复失败: {}", robotId, e.getMessage(), e);
         }
     }
     
@@ -798,14 +882,6 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     if (stats.getCommentCount() >= 20) { // 每日最多20条评论
                         logger.debug("机器人 {} 今日评论数量已达上限，跳过", robot.getName());
                         skippedRobots.add(robot.getName() + "(评论上限)");
-                        continue;
-                    }
-                    
-                    // 计算触发概率
-                    double probability = calculateBehaviorProbability(robot, "comment", "对动态发表评论");
-                    if (random.nextDouble() > probability) {
-                        logger.debug("机器人 {} 评论概率未触发，概率: {}", robot.getName(), probability);
-                        skippedRobots.add(robot.getName() + "(概率未命中)");
                         continue;
                     }
                     

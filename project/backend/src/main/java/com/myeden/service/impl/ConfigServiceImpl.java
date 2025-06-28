@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -365,6 +366,48 @@ public class ConfigServiceImpl implements ConfigService {
         robot.setPersonality(robotConfig.getPersonality());
         robot.setIntroduction(robotConfig.getDescription());
         
+        // 新增的个人信息字段
+        robot.setGender(robotConfig.getGender());
+        robot.setAge(robotConfig.getAge());
+        robot.setMbti(robotConfig.getMbti());
+        robot.setBloodType(robotConfig.getBloodType());
+        robot.setZodiac(robotConfig.getZodiac());
+        robot.setProfession(robotConfig.getOccupation());
+        robot.setLocation(robotConfig.getLocation());
+        robot.setEducation(robotConfig.getEducation());
+        robot.setRelationship(robotConfig.getRelationship());
+        
+        // 性格特征列表
+        if (robotConfig.getTraits() != null && !robotConfig.getTraits().isEmpty()) {
+            robot.setTraits(new ArrayList<>(robotConfig.getTraits()));
+        }
+        
+        // 兴趣爱好列表
+        if (robotConfig.getInterests() != null && !robotConfig.getInterests().isEmpty()) {
+            robot.setInterests(new ArrayList<>(robotConfig.getInterests()));
+        }
+        
+        // 说话风格
+        if (robotConfig.getSpeakingStyle() != null) {
+            Robot.SpeakingStyle speakingStyle = new Robot.SpeakingStyle();
+            speakingStyle.setTone(robotConfig.getSpeakingStyle().getTone());
+            speakingStyle.setVocabulary(robotConfig.getSpeakingStyle().getVocabulary());
+            speakingStyle.setEmojiUsage(robotConfig.getSpeakingStyle().getEmojiUsage());
+            speakingStyle.setSentenceLength(robotConfig.getSpeakingStyle().getSentenceLength());
+            robot.setSpeakingStyle(speakingStyle);
+        }
+        
+        // 行为模式
+        if (robotConfig.getBehaviorPatterns() != null) {
+            Robot.BehaviorPatterns behaviorPatterns = new Robot.BehaviorPatterns();
+            behaviorPatterns.setGreetingFrequency(robotConfig.getBehaviorPatterns().getGreetingFrequency());
+            behaviorPatterns.setComfortFrequency(robotConfig.getBehaviorPatterns().getComfortFrequency());
+            behaviorPatterns.setShareFrequency(robotConfig.getBehaviorPatterns().getShareFrequency());
+            behaviorPatterns.setCommentFrequency(robotConfig.getBehaviorPatterns().getCommentFrequency());
+            behaviorPatterns.setReplyFrequency(robotConfig.getBehaviorPatterns().getReplyFrequency());
+            robot.setBehaviorPatterns(behaviorPatterns);
+        }
+        
         // 昵称作为简介的一部分
         if (StringUtils.hasText(robotConfig.getNickname())) {
             robot.setIntroduction(robotConfig.getNickname() + " - " + robot.getIntroduction());
@@ -375,19 +418,7 @@ public class ConfigServiceImpl implements ConfigService {
             robot.setIntroduction(robot.getIntroduction() + "\n\n" + robotConfig.getBackground());
         }
         
-        // 性格特征
-        if (robotConfig.getTraits() != null && !robotConfig.getTraits().isEmpty()) {
-            String traitsStr = "性格特征: " + String.join(", ", robotConfig.getTraits());
-            robot.setIntroduction(robot.getIntroduction() + "\n" + traitsStr);
-        }
-        
-        // 兴趣爱好
-        if (robotConfig.getInterests() != null && !robotConfig.getInterests().isEmpty()) {
-            String interestsStr = "兴趣爱好: " + String.join(", ", robotConfig.getInterests());
-            robot.setIntroduction(robot.getIntroduction() + "\n" + interestsStr);
-        }
-        
-        // 行为模式
+        // 行为模式转换（保持原有逻辑）
         if (robotConfig.getBehaviorPatterns() != null) {
             RobotConfig.BehaviorPatterns patterns = robotConfig.getBehaviorPatterns();
             
@@ -409,10 +440,35 @@ public class ConfigServiceImpl implements ConfigService {
             }
         }
         
-        // 设置默认值
-        robot.setGender("未知");
-        robot.setProfession("AI助手");
-        robot.setMbti("未知");
+        // 设置默认值（仅当字段为空时）
+        if (robot.getGender() == null) {
+            robot.setGender("未知");
+        }
+        if (robot.getProfession() == null) {
+            robot.setProfession("AI助手");
+        }
+        if (robot.getMbti() == null) {
+            robot.setMbti("未知");
+        }
+        if (robot.getAge() == null) {
+            robot.setAge(25);
+        }
+        if (robot.getBloodType() == null) {
+            robot.setBloodType("未知");
+        }
+        if (robot.getZodiac() == null) {
+            robot.setZodiac("未知");
+        }
+        if (robot.getLocation() == null) {
+            robot.setLocation("未知");
+        }
+        if (robot.getEducation() == null) {
+            robot.setEducation("未知");
+        }
+        if (robot.getRelationship() == null) {
+            robot.setRelationship("single");
+        }
+        
         robot.setReplySpeed(5);
         robot.setIsActive(robotConfig.isActive());
         robot.setCreatedAt(LocalDateTime.now());
@@ -430,6 +486,48 @@ public class ConfigServiceImpl implements ConfigService {
         existing.setAvatar(newConfig.getAvatar());
         existing.setPersonality(newConfig.getPersonality());
         existing.setIntroduction(newConfig.getIntroduction());
+        
+        // 更新新增的个人信息字段
+        existing.setGender(newConfig.getGender());
+        existing.setAge(newConfig.getAge());
+        existing.setMbti(newConfig.getMbti());
+        existing.setBloodType(newConfig.getBloodType());
+        existing.setZodiac(newConfig.getZodiac());
+        existing.setProfession(newConfig.getProfession());
+        existing.setLocation(newConfig.getLocation());
+        existing.setEducation(newConfig.getEducation());
+        existing.setRelationship(newConfig.getRelationship());
+        
+        // 更新性格特征列表
+        if (newConfig.getTraits() != null) {
+            existing.setTraits(new ArrayList<>(newConfig.getTraits()));
+        }
+        
+        // 更新兴趣爱好列表
+        if (newConfig.getInterests() != null) {
+            existing.setInterests(new ArrayList<>(newConfig.getInterests()));
+        }
+        
+        // 更新说话风格
+        if (newConfig.getSpeakingStyle() != null) {
+            Robot.SpeakingStyle speakingStyle = new Robot.SpeakingStyle();
+            speakingStyle.setTone(newConfig.getSpeakingStyle().getTone());
+            speakingStyle.setVocabulary(newConfig.getSpeakingStyle().getVocabulary());
+            speakingStyle.setEmojiUsage(newConfig.getSpeakingStyle().getEmojiUsage());
+            speakingStyle.setSentenceLength(newConfig.getSpeakingStyle().getSentenceLength());
+            existing.setSpeakingStyle(speakingStyle);
+        }
+        
+        // 更新行为模式
+        if (newConfig.getBehaviorPatterns() != null) {
+            Robot.BehaviorPatterns behaviorPatterns = new Robot.BehaviorPatterns();
+            behaviorPatterns.setGreetingFrequency(newConfig.getBehaviorPatterns().getGreetingFrequency());
+            behaviorPatterns.setComfortFrequency(newConfig.getBehaviorPatterns().getComfortFrequency());
+            behaviorPatterns.setShareFrequency(newConfig.getBehaviorPatterns().getShareFrequency());
+            behaviorPatterns.setCommentFrequency(newConfig.getBehaviorPatterns().getCommentFrequency());
+            behaviorPatterns.setReplyFrequency(newConfig.getBehaviorPatterns().getReplyFrequency());
+            existing.setBehaviorPatterns(behaviorPatterns);
+        }
         
         // 更新行为模式
         existing.setReplyFrequency(newConfig.getReplyFrequency());

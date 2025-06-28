@@ -1,6 +1,7 @@
 package com.myeden.service;
 
 import java.util.List;
+import com.myeden.entity.Comment;
 
 /**
  * 评论管理服务接口
@@ -93,6 +94,21 @@ public interface CommentService {
      * @return 是否已评论过
      */
     boolean hasRobotCommentedOnPost(String robotId, String postId);
+    
+    /**
+     * 查找指定时间之后的评论
+     * @param since 起始时间
+     * @return 评论列表
+     */
+    List<Comment> findRecentComments(java.time.LocalDateTime since);
+    
+    /**
+     * 检查指定机器人是否已经回复过指定评论
+     * @param robotId 机器人ID
+     * @param commentId 评论ID
+     * @return 是否已回复过
+     */
+    boolean hasRobotRepliedToComment(String robotId, String commentId);
     
     /**
      * 评论发布结果

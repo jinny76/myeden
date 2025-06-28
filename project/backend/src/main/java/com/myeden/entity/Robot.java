@@ -51,6 +51,11 @@ public class Robot {
     private String gender;
     
     /**
+     * 机器人年龄
+     */
+    private Integer age;
+    
+    /**
      * 一句话简介
      */
     private String introduction;
@@ -69,6 +74,51 @@ public class Robot {
      * MBTI
      */
     private String mbti;
+    
+    /**
+     * 血型
+     */
+    private String bloodType;
+    
+    /**
+     * 星座
+     */
+    private String zodiac;
+    
+    /**
+     * 所在地
+     */
+    private String location;
+    
+    /**
+     * 学历
+     */
+    private String education;
+    
+    /**
+     * 感情状态
+     */
+    private String relationship;
+    
+    /**
+     * 性格特征列表
+     */
+    private List<String> traits = new ArrayList<>();
+    
+    /**
+     * 兴趣爱好列表
+     */
+    private List<String> interests = new ArrayList<>();
+    
+    /**
+     * 说话风格
+     */
+    private SpeakingStyle speakingStyle;
+    
+    /**
+     * 行为模式
+     */
+    private BehaviorPatterns behaviorPatterns;
     
     /**
      * 回复速度（1-10）
@@ -134,6 +184,54 @@ public class Robot {
         }
     }
     
+    // 内部类：说话风格
+    public static class SpeakingStyle {
+        private String tone;
+        private String vocabulary;
+        private String emojiUsage;
+        private String sentenceLength;
+        
+        public SpeakingStyle() {}
+        
+        public String getTone() { return tone; }
+        public void setTone(String tone) { this.tone = tone; }
+        
+        public String getVocabulary() { return vocabulary; }
+        public void setVocabulary(String vocabulary) { this.vocabulary = vocabulary; }
+        
+        public String getEmojiUsage() { return emojiUsage; }
+        public void setEmojiUsage(String emojiUsage) { this.emojiUsage = emojiUsage; }
+        
+        public String getSentenceLength() { return sentenceLength; }
+        public void setSentenceLength(String sentenceLength) { this.sentenceLength = sentenceLength; }
+    }
+    
+    // 内部类：行为模式
+    public static class BehaviorPatterns {
+        private double greetingFrequency;
+        private double comfortFrequency;
+        private double shareFrequency;
+        private double commentFrequency;
+        private double replyFrequency;
+        
+        public BehaviorPatterns() {}
+        
+        public double getGreetingFrequency() { return greetingFrequency; }
+        public void setGreetingFrequency(double greetingFrequency) { this.greetingFrequency = greetingFrequency; }
+        
+        public double getComfortFrequency() { return comfortFrequency; }
+        public void setComfortFrequency(double comfortFrequency) { this.comfortFrequency = comfortFrequency; }
+        
+        public double getShareFrequency() { return shareFrequency; }
+        public void setShareFrequency(double shareFrequency) { this.shareFrequency = shareFrequency; }
+        
+        public double getCommentFrequency() { return commentFrequency; }
+        public void setCommentFrequency(double commentFrequency) { this.commentFrequency = commentFrequency; }
+        
+        public double getReplyFrequency() { return replyFrequency; }
+        public void setReplyFrequency(double replyFrequency) { this.replyFrequency = replyFrequency; }
+    }
+    
     // 构造函数
     public Robot() {
         this.createdAt = LocalDateTime.now();
@@ -187,6 +285,14 @@ public class Robot {
         this.gender = gender;
     }
     
+    public Integer getAge() {
+        return age;
+    }
+    
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+    
     public String getIntroduction() {
         return introduction;
     }
@@ -217,6 +323,78 @@ public class Robot {
     
     public void setMbti(String mbti) {
         this.mbti = mbti;
+    }
+    
+    public String getBloodType() {
+        return bloodType;
+    }
+    
+    public void setBloodType(String bloodType) {
+        this.bloodType = bloodType;
+    }
+    
+    public String getZodiac() {
+        return zodiac;
+    }
+    
+    public void setZodiac(String zodiac) {
+        this.zodiac = zodiac;
+    }
+    
+    public String getLocation() {
+        return location;
+    }
+    
+    public void setLocation(String location) {
+        this.location = location;
+    }
+    
+    public String getEducation() {
+        return education;
+    }
+    
+    public void setEducation(String education) {
+        this.education = education;
+    }
+    
+    public String getRelationship() {
+        return relationship;
+    }
+    
+    public void setRelationship(String relationship) {
+        this.relationship = relationship;
+    }
+    
+    public List<String> getTraits() {
+        return traits;
+    }
+    
+    public void setTraits(List<String> traits) {
+        this.traits = traits;
+    }
+    
+    public List<String> getInterests() {
+        return interests;
+    }
+    
+    public void setInterests(List<String> interests) {
+        this.interests = interests;
+    }
+    
+    public SpeakingStyle getSpeakingStyle() {
+        return speakingStyle;
+    }
+    
+    public void setSpeakingStyle(SpeakingStyle speakingStyle) {
+        this.speakingStyle = speakingStyle;
+    }
+    
+    public BehaviorPatterns getBehaviorPatterns() {
+        return behaviorPatterns;
+    }
+    
+    public void setBehaviorPatterns(BehaviorPatterns behaviorPatterns) {
+        this.behaviorPatterns = behaviorPatterns;
     }
     
     public Integer getReplySpeed() {
@@ -333,10 +511,20 @@ public class Robot {
         this.name = robot.getName();
         this.avatar = robot.getAvatar();
         this.gender = robot.getGender();
+        this.age = robot.getAge();
         this.introduction = robot.getIntroduction();
         this.personality = robot.getPersonality();
         this.profession = robot.getProfession();
         this.mbti = robot.getMbti();
+        this.bloodType = robot.getBloodType();
+        this.zodiac = robot.getZodiac();
+        this.location = robot.getLocation();
+        this.education = robot.getEducation();
+        this.relationship = robot.getRelationship();
+        this.traits = robot.getTraits();
+        this.interests = robot.getInterests();
+        this.speakingStyle = robot.getSpeakingStyle();
+        this.behaviorPatterns = robot.getBehaviorPatterns();
         this.replySpeed = robot.getReplySpeed();
         this.replyFrequency = robot.getReplyFrequency();
         this.shareFrequency = robot.getShareFrequency();

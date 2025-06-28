@@ -670,4 +670,43 @@ public class CommentServiceImpl implements CommentService {
             return false;
         }
     }
+    
+    @Override
+    public List<Comment> findRecentComments(LocalDateTime since) {
+        try {
+            logger.debug("查找 {} 之后的评论", since);
+            
+            // 查询指定时间之后的评论，按创建时间倒序排列
+            List<Comment> recentComments = commentRepository.findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(since);
+            
+            logger.debug("找到 {} 条近期评论", recentComments.size());
+            return recentComments;
+            
+        } catch (Exception e) {
+            logger.error("查找近期评论失败: since={}, error={}", since, e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+    
+    @Override
+    public boolean hasRobotRepliedToComment(String robotId, String commentId) {
+        try {
+            logger.debug("检查机器人 {} 是否已回复过评论 {}", robotId, commentId);
+            
+            // 查询该机器人对指定评论的回复数量
+            long replyCount = commentRepository.countByReplyToIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(
+                commentId, robotId, "robot");
+            
+            boolean hasReplied = replyCount > 0;
+            logger.debug("机器人 {} 对评论 {} 的回复数量: {}, 已回复: {}", 
+                        robotId, commentId, replyCount, hasReplied);
+            
+            return hasReplied;
+            
+        } catch (Exception e) {
+            logger.error("检查机器人回复状态失败: robotId={}, commentId={}, error={}", 
+                        robotId, commentId, e.getMessage(), e);
+            return false;
+        }
+    }
 } 

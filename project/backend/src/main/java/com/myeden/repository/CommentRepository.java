@@ -367,4 +367,24 @@ public interface CommentRepository extends MongoRepository<Comment, String> {
      */
     @Query(value = "{'postId': ?0, 'authorId': ?1, 'authorType': ?2, 'isDeleted': false}", count = true)
     long countByPostIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(String postId, String authorId, String authorType);
+    
+    /**
+     * 根据创建时间之后和未删除查找评论，按创建时间倒序排列
+     * 用于查找近期评论
+     * @param createdAt 创建时间
+     * @return 评论列表
+     */
+    @Query(value = "{'createdAt': {$gt: ?0}, 'isDeleted': false}", sort = "{'createdAt': -1}")
+    List<Comment> findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(LocalDateTime createdAt);
+    
+    /**
+     * 根据回复目标ID、作者ID、作者类型和未删除统计回复数量
+     * 用于检查指定机器人是否已回复过指定评论
+     * @param replyToId 回复目标ID
+     * @param authorId 作者ID
+     * @param authorType 作者类型
+     * @return 回复数量
+     */
+    @Query(value = "{'replyToId': ?0, 'authorId': ?1, 'authorType': ?2, 'isDeleted': false}", count = true)
+    long countByReplyToIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(String replyToId, String authorId, String authorType);
 } 

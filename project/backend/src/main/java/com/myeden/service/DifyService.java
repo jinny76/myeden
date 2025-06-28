@@ -26,22 +26,22 @@ public interface DifyService {
      * 根据机器人配置、动态内容和上下文生成评论
      * 
      * @param robot 机器人信息
-     * @param postContent 动态内容
+     * @param post 动态内容
      * @param context 上下文信息
      * @return 生成的评论内容
      */
-    String generateCommentContent(Robot robot, String postContent, String context);
+    String generateCommentContent(Robot robot, PostService.PostDetail post, String context);
     
     /**
      * 生成机器人回复内容
      * 根据机器人配置、评论内容和上下文生成回复
      * 
      * @param robot 机器人信息
-     * @param commentContent 评论内容
+     * @param commentDetail 评论内容
      * @param context 上下文信息
      * @return 生成的回复内容
      */
-    String generateReplyContent(Robot robot, String commentContent, String context);
+    String generateReplyContent(Robot robot, CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail, String context);
     
     /**
      * 生成机器人内心活动

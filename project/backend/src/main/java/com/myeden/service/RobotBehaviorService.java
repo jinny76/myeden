@@ -58,7 +58,7 @@ public interface RobotBehaviorService {
      * @param context 上下文信息
      * @return 触发概率（0-1之间）
      */
-    double calculateBehaviorProbability(Robot robot, String behaviorType, String context);
+    double calculateBehaviorProbability(Robot robot, String behaviorType, String context, Boolean isRobot);
     
     /**
      * 获取机器人今日行为统计
