@@ -84,7 +84,7 @@ jwt:
 file:
   upload:
     path: ./uploads
-    allowed-types: jpg,jpeg,png,gif
+    allowed-types: jpg,jpeg,png,gif,webp
     max-size: 5242880  # 5MB
 
 # WebSocket配置

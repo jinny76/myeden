@@ -104,7 +104,10 @@
             <!-- 动态头部 -->
             <div class="post-header">
               <div class="post-author">
-                <el-avatar :src="post.authorAvatar" />
+                <el-avatar 
+                  :src="getAuthorAvatarUrl(post)" 
+                  @error="(event) => handleAuthorAvatarError(event, post)"
+                />
                 <div class="author-info">
                   <span class="author-name">{{ post.authorName }}</span>
                   <span class="post-time">{{ formatTime(post.createdAt) }}</span>
@@ -138,13 +141,13 @@
                     v-for="(image, index) in post.images" 
                     :key="index"
                     class="image-item"
-                    @click="previewImage(post.images, index)"
                   >
                     <el-image 
-                      :src="image" 
+                      :src="buildImageUrl(image)" 
                       fit="cover"
-                      :preview-src-list="post.images"
+                      :preview-src-list="post.images.map(img => buildImageUrl(img))"
                       :initial-index="index"
+                      @error="handleImageError"
                     />
                   </div>
                 </div>
@@ -160,8 +163,7 @@
             <!-- 动态操作 -->
             <div class="post-actions-bar">
               <el-button type="text" @click="toggleLike(post)">
-                <el-icon><Heart /></el-icon>
-                {{ post.isLiked ? '取消点赞' : '点赞' }}
+                {{ post.isLiked ? '❤️ 取消点赞' : '🤍 点赞' }}
               </el-button>
               <el-button type="text" @click="showComments(post)">
                 <el-icon><ChatDotRound /></el-icon>
@@ -179,7 +181,11 @@
                   class="comment-item"
                 >
                   <div class="comment-header">
-                    <el-avatar :src="comment.authorAvatar" :size="32" />
+                    <el-avatar 
+                      :src="getCommentAuthorAvatarUrl(comment)" 
+                      :size="32"
+                      @error="(event) => handleCommentAvatarError(event, comment)"
+                    />
                     <div class="comment-info">
                       <span class="comment-author">{{ comment.authorName }}</span>
                       <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
@@ -250,7 +256,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Heart, ChatDotRound, MoreFilled } from '@element-plus/icons-vue'
+import { Plus, ChatDotRound, MoreFilled, Close } from '@element-plus/icons-vue'
+import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 
 // 响应式数据
 const router = useRouter()
@@ -498,6 +505,48 @@ const formatTime = (time) => {
   } else {
     return date.toLocaleDateString()
   }
+}
+
+const getAuthorAvatarUrl = (post) => {
+  if (post.authorType === 'user') {
+    return getUserAvatarUrl({ avatar: post.authorAvatar, nickname: post.authorName })
+  } else if (post.authorType === 'robot') {
+    return getRobotAvatarUrl({ avatar: post.authorAvatar, name: post.authorName, id: post.authorId })
+  }
+  return '/default-avatar.png'
+}
+
+const handleAuthorAvatarError = (event, post) => {
+  if (post.authorType === 'robot') {
+    handleRobotAvatarError(event, post.authorName)
+  } else {
+    event.target.src = getUserAvatarUrl({ nickname: post.authorName })
+  }
+}
+
+const getCommentAuthorAvatarUrl = (comment) => {
+  if (comment.authorType === 'user') {
+    return getUserAvatarUrl({ avatar: comment.authorAvatar, nickname: comment.authorName })
+  } else if (comment.authorType === 'robot') {
+    return getRobotAvatarUrl({ avatar: comment.authorAvatar, name: comment.authorName, id: comment.authorId })
+  }
+  return '/default-avatar.png'
+}
+
+const handleCommentAvatarError = (event, comment) => {
+  if (comment.authorType === 'robot') {
+    handleRobotAvatarError(event, comment.authorName)
+  } else {
+    event.target.src = getUserAvatarUrl({ nickname: comment.authorName })
+  }
+}
+
+const buildImageUrl = (imageUrl) => {
+  if (imageUrl.includes('/uploads/')) {
+    const apiImageUrl = imageUrl.replace('/uploads/', '/api/v1/files/')
+    return `${window.location.origin}${apiImageUrl}`
+  }
+  return imageUrl
 }
 
 // 生命周期

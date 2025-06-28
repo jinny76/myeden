@@ -76,6 +76,45 @@ export const getUserAvatarUrl = (userInfo) => {
 }
 
 /**
+ * 生成机器人默认头像URL
+ * @param {string} robotName - 机器人名称
+ * @param {string} robotId - 机器人ID（可选）
+ * @returns {string} 默认机器人头像URL
+ */
+export const generateRobotDefaultAvatar = (robotName, robotId = null) => {
+  const name = robotName || 'Robot'
+  
+  // 使用UI Avatars服务生成基于机器人名称的头像
+  // 为机器人使用不同的背景色和样式
+  const colors = ['ff6b6b', '4ecdc4', '45b7d1', '96ceb4', 'feca57', 'ff9ff3', '54a0ff', '5f27cd']
+  const randomColor = colors[Math.floor(Math.random() * colors.length)]
+  
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${randomColor}&color=fff&size=200&bold=true`
+}
+
+/**
+ * 获取机器人头像URL（包含默认头像处理）
+ * @param {Object} robotInfo - 机器人信息对象
+ * @returns {string} 头像URL
+ */
+export const getRobotAvatarUrl = (robotInfo) => {
+  if (!robotInfo) {
+    return generateRobotDefaultAvatar('Robot')
+  }
+  
+  // 如果机器人有头像，构建完整URL
+  if (robotInfo.avatar) {
+    const fullAvatarUrl = buildAvatarUrl(robotInfo.avatar)
+    if (fullAvatarUrl) {
+      return fullAvatarUrl
+    }
+  }
+  
+  // 如果没有头像，生成默认头像
+  return generateRobotDefaultAvatar(robotInfo.name, robotInfo.id)
+}
+
+/**
  * 处理头像加载错误
  * @param {Event} event - 错误事件
  * @param {string} nickname - 用户昵称
@@ -84,6 +123,19 @@ export const getUserAvatarUrl = (userInfo) => {
 export const handleAvatarError = (event, nickname) => {
   console.warn('头像加载失败，使用默认头像:', event.target.src)
   const defaultAvatar = generateDefaultAvatar(nickname)
+  event.target.src = defaultAvatar
+  return defaultAvatar
+}
+
+/**
+ * 处理机器人头像加载错误
+ * @param {Event} event - 错误事件
+ * @param {string} robotName - 机器人名称
+ * @returns {string} 默认头像URL
+ */
+export const handleRobotAvatarError = (event, robotName) => {
+  console.warn('机器人头像加载失败，使用默认头像:', event.target.src)
+  const defaultAvatar = generateRobotDefaultAvatar(robotName)
   event.target.src = defaultAvatar
   return defaultAvatar
 }

@@ -34,23 +34,23 @@ public class CommentController {
     /**
      * 发表评论
      * @param postId 动态ID
-     * @param content 评论内容
+     * @param request 评论请求数据
      * @return 评论发布结果
      */
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<EventResponse> createComment(
             @PathVariable String postId,
-            @RequestParam("content") String content) {
+            @RequestBody CommentRequest request) {
         
         try {
-            logger.info("收到发表评论请求，动态ID: {}, 内容长度: {}", postId, content.length());
+            logger.info("收到发表评论请求，动态ID: {}, 内容长度: {}", postId, request.getContent().length());
             
             // 获取当前用户信息
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userId = authentication.getName();
             
             // 发表评论
-            CommentService.CommentResult result = commentService.createComment(postId, userId, "user", content);
+            CommentService.CommentResult result = commentService.createComment(postId, userId, "user", request.getContent());
             
             logger.info("评论发表成功，评论ID: {}", result.getCommentId());
             
@@ -73,23 +73,23 @@ public class CommentController {
     /**
      * 回复评论
      * @param commentId 评论ID
-     * @param content 回复内容
+     * @param request 回复请求数据
      * @return 回复发布结果
      */
     @PostMapping("/comments/{commentId}/replies")
     public ResponseEntity<EventResponse> replyComment(
             @PathVariable String commentId,
-            @RequestParam("content") String content) {
+            @RequestBody CommentRequest request) {
         
         try {
-            logger.info("收到回复评论请求，评论ID: {}, 内容长度: {}", commentId, content.length());
+            logger.info("收到回复评论请求，评论ID: {}, 内容长度: {}", commentId, request.getContent().length());
             
             // 获取当前用户信息
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userId = authentication.getName();
             
             // 回复评论
-            CommentService.CommentResult result = commentService.replyComment(commentId, userId, "user", content);
+            CommentService.CommentResult result = commentService.replyComment(commentId, userId, "user", request.getContent());
             
             logger.info("回复评论成功，回复ID: {}", result.getCommentId());
             
@@ -357,6 +357,27 @@ public class CommentController {
                 "取消点赞失败: " + e.getMessage(),
                 null
             ));
+        }
+    }
+    
+    /**
+     * 评论请求数据类
+     */
+    public static class CommentRequest {
+        private String content;
+        
+        public CommentRequest() {}
+        
+        public CommentRequest(String content) {
+            this.content = content;
+        }
+        
+        public String getContent() {
+            return content;
+        }
+        
+        public void setContent(String content) {
+            this.content = content;
         }
     }
 } 

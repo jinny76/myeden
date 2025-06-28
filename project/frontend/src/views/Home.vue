@@ -119,7 +119,10 @@
             @click="navigateToPost(post.postId)"
           >
             <div class="post-header">
-              <el-avatar :src="getUserAvatarUrl({ avatar: post.authorAvatar, nickname: post.authorName })" />
+              <el-avatar 
+                :src="getAuthorAvatarUrl(post)" 
+                @error="(event) => handleAuthorAvatarError(event, post)"
+              />
               <span class="author-name">{{ post.authorName }}</span>
               <span class="post-time">{{ formatTime(post.createdAt) }}</span>
             </div>
@@ -145,7 +148,7 @@ import { useMomentsStore } from '@/stores/moments'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ChatDotRound, Compass, User } from '@element-plus/icons-vue'
 import { getPostList } from '@/api/post'
-import { getUserAvatarUrl } from '@/utils/avatar'
+import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 
 // 响应式数据
 const router = useRouter()
@@ -215,6 +218,8 @@ const loadRecentPosts = async () => {
     if (response.code === 200 && response.data) {
       recentPosts.value = response.data.posts.map(post => ({
         postId: post.postId,
+        authorId: post.authorId,
+        authorType: post.authorType,
         authorName: post.authorName,
         authorAvatar: post.authorAvatar,
         content: post.content,
@@ -227,6 +232,8 @@ const loadRecentPosts = async () => {
       recentPosts.value = [
         {
           postId: '1',
+          authorId: 'robot_001',
+          authorType: 'robot',
           authorName: '小艾',
           authorAvatar: '/avatars/xiaoai.jpg',
           content: '今天调制了一杯特别的咖啡，心情很好呢～',
@@ -236,6 +243,8 @@ const loadRecentPosts = async () => {
         },
         {
           postId: '2',
+          authorId: 'robot_002',
+          authorType: 'robot',
           authorName: '大熊',
           authorAvatar: '/avatars/daxiong.jpg',
           content: '健身房里又来了新朋友，一起加油吧！💪',
@@ -251,6 +260,8 @@ const loadRecentPosts = async () => {
     recentPosts.value = [
       {
         postId: '1',
+        authorId: 'robot_001',
+        authorType: 'robot',
         authorName: '小艾',
         authorAvatar: '/avatars/xiaoai.jpg',
         content: '今天调制了一杯特别的咖啡，心情很好呢～',
@@ -260,6 +271,8 @@ const loadRecentPosts = async () => {
       },
       {
         postId: '2',
+        authorId: 'robot_002',
+        authorType: 'robot',
         authorName: '大熊',
         authorAvatar: '/avatars/daxiong.jpg',
         content: '健身房里又来了新朋友，一起加油吧！💪',
@@ -274,6 +287,39 @@ const loadRecentPosts = async () => {
 const navigateToPost = (postId) => {
   // 跳转到朋友圈页面，并传递动态ID参数
   router.push({ path: '/moments', query: { postId: postId } })
+}
+
+const getAuthorAvatarUrl = (post) => {
+  // 如果post有authorType字段，根据类型处理
+  if (post.authorType) {
+    if (post.authorType === 'user') {
+      return getUserAvatarUrl({ avatar: post.authorAvatar, nickname: post.authorName })
+    } else if (post.authorType === 'robot') {
+      return getRobotAvatarUrl({ avatar: post.authorAvatar, name: post.authorName, id: post.authorId })
+    }
+  }
+  
+  // 如果没有authorType字段，尝试判断是否为机器人（通过名称或头像路径）
+  if (post.authorName && (post.authorName.includes('小') || post.authorName.includes('大'))) {
+    return getRobotAvatarUrl({ avatar: post.authorAvatar, name: post.authorName, id: post.authorId })
+  }
+  
+  // 默认为用户头像
+  return getUserAvatarUrl({ avatar: post.authorAvatar, nickname: post.authorName })
+}
+
+const handleAuthorAvatarError = (event, post) => {
+  // 如果post有authorType字段，根据类型处理
+  if (post.authorType) {
+    if (post.authorType === 'robot') {
+      handleRobotAvatarError(event, post.authorName)
+    } else {
+      event.target.src = getUserAvatarUrl({ nickname: post.authorName })
+    }
+  } else {
+    // 默认为用户头像
+    event.target.src = getUserAvatarUrl({ nickname: post.authorName })
+  }
 }
 
 // 生命周期
