@@ -1,7 +1,8 @@
 import axios from 'axios'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import { getToken, removeToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
+import { message } from '@/utils/message'
 import router from '@/router'
 
 /**
@@ -54,22 +55,22 @@ service.interceptors.response.use(
     console.log('✅ 响应成功:', response.config.url, response.status)
     
     // 处理业务错误
-    const { code, message, data } = response.data
+    const { code, message: responseMessage, data } = response.data
     
     if (code === 200) {
       return response.data
     } else if (code === 401) {
       // Token过期或无效
       handleTokenExpired()
-      return Promise.reject(new Error(message || '登录已过期'))
+      return Promise.reject(new Error(responseMessage || '登录已过期'))
     } else if (code === 403) {
       // 权限不足
-      ElMessage.error(message || '权限不足')
-      return Promise.reject(new Error(message || '权限不足'))
+      message.error(responseMessage || '权限不足')
+      return Promise.reject(new Error(responseMessage || '权限不足'))
     } else {
       // 其他业务错误
-      ElMessage.error(message || '请求失败')
-      return Promise.reject(new Error(message || '请求失败'))
+      message.error(responseMessage || '请求失败')
+      return Promise.reject(new Error(responseMessage || '请求失败'))
     }
   },
   (error) => {
@@ -80,35 +81,35 @@ service.interceptors.response.use(
       
       switch (status) {
         case 400:
-          ElMessage.error(data?.message || '请求参数错误')
+          message.error(data?.message || '请求参数错误')
           break
         case 401:
           handleTokenExpired()
           break
         case 403:
-          ElMessage.error('权限不足')
+          message.error('权限不足')
           break
         case 404:
-          ElMessage.error('请求的资源不存在')
+          message.silentError('请求的资源不存在')
           break
         case 500:
-          ElMessage.error('服务器内部错误')
+          message.silentError('服务器内部错误')
           break
         case 502:
-          ElMessage.error('网关错误')
+          message.silentError('网关错误')
           break
         case 503:
-          ElMessage.error('服务不可用')
+          message.silentError('服务不可用')
           break
         default:
-          ElMessage.error(data?.message || '网络错误')
+          message.smartError(data?.message || '网络错误', error)
       }
     } else if (error.request) {
       // 网络错误
-      ElMessage.error('网络连接失败，请检查网络设置')
+      message.silentError('网络连接失败，请检查网络设置', error)
     } else {
       // 其他错误
-      ElMessage.error(error.message || '请求失败')
+      message.smartError(error.message || '请求失败', error)
     }
     
     return Promise.reject(error)
@@ -124,7 +125,7 @@ const handleTokenExpired = async () => {
   try {
     // 尝试刷新Token
     await userStore.refreshToken()
-    ElMessage.success('登录状态已刷新')
+    message.lightSuccess('登录状态已刷新')
   } catch (error) {
     // 刷新失败，清除用户状态并跳转到登录页
     userStore.logout()

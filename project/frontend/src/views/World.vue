@@ -128,7 +128,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
+import { message } from '@/utils/message'
 import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, ArrowRight } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 
@@ -149,7 +150,7 @@ const handleUserCommand = async (command) => {
       router.push('/profile-setup')
       break
     case 'settings':
-      ElMessage.info('设置功能开发中...')
+      message.info('设置功能开发中...')
       break
     case 'logout':
       await handleLogout()
@@ -167,11 +168,11 @@ const handleLogout = async () => {
     
     await userStore.logout()
     worldStore.clearWorld()
-    ElMessage.success('退出登录成功')
+    message.success('退出登录成功')
     router.push('/login')
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('退出登录失败')
+      message.error('退出登录失败')
     }
   }
 }
@@ -187,10 +188,10 @@ const viewRobotPosts = (robot) => {
 const retryLoad = async () => {
   try {
     await worldStore.initWorld()
-    ElMessage.success('重新加载成功')
+    message.success('重新加载成功')
   } catch (error) {
     console.error('重新加载失败:', error)
-    ElMessage.error('重新加载失败')
+    message.error('重新加载失败')
   }
 }
 
@@ -208,7 +209,7 @@ onMounted(async () => {
     await worldStore.initWorld()
   } catch (error) {
     console.error('初始化世界数据失败:', error)
-    ElMessage.error('加载世界数据失败')
+    message.error('加载世界数据失败')
   }
   
   // 添加点击外部关闭移动端菜单的监听

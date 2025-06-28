@@ -160,7 +160,7 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/message'
 import { Plus, Camera, Male, Female, User, Check, Brush } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { userApi } from '@/api/user'
@@ -240,7 +240,7 @@ const loadUserInfo = async () => {
     initUserProfile()
   } catch (error) {
     console.error('加载用户信息失败:', error)
-    ElMessage.error('加载用户信息失败，请重新登录')
+    message.error('加载用户信息失败，请重新登录')
     router.push('/login')
   }
 }
@@ -260,10 +260,10 @@ const beforeAvatarUpload = (file) => {
   const isLt5M = file.size / 1024 / 1024 < 5
 
   if (!isJPG) {
-    ElMessage.error('头像只能是JPG或PNG格式!')
+    message.error('头像只能是JPG或PNG格式!')
   }
   if (!isLt5M) {
-    ElMessage.error('头像大小不能超过5MB!')
+    message.error('头像大小不能超过5MB!')
   }
   return isJPG && isLt5M
 }
@@ -273,7 +273,7 @@ const handleAvatarUpload = async (options) => {
   try {
     const userId = userStore.userInfo?.userId
     if (!userId) {
-      ElMessage.error('用户信息不存在，请重新登录')
+      message.error('用户信息不存在，请重新登录')
       return
     }
     
@@ -294,16 +294,16 @@ const handleAvatarUpload = async (options) => {
         avatarUrl.value = fullAvatarUrl
         // 更新用户store中的头像信息（保存相对路径）
         userStore.updateAvatar(avatarUrlFromResponse)
-        ElMessage.success('头像上传成功')
+        message.success('头像上传成功')
       } else {
-        ElMessage.error('头像URL获取失败')
+        message.error('头像URL获取失败')
       }
     } else {
-      ElMessage.error(response.message || '头像上传失败')
+      message.error(response.message || '头像上传失败')
     }
   } catch (error) {
     console.error('头像上传失败:', error)
-    ElMessage.error('头像上传失败，请重试')
+    message.error('头像上传失败，请重试')
   }
 }
 
@@ -318,7 +318,7 @@ const handleSave = async () => {
     // 获取当前用户ID
     const userId = userStore.userInfo?.userId
     if (!userId) {
-      ElMessage.error('用户信息不存在，请重新登录')
+      message.error('用户信息不存在，请重新登录')
       router.push('/login')
       return
     }
@@ -335,16 +335,16 @@ const handleSave = async () => {
       // 完成首次登录
       await userApi.completeFirstLogin(userId)
       
-      ElMessage.success('个人资料保存成功！')
+      message.success('个人资料保存成功！')
       
       // 跳转到首页
       router.push('/')
     } else {
-      ElMessage.error(response.message || '保存失败')
+      message.error(response.message || '保存失败')
     }
   } catch (error) {
     console.error('保存失败:', error)
-    ElMessage.error(error.message || '保存失败，请重试')
+    message.error(error.message || '保存失败，请重试')
   } finally {
     loading.value = false
   }
@@ -361,7 +361,7 @@ watch(() => userStore.userInfo, (newValue) => {
 const handleAvatarError = (event) => {
   const nickname = userStore.userInfo?.nickname || 'User'
   handleAvatarErrorUtil(event, nickname)
-  ElMessage.error('头像加载失败，已切换到默认头像')
+  message.error('头像加载失败，已切换到默认头像')
 }
 </script>
 

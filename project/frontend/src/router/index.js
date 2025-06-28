@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { message } from '@/utils/message'
+import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
-import { ElMessage } from 'element-plus'
 import MainLayout from '@/layouts/MainLayout.vue'
 
 /**
@@ -129,7 +130,7 @@ router.beforeEach(async (to, from, next) => {
       }
       
       // 状态恢复失败，重定向到登录页
-      ElMessage.warning('请先登录')
+      message.warning('请先登录')
       next('/login')
       return
     }
@@ -140,7 +141,7 @@ router.beforeEach(async (to, from, next) => {
         await userStore.checkAuth()
       } catch (error) {
         console.error('认证检查失败:', error)
-        ElMessage.error('登录状态已过期，请重新登录')
+        message.error('登录状态已过期，请重新登录')
         userStore.logout()
         next('/login')
         return
@@ -175,7 +176,7 @@ router.afterEach((to, from) => {
 // 路由错误处理
 router.onError((error) => {
   console.error('路由错误:', error)
-  ElMessage.error('页面加载失败，请稍后重试')
+  message.error('页面加载失败，请稍后重试')
 })
 
 export default router 

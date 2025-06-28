@@ -385,7 +385,8 @@ import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElPopover } from 'element-plus'
+import { message } from '@/utils/message'
 import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
@@ -433,7 +434,7 @@ const handleUserCommand = async (command) => {
       router.push('/profile-setup')
       break
     case 'settings':
-      ElMessage.info('设置功能开发中...')
+      message.info('设置功能开发中...')
       break
     case 'logout':
       await handleLogout()
@@ -450,11 +451,11 @@ const handleLogout = async () => {
     })
     
     await userStore.logout()
-    ElMessage.success('退出登录成功')
+    message.success('退出登录成功')
     router.push('/login')
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('退出登录失败')
+      message.error('退出登录失败')
     }
   }
 }
@@ -553,7 +554,7 @@ const loadMorePosts = async () => {
     }
   } catch (error) {
     console.error('加载更多动态失败:', error)
-    ElMessage.error('加载更多动态失败')
+    message.error('加载更多动态失败')
   } finally {
     isLoadingMore.value = false
   }
@@ -561,7 +562,7 @@ const loadMorePosts = async () => {
 
 const publishPost = async () => {
   if (!newPost.value.content.trim()) {
-    ElMessage.warning('请输入动态内容')
+    message.warning('请输入动态内容')
     return
   }
   
@@ -623,10 +624,10 @@ const publishPost = async () => {
       }
       newPost.value.images = []
       
-      ElMessage.success('动态发布成功')
+      message.success('动态发布成功')
     }
   } catch (error) {
-    ElMessage.error('动态发布失败')
+    message.error('动态发布失败')
   } finally {
     publishing.value = false
   }
@@ -637,7 +638,7 @@ const publishPost = async () => {
  */
 const publishPostMobile = async () => {
   if (!newPost.value.content.trim()) {
-    ElMessage.warning('请输入动态内容')
+    message.warning('请输入动态内容')
     return
   }
   
@@ -702,10 +703,10 @@ const publishPostMobile = async () => {
       // 关闭移动端编辑器
       showMobileEditor.value = false
       
-      ElMessage.success('动态发布成功')
+      message.success('动态发布成功')
     }
   } catch (error) {
-    ElMessage.error('动态发布失败')
+    message.error('动态发布失败')
   } finally {
     publishing.value = false
   }
@@ -721,10 +722,10 @@ const handlePostAction = async (command, post) => {
       })
       
       await momentsStore.removePost(post.postId)
-      ElMessage.success('动态删除成功')
+      message.success('动态删除成功')
     } catch (error) {
       if (error !== 'cancel') {
-        ElMessage.error('动态删除失败')
+        message.error('动态删除失败')
       }
     }
   }
@@ -738,7 +739,7 @@ const toggleLike = async (post) => {
       await momentsStore.likePostAction(post.postId)
     }
   } catch (error) {
-    ElMessage.error('操作失败')
+    message.error('操作失败')
   }
 }
 
@@ -752,7 +753,7 @@ const showComments = async (post) => {
       // 自动加载所有评论的回复
       await loadAllReplies(post.postId)
     } catch (error) {
-      ElMessage.error('加载评论失败')
+      message.error('加载评论失败')
     }
   }
 }
@@ -816,7 +817,7 @@ const loadReplies = async (commentId, refresh = false) => {
     }
   } catch (error) {
     console.error('加载回复列表失败:', error)
-    ElMessage.error('加载回复失败')
+    message.error('加载回复失败')
   } finally {
     replyState.loading = false
   }
@@ -824,7 +825,7 @@ const loadReplies = async (commentId, refresh = false) => {
 
 const submitComment = async (post) => {
   if (!post.newComment.trim()) {
-    ElMessage.warning('请输入评论内容')
+    message.warning('请输入评论内容')
     return
   }
   
@@ -837,9 +838,9 @@ const submitComment = async (post) => {
     post.submittingComment = true
     await momentsStore.publishComment(post.postId, { content: post.newComment })
     post.newComment = ''
-    ElMessage.success('评论发表成功')
+    message.success('评论发表成功')
   } catch (error) {
-    ElMessage.error('评论发表失败')
+    message.error('评论发表失败')
   } finally {
     post.submittingComment = false
   }
@@ -862,7 +863,7 @@ const loadMoreReplies = async (commentId) => {
 
 const submitReply = async (comment) => {
   if (!comment.replyContent.trim()) {
-    ElMessage.warning('请输入回复内容')
+    message.warning('请输入回复内容')
     return
   }
   
@@ -882,9 +883,9 @@ const submitReply = async (comment) => {
     // 更新评论的回复数量
     comment.replyCount++
     
-    ElMessage.success('回复发表成功')
+    message.success('回复发表成功')
   } catch (error) {
-    ElMessage.error('回复发表失败')
+    message.error('回复发表失败')
   } finally {
     comment.submittingReply = false
   }
@@ -898,7 +899,7 @@ const toggleCommentLike = async (comment) => {
       await momentsStore.likeCommentAction(comment.commentId)
     }
   } catch (error) {
-    ElMessage.error('操作失败')
+    message.error('操作失败')
   }
 }
 
@@ -908,11 +909,11 @@ const handleImageChange = (file, fileList) => {
   const isLt10M = file.raw.size / 1024 / 1024 < 10
 
   if (!isImage) {
-    ElMessage.error('只能选择图片文件')
+    message.error('只能选择图片文件')
     return false
   }
   if (!isLt10M) {
-    ElMessage.error('图片大小不能超过 10MB')
+    message.error('图片大小不能超过 10MB')
     return false
   }
   
@@ -1027,7 +1028,7 @@ onMounted(async () => {
     // 自动加载所有动态的评论和回复
     await loadAllCommentsAndReplies()
   } catch (error) {
-    ElMessage.error('加载动态列表失败')
+    message.error('加载动态列表失败')
   }
   
   // 添加滚动事件监听器
@@ -1155,9 +1156,9 @@ const performSearch = async () => {
         // 为搜索结果的动态加载评论和回复
         await loadAllCommentsAndReplies()
         
-        ElMessage.success(`找到 ${total} 条相关动态`)
+        message.success(`找到 ${total} 条相关动态`)
       } else {
-        ElMessage.info('没有找到相关动态')
+        message.info('没有找到相关动态')
       }
       
       // 更新hasMore状态
@@ -1165,7 +1166,7 @@ const performSearch = async () => {
     }
   } catch (error) {
     console.error('搜索失败:', error)
-    ElMessage.error('搜索失败，请重试')
+    message.error('搜索失败，请重试')
   } finally {
     isSearching.value = false
   }
@@ -1189,7 +1190,7 @@ const clearSearch = async () => {
     await momentsStore.loadPosts({ authorType: filterType.value }, true)
     await loadAllCommentsAndReplies()
   } catch (error) {
-    ElMessage.error('恢复动态列表失败')
+    message.error('恢复动态列表失败')
   }
 }
 </script>

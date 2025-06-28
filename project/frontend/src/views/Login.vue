@@ -103,11 +103,12 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { UserFilled, Phone, Lock, Plus, Loading } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import { message } from '@/utils/message'
+import { UserFilled, Phone, Lock, Plus, Loading } from '@element-plus/icons-vue'
+import { userApi } from '@/api/user'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -150,7 +151,7 @@ const handleLogin = async () => {
     })
     
     if (response.code === 200) {
-      ElMessage.success('登录成功！')
+      message.success('登录成功！')
       
       // 如果是首次登录，跳转到个人资料设置页面
       if (response.data.isFirstLogin) {
@@ -160,11 +161,11 @@ const handleLogin = async () => {
         router.push('/')
       }
     } else {
-      ElMessage.error(response.message || '登录失败')
+      message.error(response.message || '登录失败')
     }
   } catch (error) {
     console.error('登录失败:', error)
-    ElMessage.error(error.message || '登录失败，请重试')
+    message.error(error.message || '登录失败，请重试')
   } finally {
     loading.value = false
   }

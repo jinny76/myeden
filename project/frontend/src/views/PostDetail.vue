@@ -227,11 +227,12 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
+import { message } from '@/utils/message'
 import { ArrowLeft, ChatDotRound, MoreFilled, Loading, Message, Star } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
-import { getPostDetail } from '@/api/post'
-import { getCommentList, createComment, replyComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
+import { getPostDetail, deletePost, likePost, unlikePost } from '@/api/post'
+import { getCommentList, createComment, createReply, replyComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
 
 // 响应式数据
 const router = useRouter()
@@ -278,7 +279,7 @@ const loadPostDetail = async () => {
     }
   } catch (error) {
     console.error('加载动态详情失败:', error)
-    ElMessage.error('加载动态详情失败')
+    message.error('加载动态详情失败')
     post.value = null
   } finally {
     loading.value = false
@@ -294,7 +295,7 @@ const loadComments = async () => {
     }
   } catch (error) {
     console.error('加载评论失败:', error)
-    ElMessage.error('加载评论失败')
+    message.error('加载评论失败')
   }
 }
 
@@ -343,7 +344,7 @@ const loadReplies = async (commentId, refresh = false) => {
     }
   } catch (error) {
     console.error('加载回复列表失败:', error)
-    ElMessage.error('加载回复失败')
+    message.error('加载回复失败')
   } finally {
     replyState.loading = false
   }
@@ -359,11 +360,11 @@ const handlePostAction = async (command, post) => {
       })
       
       await momentsStore.removePost(post.postId)
-      ElMessage.success('动态删除成功')
+      message.success('动态删除成功')
       goBack()
     } catch (error) {
       if (error !== 'cancel') {
-        ElMessage.error('动态删除失败')
+        message.error('动态删除失败')
       }
     }
   }
@@ -381,13 +382,13 @@ const toggleLike = async (post) => {
       post.isLiked = true
     }
   } catch (error) {
-    ElMessage.error('操作失败')
+    message.error('操作失败')
   }
 }
 
 const submitComment = async () => {
   if (!newComment.value.trim()) {
-    ElMessage.warning('请输入评论内容')
+    message.warning('请输入评论内容')
     return
   }
   
@@ -398,10 +399,10 @@ const submitComment = async () => {
       newComment.value = ''
       await loadComments()
       post.value.commentCount++
-      ElMessage.success('评论发表成功')
+      message.success('评论发表成功')
     }
   } catch (error) {
-    ElMessage.error('评论发表失败')
+    message.error('评论发表失败')
   }
 }
 
@@ -422,7 +423,7 @@ const loadMoreReplies = async (commentId) => {
 
 const submitReply = async (comment) => {
   if (!comment.replyContent.trim()) {
-    ElMessage.warning('请输入回复内容')
+    message.warning('请输入回复内容')
     return
   }
   
@@ -433,10 +434,10 @@ const submitReply = async (comment) => {
       comment.showReplyInput = false
       await loadReplies(comment.commentId, true)
       comment.replyCount++
-      ElMessage.success('回复发表成功')
+      message.success('回复发表成功')
     }
   } catch (error) {
-    ElMessage.error('回复发表失败')
+    message.error('回复发表失败')
   }
 }
 
@@ -452,7 +453,7 @@ const toggleCommentLike = async (comment) => {
       comment.isLiked = true
     }
   } catch (error) {
-    ElMessage.error('操作失败')
+    message.error('操作失败')
   }
 }
 

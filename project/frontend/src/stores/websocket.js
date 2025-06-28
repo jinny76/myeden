@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { Client } from '@stomp/stompjs'
+import { message } from '@/utils/message'
+import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
-import { ElMessage } from 'element-plus'
 
 /**
  * WebSocket状态管理
@@ -102,7 +103,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
     } catch (error) {
       console.error('❌ WebSocket连接失败:', error)
       isConnecting.value = false
-      ElMessage.error('WebSocket连接失败')
+      message.error('WebSocket连接失败')
       throw error
     }
   }
@@ -183,7 +184,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
       console.log('📤 发送消息:', destination, data)
     } catch (error) {
       console.error('❌ 发送消息失败:', error)
-      ElMessage.error('消息发送失败')
+      message.error('消息发送失败')
     }
   }
 
@@ -278,7 +279,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
     if (canReconnect.value) {
       scheduleReconnect()
     } else {
-      ElMessage.error('WebSocket连接失败，请刷新页面重试')
+      message.error('WebSocket连接失败，请刷新页面重试')
     }
   }
 
@@ -321,7 +322,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
     addToMessageHistory('notification', notification)
     
     // 显示通知
-    ElMessage({
+    message({
       message: notification.message,
       type: notification.type || 'info',
       duration: notification.duration || 3000

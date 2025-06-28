@@ -1,5 +1,8 @@
 <template>
-  <router-view />
+  <div id="app">
+    <router-view />
+    <ToastMessage ref="toastRef" />
+  </div>
 </template>
 
 <script setup>
@@ -7,7 +10,9 @@ import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useWebSocketStore } from '@/stores/websocket'
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/message'
+import { getToken, removeToken } from '@/utils/auth'
+import ToastMessage from '@/components/ToastMessage.vue'
 
 /**
  * 应用根组件
@@ -55,7 +60,7 @@ onUnmounted(() => {
 // 全局错误处理
 const handleGlobalError = (event) => {
   console.error('全局错误:', event.error)
-  ElMessage.error('系统发生错误，请稍后重试')
+  message.error('系统发生错误，请稍后重试')
 }
 
 // 注册全局错误监听
@@ -63,7 +68,7 @@ onMounted(() => {
   window.addEventListener('error', handleGlobalError)
   window.addEventListener('unhandledrejection', (event) => {
     console.error('未处理的Promise拒绝:', event.reason)
-    ElMessage.error('操作失败，请稍后重试')
+    message.error('操作失败，请稍后重试')
   })
 })
 

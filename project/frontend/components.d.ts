@@ -41,5 +41,6 @@ declare module 'vue' {
     ElUpload: typeof import('element-plus/es')['ElUpload']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ToastMessage: typeof import('./src/components/ToastMessage.vue')['default']
   }
 }

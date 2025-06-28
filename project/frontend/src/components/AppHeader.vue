@@ -90,8 +90,12 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChatDotRound, Compass, User, Menu, Close, House, SwitchButton, UserFilled } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
+import { message } from '@/utils/message'
+import { 
+  ChatDotRound, Compass, User, Menu, Close, House, SwitchButton, 
+  UserFilled, ArrowRight, Star, Setting, Plus, View, Bell 
+} from '@element-plus/icons-vue'
 import { getUserAvatarUrl } from '@/utils/avatar'
 
 const router = useRouter()
@@ -111,7 +115,7 @@ const handleUserCommand = async (command) => {
       router.push('/profile-setup')
       break
     case 'settings':
-      ElMessage.info('设置功能开发中...')
+      message.info('设置功能开发中...')
       break
     case 'logout':
       await handleLogout()
@@ -127,12 +131,12 @@ const handleLogout = async () => {
       type: 'warning'
     })
     await userStore.logout()
-    ElMessage.success('退出登录成功')
+    message.success('退出登录成功')
     router.push('/login')
     isMobileMenuOpen.value = false
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('退出登录失败')
+      message.error('退出登录失败')
     }
   }
 }

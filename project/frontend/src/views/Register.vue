@@ -121,11 +121,12 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Plus, Phone, Lock, UserFilled, Loading } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import { message } from '@/utils/message'
+import { User, Lock, View, Hide, ArrowRight, Phone } from '@element-plus/icons-vue'
+import { userApi } from '@/api/user'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -183,16 +184,16 @@ const handleRegister = async () => {
     })
     
     if (response.code === 200) {
-      ElMessage.success('注册成功！')
+      message.success('注册成功！')
       
       // 跳转到首页
       router.push('/')
     } else {
-      ElMessage.error(response.message || '注册失败')
+      message.error(response.message || '注册失败')
     }
   } catch (error) {
     console.error('注册失败:', error)
-    ElMessage.error(error.message || '注册失败，请重试')
+    message.error(error.message || '注册失败，请重试')
   } finally {
     loading.value = false
   }
