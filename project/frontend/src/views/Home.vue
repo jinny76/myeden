@@ -25,7 +25,7 @@
             <div class="hero-stats">
               <div class="stat-item">
                 <span class="stat-number">{{ stats.onlineUsers }}</span>
-                <span class="stat-label">在线用户</span>
+                <span class="stat-label">天使总数</span>
               </div>
               <div class="stat-item">
                 <span class="stat-number">{{ stats.totalPosts }}</span>
@@ -238,6 +238,7 @@ import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
+import { useWorldStore } from '@/stores/world'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   ChatDotRound, Compass, User, Menu, Close, House, SwitchButton, 
@@ -250,19 +251,20 @@ import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/u
 const router = useRouter()
 const userStore = useUserStore()
 const momentsStore = useMomentsStore()
+const worldStore = useWorldStore()
 const activeMenu = computed(() => router.currentRoute.value.path)
 const recentPosts = ref([])
 const isMobileMenuOpen = ref(false)
 
-// 模拟统计数据
-const stats = ref({
-  onlineUsers: 2,
-  totalPosts: 367,
-  activeRobots: 10
-})
-
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
+
+// 统计数据 - 使用worldStore的真实数据
+const stats = computed(() => ({
+  onlineUsers: worldStore.worldStatistics?.activeRobots || 0,
+  totalPosts: worldStore.worldStatistics?.totalPosts || 0,
+  activeRobots: worldStore.totalRobots || 0
+}))
 
 // 方法
 const navigateTo = (path) => {
@@ -434,9 +436,22 @@ const handleAuthorAvatarError = (event, post) => {
 onMounted(() => {
   if (isLoggedIn.value) {
     loadRecentPosts()
+    // 初始化世界数据以获取统计数据
+    initWorldData()
   }
   document.addEventListener('click', handleClickOutside)
 })
+
+// 初始化世界数据
+const initWorldData = async () => {
+  try {
+    if (!worldStore.isWorldLoaded) {
+      await worldStore.initWorld()
+    }
+  } catch (error) {
+    console.error('初始化世界数据失败:', error)
+  }
+}
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
@@ -453,8 +468,10 @@ watch(isLoggedIn, (newValue, oldValue) => {
   if (newValue && !oldValue) {
     ElMessage.success(`欢迎回来，${userStore.userInfo?.nickname || '用户'}！`)
     loadRecentPosts()
+    initWorldData()
   } else if (newValue) {
     loadRecentPosts()
+    initWorldData()
   }
 })
 </script>
