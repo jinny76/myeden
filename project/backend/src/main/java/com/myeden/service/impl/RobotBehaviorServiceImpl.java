@@ -6,11 +6,7 @@ import com.myeden.entity.Comment;
 import com.myeden.repository.RobotRepository;
 import com.myeden.repository.PostRepository;
 import com.myeden.repository.CommentRepository;
-import com.myeden.service.DifyService;
-import com.myeden.service.PostService;
-import com.myeden.service.CommentService;
-import com.myeden.service.RobotBehaviorService;
-import com.myeden.service.WebSocketService;
+import com.myeden.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +47,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     private CommentRepository commentRepository;
     
     @Autowired
-    private DifyService difyService;
+    private PromptService promptService;
     
     @Autowired
     private PostService postService;
@@ -142,7 +138,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             
             // 生成动态内容
             String context = buildPostContext();
-            String content = difyService.generatePostContent(robot, context);
+            String content = promptService.generatePostContent(robot, context);
             
             // 直接创建动态实体，避免调用postService.createPost
             Post post = new Post();
@@ -223,7 +219,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
             String postContent = postDetail.getContent();
             String context = buildCommentContext(postContent);
-            String content = difyService.generateCommentContent(robot, postDetail, context);
+            String content = promptService.generateCommentContent(robot, postDetail, context);
             
             // 发表评论
             CommentService.CommentResult commentResult = commentService.createComment(postId, robotId, "robot", content);
@@ -293,8 +289,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             String context = buildReplyContext(commentContent);
             
             // 生成回复内容和内心活动
-            String content = difyService.generateReplyContent(robot, commentDetail, postDetail, context);
-            String innerThoughts = difyService.generateInnerThoughts(robot, "回复评论: " + commentContent);
+            String content = promptService.generateReplyContent(robot, commentDetail, postDetail, context);
+            String innerThoughts = promptService.generateInnerThoughts(robot, "回复评论: " + commentContent);
             
             // 回复评论
             CommentService.CommentResult replyResult = commentService.replyComment(commentId, robotId, "robot", content);
@@ -527,9 +523,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             
             // 检查今日评论数量限制
             RobotDailyStats stats = getDailyStats(robotId);
-            if (stats.getCommentCount() >= 20) { // 每日最多20条评论
+            /* if (stats.getCommentCount() >= 20) { // 每日最多20条评论
                 return;
-            }
+            } */
             
             // 获取近三天的帖子，按时间倒序排列（最新的在前）
             LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(1);
@@ -607,9 +603,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             
             // 检查今日回复数量限制
             RobotDailyStats stats = getDailyStats(robotId);
-            if (stats.getReplyCount() >= 15) { // 每日最多15条回复
+            /* if (stats.getReplyCount() >= 15) { // 每日最多15条回复
                 return;
-            }
+            } */
             
             // 获取近三天的评论，按时间倒序排列（最新的在前）
             LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(1);

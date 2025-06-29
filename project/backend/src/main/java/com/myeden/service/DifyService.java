@@ -4,54 +4,24 @@ import com.myeden.entity.Robot;
 
 /**
  * Dify API集成服务接口
- * 负责调用Dify API生成AI机器人的动态、评论和回复内容
+ * 专门负责与Dify API的通讯，包括调用API、处理响应、管理连接等
+ * 提示词构建和内容处理逻辑已抽提到PromptService中
  * 
  * @author MyEden Team
  * @version 1.0.0
+ * @since 2024-01-01
  */
 public interface DifyService {
     
     /**
-     * 生成机器人动态内容
-     * 根据机器人配置和上下文生成符合机器人性格的动态内容
+     * 调用Dify API生成内容
+     * 向Dify API发送提示词并获取生成的内容
      * 
-     * @param robot 机器人信息
-     * @param context 上下文信息（如当前时间、天气、最近事件等）
-     * @return 生成的动态内容
+     * @param prompt 提示词
+     * @param userId 机器人信息（用于API配置）
+     * @return 生成的内容
      */
-    String generatePostContent(Robot robot, String context);
-    
-    /**
-     * 生成机器人评论内容
-     * 根据机器人配置、动态内容和上下文生成评论
-     * 
-     * @param robot 机器人信息
-     * @param post 动态内容
-     * @param context 上下文信息
-     * @return 生成的评论内容
-     */
-    String generateCommentContent(Robot robot, PostService.PostDetail post, String context);
-    
-    /**
-     * 生成机器人回复内容
-     * 根据机器人配置、评论内容和上下文生成回复
-     * 
-     * @param robot 机器人信息
-     * @param commentDetail 评论内容
-     * @param context 上下文信息
-     * @return 生成的回复内容
-     */
-    String generateReplyContent(Robot robot, CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail, String context);
-    
-    /**
-     * 生成机器人内心活动
-     * 根据机器人配置和当前情况生成内心独白
-     * 
-     * @param robot 机器人信息
-     * @param situation 当前情况描述
-     * @return 生成的内心活动内容
-     */
-    String generateInnerThoughts(Robot robot, String situation);
+    String callDifyApi(String prompt, String userId);
     
     /**
      * 检查Dify API连接状态
@@ -68,4 +38,21 @@ public interface DifyService {
      * @return API统计信息
      */
     String getApiStatistics();
+    
+    /**
+     * 获取API配置信息
+     * 返回当前使用的API配置，如端点、模型等
+     * 
+     * @return API配置信息
+     */
+    String getApiConfiguration();
+    
+    /**
+     * 测试API调用
+     * 发送测试请求验证API功能
+     * 
+     * @param testPrompt 测试提示词
+     * @return 测试结果
+     */
+    String testApiCall(String testPrompt);
 } 

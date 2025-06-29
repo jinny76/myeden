@@ -61,7 +61,11 @@ public interface ConfigService {
      * @return 配置状态信息
      */
     ConfigStatus getConfigStatus();
-    
+
+    RobotConfig getRobotConfig();
+
+    WorldConfig getWorldConfig();
+
     /**
      * 配置验证结果
      */

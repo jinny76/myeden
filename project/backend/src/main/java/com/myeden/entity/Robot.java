@@ -141,6 +141,12 @@ public class Robot {
     private List<ActiveTimeRange> activeTimeRanges = new ArrayList<>();
     
     /**
+     * 个人主题列表
+     * 存储机器人喜欢讨论的个人主题，用于内容生成
+     */
+    private List<Topic> topics = new ArrayList<>();
+    
+    /**
      * 是否激活
      */
     private Boolean isActive = true;
@@ -230,6 +236,30 @@ public class Robot {
         
         public double getReplyFrequency() { return replyFrequency; }
         public void setReplyFrequency(double replyFrequency) { this.replyFrequency = replyFrequency; }
+    }
+    
+    // 内部类：个人主题
+    public static class Topic {
+        private String name;
+        private int frequency;
+        private String content;
+        
+        public Topic() {}
+        
+        public Topic(String name, int frequency, String content) {
+            this.name = name;
+            this.frequency = frequency;
+            this.content = content;
+        }
+        
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        
+        public int getFrequency() { return frequency; }
+        public void setFrequency(int frequency) { this.frequency = frequency; }
+        
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
     }
     
     // 构造函数
@@ -429,6 +459,14 @@ public class Robot {
         this.activeTimeRanges = activeTimeRanges;
     }
     
+    public List<Topic> getTopics() {
+        return topics;
+    }
+    
+    public void setTopics(List<Topic> topics) {
+        this.topics = topics;
+    }
+    
     public Boolean getIsActive() {
         return isActive;
     }
@@ -458,6 +496,37 @@ public class Robot {
      */
     public void addActiveTimeRange(String startTime, String endTime) {
         this.activeTimeRanges.add(new ActiveTimeRange(startTime, endTime));
+    }
+    
+    /**
+     * 添加个人主题
+     */
+    public void addTopic(String name, int frequency, String content) {
+        this.topics.add(new Topic(name, frequency, content));
+    }
+    
+    /**
+     * 添加个人主题
+     */
+    public void addTopic(Topic topic) {
+        this.topics.add(topic);
+    }
+    
+    /**
+     * 移除个人主题
+     */
+    public void removeTopic(String topicName) {
+        this.topics.removeIf(topic -> topicName.equals(topic.getName()));
+    }
+    
+    /**
+     * 获取指定名称的主题
+     */
+    public Topic getTopicByName(String topicName) {
+        return this.topics.stream()
+                .filter(topic -> topicName.equals(topic.getName()))
+                .findFirst()
+                .orElse(null);
     }
     
     /**
@@ -529,8 +598,42 @@ public class Robot {
         this.replyFrequency = robot.getReplyFrequency();
         this.shareFrequency = robot.getShareFrequency();
         this.activeTimeRanges = robot.getActiveTimeRanges();
+        this.topics = robot.getTopics();
         this.isActive = robot.getIsActive();
         this.updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * 测试topic功能
+     * 用于验证topic相关方法是否正常工作
+     */
+    public void testTopicFunctionality() {
+        System.out.println("=== Robot Topic功能测试 ===");
+        System.out.println("机器人: " + this.name);
+        System.out.println("当前主题数量: " + (this.topics != null ? this.topics.size() : 0));
+        
+        // 添加测试主题
+        this.addTopic("分享生活", 1, "分享自己最近的生活");
+        this.addTopic("分享心情", 2, "分享自己最近的心情");
+        this.addTopic("分享感悟", 1, "分享自己最近的人生感悟");
+        
+        System.out.println("添加主题后数量: " + this.topics.size());
+        
+        // 测试获取主题
+        Topic topic = this.getTopicByName("分享心情");
+        if (topic != null) {
+            System.out.println("找到主题: " + topic.getName() + ", 频次: " + topic.getFrequency());
+        }
+        
+        // 测试移除主题
+        this.removeTopic("分享感悟");
+        System.out.println("移除主题后数量: " + this.topics.size());
+        
+        // 显示所有主题
+        System.out.println("所有主题:");
+        for (Topic t : this.topics) {
+            System.out.println("- " + t.getName() + " (频次: " + t.getFrequency() + "): " + t.getContent());
+        }
     }
     
     @Override
@@ -542,6 +645,7 @@ public class Robot {
                 ", gender='" + gender + '\'' +
                 ", profession='" + profession + '\'' +
                 ", isActive=" + isActive +
+                ", topicsCount=" + (topics != null ? topics.size() : 0) +
                 ", createdAt=" + createdAt +
                 '}';
     }

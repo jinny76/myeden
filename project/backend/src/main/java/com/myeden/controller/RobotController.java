@@ -4,6 +4,8 @@ import com.myeden.entity.Robot;
 import com.myeden.service.RobotBehaviorService;
 import com.myeden.service.WorldService;
 import com.myeden.service.PostService;
+import com.myeden.service.PromptService;
+import com.myeden.repository.RobotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,6 +40,12 @@ public class RobotController {
     
     @Autowired
     private PostService postService;
+    
+    @Autowired
+    private PromptService promptService;
+    
+    @Autowired
+    private RobotRepository robotRepository;
     
     /**
      * 获取机器人列表
@@ -202,7 +210,6 @@ public class RobotController {
     @PostMapping("/status/refresh")
     public ResponseEntity<EventResponse> refreshRobotStatus() {
         try {
-            // 调用RobotBehaviorService的刷新方法
             robotBehaviorService.refreshRobotActiveStatus();
             return ResponseEntity.ok(EventResponse.success(null, "刷新机器人在线状态成功"));
         } catch (Exception e) {
@@ -211,40 +218,31 @@ public class RobotController {
     }
     
     /**
-     * 手动触发所有在线机器人对指定动态进行评论
-     * 
-     * @param postId 动态ID
-     * @return 触发结果
+     * 测试机器人topic选择功能
+     * 验证通用主题和个人主题的合并与随机选择是否正常工作
+     * @param robotId 机器人ID
+     * @return 测试结果
      */
-    @PostMapping("/trigger-comment/{postId}")
-    public ResponseEntity<Map<String, Object>> triggerRobotComment(@PathVariable String postId) {
+    @GetMapping("/{robotId}/test-topic")
+    public ResponseEntity<EventResponse> testRobotTopicSelection(@PathVariable String robotId) {
         try {
-            logger.info("手动触发机器人评论，动态ID: {}", postId);
-            
-            // 验证动态是否存在
-            PostService.PostDetail postDetail = postService.getPostDetail(postId);
-            if (postDetail == null) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("success", false, "message", "动态不存在"));
+            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
+            if (robot == null) {
+                return ResponseEntity.badRequest().body(EventResponse.error("机器人不存在: " + robotId));
             }
             
-            // 触发所有机器人评论
-            robotBehaviorService.triggerAllRobotsComment(postId, postDetail.getContent());
+            // 调用PromptService的测试方法
+            String testResult = ((com.myeden.service.impl.PromptServiceImpl) promptService).testTopicSelection(robot);
             
             Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("message", "成功触发机器人进行评论");
-            result.put("postId", postId);
-            result.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            result.put("robotId", robotId);
+            result.put("robotName", robot.getName());
+            result.put("testResult", testResult);
             
-            logger.info("手动触发机器人评论完成，动态ID: {}", postId);
-            
-            return ResponseEntity.ok(result);
-            
+            return ResponseEntity.ok(EventResponse.success(result, "Topic选择功能测试完成"));
         } catch (Exception e) {
-            logger.error("手动触发机器人评论失败: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "触发失败: " + e.getMessage()));
+            logger.error("测试机器人topic选择功能失败", e);
+            return ResponseEntity.badRequest().body(EventResponse.error("测试失败: " + e.getMessage()));
         }
     }
 } 

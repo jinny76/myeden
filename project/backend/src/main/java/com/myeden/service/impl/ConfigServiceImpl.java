@@ -9,7 +9,6 @@ import com.myeden.service.ConfigService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.ConfigurationPropertiesBinding;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -407,6 +406,19 @@ public class ConfigServiceImpl implements ConfigService {
             behaviorPatterns.setReplyFrequency(robotConfig.getBehaviorPatterns().getReplyFrequency());
             robot.setBehaviorPatterns(behaviorPatterns);
         }
+
+        if (robotConfig.getTopic() != null) {
+            List<Robot.Topic> topics = new ArrayList<>();
+            for (int i = 0; i < robotConfig.getTopic().size(); i++) {
+                RobotConfig.Topic topic = robotConfig.getTopic().get(i);
+                Robot.Topic newTopic = new Robot.Topic();
+                newTopic.setName(topic.getName());
+                newTopic.setContent(topic.getContent());
+                newTopic.setFrequency(topic.getFrequency());
+                topics.add(newTopic);
+            }
+            robot.setTopics(topics);
+        }
         
         // 昵称作为简介的一部分
         if (StringUtils.hasText(robotConfig.getNickname())) {
@@ -439,6 +451,8 @@ public class ConfigServiceImpl implements ConfigService {
                 }
             }
         }
+
+
         
         // 设置默认值（仅当字段为空时）
         if (robot.getGender() == null) {
@@ -600,14 +614,6 @@ public class ConfigServiceImpl implements ConfigService {
             return new ConfigValidationResult(false, "机器人基础配置不能为空");
         }
         
-        if (config.getBaseConfig().getTotalCount() <= 0) {
-            return new ConfigValidationResult(false, "机器人总数必须大于0");
-        }
-        
-        if (config.getBaseConfig().getMaxActivePerUser() <= 0) {
-            return new ConfigValidationResult(false, "每个用户最大活跃机器人数必须大于0");
-        }
-        
         // 验证机器人列表
         List<RobotConfig.RobotInfo> robots = config.getList();
         if (robots == null || robots.isEmpty()) {
@@ -740,5 +746,15 @@ public class ConfigServiceImpl implements ConfigService {
         public long getActiveWorlds() { return activeWorlds; }
         public long getConfigWorlds() { return configWorlds; }
         public LocalDateTime getLastSync() { return lastSync; }
+    }
+
+    @Override
+    public RobotConfig getRobotConfig() {
+        return robotConfig;
+    }
+
+    @Override
+    public WorldConfig getWorldConfig() {
+        return worldConfig;
     }
 } 
