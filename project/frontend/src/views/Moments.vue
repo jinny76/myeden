@@ -236,6 +236,10 @@
                   <el-icon><ChatDotRound /></el-icon>
                   <span>{{ post.commentCount }}</span>
                 </span>
+                <!-- 添加查看内心活动按钮 -->
+                <span v-if="post.innerThoughts" class="stat-item inner-thoughts-stat" @click="showInnerThoughts(post)">
+                  <el-icon><View /></el-icon>
+                </span>
               </div>
               
               <!-- 评论区域 -->
@@ -266,6 +270,10 @@
                       <span class="action-link" @click="toggleCommentLike(comment)">
                         <el-icon><Star /></el-icon>
                         {{ comment.likeCount }}
+                      </span>
+                      <!-- 添加查看内心活动按钮 -->
+                      <span v-if="comment.innerThoughts" class="action-link" @click="showInnerThoughts(comment)">
+                        <el-icon><View /></el-icon>
                       </span>
                     </div>
                     
@@ -310,6 +318,10 @@
                             <span class="action-link" @click="toggleCommentLike(reply)">
                               <el-icon><Star /></el-icon>
                               {{ reply.likeCount }}
+                            </span>
+                            <!-- 添加查看内心活动按钮 -->
+                            <span v-if="reply.innerThoughts" class="action-link" @click="showInnerThoughts(reply)">
+                              <el-icon><View /></el-icon>
                             </span>
                           </div>
                         </div>
@@ -391,6 +403,42 @@
         {{ isRefreshing ? '正在刷新...' : (isPulling ? '下拉刷新' : '') }}
       </span>
     </div>
+
+    <!-- 内心活动弹窗 -->
+    <el-dialog
+      v-model="showInnerThoughtsDialog"
+      :title="currentThoughtsItem?.authorType === 'robot' ? '天使内心活动' : '内心活动'"
+      width="90%"
+      :close-on-click-modal="true"
+      class="inner-thoughts-dialog"
+    >
+      <div class="inner-thoughts-content">
+        <div class="thoughts-header">
+          <el-avatar 
+            :src="currentThoughtsItem ? (currentThoughtsItem.postId ? getAuthorAvatarUrl(currentThoughtsItem) : getCommentAuthorAvatarUrl(currentThoughtsItem)) : ''" 
+            :size="40"
+          />
+          <div class="thoughts-info">
+            <span class="thoughts-author">{{ currentThoughtsItem?.authorName }}</span>
+            <span class="thoughts-time">{{ currentThoughtsItem ? formatTime(currentThoughtsItem.createdAt) : '' }}</span>
+            <span class="thoughts-type">
+              {{ currentThoughtsItem?.authorType === 'robot' ? '天使' : '用户' }} · 
+              {{ currentThoughtsItem?.postId ? '动态' : '评论' }}
+            </span>
+          </div>
+        </div>
+        <div class="thoughts-body">
+          <div class="thoughts-content">
+            <h4>内心想法：</h4>
+            <p>{{ currentThoughtsItem?.innerThoughts }}</p>
+          </div>
+          <div class="thoughts-original">
+            <h4>实际表达：</h4>
+            <p>{{ currentThoughtsItem?.content }}</p>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -401,7 +449,7 @@ import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessageBox, ElPopover } from 'element-plus'
 import { message } from '@/utils/message'
-import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star } from '@element-plus/icons-vue'
+import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, View } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
 import { createPost, searchPosts } from '@/api/post'
@@ -444,6 +492,10 @@ const searchKeyword = ref('')
 const searchType = ref('all')
 const searchTimeout = ref(null)
 const isSearching = ref(false)
+
+// 内心活动相关状态
+const showInnerThoughtsDialog = ref(false)
+const currentThoughtsItem = ref(null)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -1357,6 +1409,12 @@ const clearSearch = async () => {
   } catch (error) {
     message.error('恢复动态列表失败')
   }
+}
+
+// 内心活动相关方法
+const showInnerThoughts = (item) => {
+  currentThoughtsItem.value = item
+  showInnerThoughtsDialog.value = true
 }
 </script>
 
@@ -2451,5 +2509,218 @@ body.pulling {
 
 body.refreshing {
   transition: transform 0.3s ease;
+}
+
+/* 内心活动弹窗 */
+.inner-thoughts-dialog {
+  border-radius: 16px;
+}
+
+.inner-thoughts-dialog :deep(.el-dialog) {
+  border-radius: 16px;
+  background: var(--color-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+.inner-thoughts-dialog :deep(.el-dialog__header) {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+}
+
+.inner-thoughts-dialog :deep(.el-dialog__title) {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.inner-thoughts-dialog :deep(.el-dialog__body) {
+  padding: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.inner-thoughts-dialog :deep(.el-dialog__footer) {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 16px 16px;
+  padding: 20px;
+}
+
+.inner-thoughts-content {
+  padding: 20px;
+}
+
+.thoughts-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.thoughts-info {
+  margin-left: 16px;
+}
+
+.thoughts-author {
+  font-weight: 600;
+  color: var(--color-text);
+  display: block;
+  font-size: 1.1rem;
+}
+
+.thoughts-time {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.thoughts-type {
+  color: var(--color-text);
+  font-size: 0.8rem;
+  opacity: 0.6;
+  margin-top: 4px;
+  display: block;
+  padding: 2px 8px;
+  background: rgba(34, 211, 107, 0.1);
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.thoughts-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.thoughts-content,
+.thoughts-original {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+.thoughts-content:hover,
+.thoughts-original:hover {
+  border-color: rgba(34, 211, 107, 0.2);
+  background: rgba(34, 211, 107, 0.02);
+}
+
+.thoughts-content h4,
+.thoughts-original h4 {
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 12px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thoughts-content h4::before {
+  content: "💭";
+  font-size: 1.2rem;
+}
+
+.thoughts-original h4::before {
+  content: "💬";
+  font-size: 1.2rem;
+}
+
+.thoughts-content p,
+.thoughts-original p {
+  color: var(--color-text);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .inner-thoughts-dialog :deep(.el-dialog) {
+    margin: 10px;
+    width: calc(100% - 20px) !important;
+    max-width: none;
+    max-height: 85vh;
+  }
+  
+  .inner-thoughts-dialog :deep(.el-dialog__body) {
+    max-height: 65vh;
+  }
+  
+  .inner-thoughts-content {
+    padding: 16px;
+  }
+  
+  .thoughts-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+  
+  .thoughts-content,
+  .thoughts-original {
+    padding: 12px;
+  }
+  
+  .thoughts-content h4,
+  .thoughts-original h4 {
+    font-size: 0.95rem;
+  }
+  
+  .thoughts-content p,
+  .thoughts-original p {
+    font-size: 0.9rem;
+  }
+}
+
+.like-stat {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s;
+  user-select: none;
+}
+.like-stat:hover .el-icon,
+.like-stat:active .el-icon {
+  color: #22d36b;
+  transform: scale(1.1);
+}
+.like-stat .el-icon.liked {
+  color: #22d36b;
+  transform: scale(1.1);
+  transition: all 0.2s;
+}
+
+/* 内心活动按钮样式 */
+.inner-thoughts-stat {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.inner-thoughts-stat:hover .el-icon,
+.inner-thoughts-stat:active .el-icon {
+  color: #667eea;
+  transform: scale(1.1);
+}
+
+.inner-thoughts-stat .el-icon {
+  color: #667eea;
+  transition: all 0.2s;
 }
 </style> 

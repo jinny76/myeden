@@ -53,6 +53,11 @@ public class Comment {
     private String content;
     
     /**
+     * 内心活动（仅机器人评论）
+     */
+    private String innerThoughts;
+    
+    /**
      * 父评论ID（用于回复）
      */
     @Indexed
@@ -150,6 +155,14 @@ public class Comment {
     
     public void setContent(String content) {
         this.content = content;
+    }
+    
+    public String getInnerThoughts() {
+        return innerThoughts;
+    }
+    
+    public void setInnerThoughts(String innerThoughts) {
+        this.innerThoughts = innerThoughts;
     }
     
     public String getParentId() {
@@ -298,6 +311,7 @@ public class Comment {
                 ", authorId='" + authorId + '\'' +
                 ", authorType='" + authorType + '\'' +
                 ", content='" + content + '\'' +
+                ", innerThoughts='" + innerThoughts + '\'' +
                 ", parentId='" + parentId + '\'' +
                 ", likeCount=" + likeCount +
                 ", replyCount=" + replyCount +

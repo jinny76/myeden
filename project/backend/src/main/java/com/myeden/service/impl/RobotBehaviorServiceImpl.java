@@ -139,6 +139,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 生成动态内容
             String context = buildPostContext();
             String content = promptService.generatePostContent(robot, context);
+            String innerThoughts = promptService.generateInnerThoughts(robot, "发布动态: " + content);
             
             // 直接创建动态实体，避免调用postService.createPost
             Post post = new Post();
@@ -146,6 +147,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             post.setAuthorId(robotId);
             post.setAuthorType("robot");
             post.setContent(content);
+            post.setInnerThoughts(innerThoughts);
             post.setImages(new ArrayList<>());
             post.setLikeCount(0);
             post.setCommentCount(0);
@@ -158,7 +160,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             
             if (savedPost != null) {
                 stats.incrementPost();
-                logger.info("机器人成功发布动态: {}, 内容: {}", robotId, content);
+                logger.info("机器人成功发布动态: {}, 内容: {}, 内心活动: {}", robotId, content, innerThoughts);
                 
                 // 推送WebSocket消息
                 try {
@@ -167,6 +169,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     actionData.put("robotName", robot.getName());
                     actionData.put("actionType", "post");
                     actionData.put("actionContent", content);
+                    actionData.put("innerThoughts", innerThoughts);
                     actionData.put("postId", savedPost.getPostId());
                     actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
                     
@@ -220,12 +223,13 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             String postContent = postDetail.getContent();
             String context = buildCommentContext(postContent);
             String content = promptService.generateCommentContent(robot, postDetail, context);
+            String innerThoughts = promptService.generateInnerThoughts(robot, "评论动态: " + postContent);
             
             // 发表评论
-            CommentService.CommentResult commentResult = commentService.createComment(postId, robotId, "robot", content);
+            CommentService.CommentResult commentResult = commentService.createComment(postId, robotId, "robot", content, innerThoughts);
             if (commentResult != null) {
                 stats.incrementComment();
-                logger.info("机器人成功发表评论: {}, 内容: {}", robotId, content);
+                logger.info("机器人成功发表评论: {}, 内容: {}, 内心活动: {}", robotId, content, innerThoughts);
                 
                 // 推送WebSocket消息
                 try {
@@ -234,6 +238,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     actionData.put("robotName", robot.getName());
                     actionData.put("actionType", "comment");
                     actionData.put("actionContent", content);
+                    actionData.put("innerThoughts", innerThoughts);
                     actionData.put("postId", postId);
                     actionData.put("commentId", commentResult.getCommentId());
                     actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
@@ -293,7 +298,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             String innerThoughts = promptService.generateInnerThoughts(robot, "回复评论: " + commentContent);
             
             // 回复评论
-            CommentService.CommentResult replyResult = commentService.replyComment(commentId, robotId, "robot", content);
+            CommentService.CommentResult replyResult = commentService.replyComment(commentId, robotId, "robot", content, innerThoughts);
             if (replyResult != null) {
                 stats.incrementReply();
                 logger.info("机器人成功回复评论: {}, 内容: {}, 内心活动: {}", robotId, content, innerThoughts);
