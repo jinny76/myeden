@@ -352,7 +352,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 根据行为类型调整基础概率
             switch (behaviorType) {
                 case "post":
-                    baseProbability = 0.05;
+                    baseProbability = 0.02;
                     break;
                 case "comment":
                     baseProbability = 0.6;
@@ -387,8 +387,13 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             double finalProbability = baseProbability * timeMultiplier * socialEnergyMultiplier * moodMultiplier * randomFactor;
             
             // 确保概率在合理范围内
-            return Math.min(Math.max(finalProbability, 0.05), 0.95);
-            
+            if (finalProbability < 0) {
+                finalProbability = 0;
+            } else if (finalProbability > 1) {
+                finalProbability = 1;
+            }
+
+            return finalProbability;
         } catch (Exception e) {
             logger.error("计算行为概率失败: {}", e.getMessage(), e);
             return 0.3; // 默认概率
