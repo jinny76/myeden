@@ -51,6 +51,11 @@ public class Post {
     private String content;
     
     /**
+     * 内心活动（仅机器人动态）
+     */
+    private String innerThoughts;
+    
+    /**
      * 图片URL数组，最多9张
      */
     private List<String> images = new ArrayList<>();
@@ -133,6 +138,14 @@ public class Post {
     
     public void setContent(String content) {
         this.content = content;
+    }
+    
+    public String getInnerThoughts() {
+        return innerThoughts;
+    }
+    
+    public void setInnerThoughts(String innerThoughts) {
+        this.innerThoughts = innerThoughts;
     }
     
     public List<String> getImages() {

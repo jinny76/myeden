@@ -24,9 +24,22 @@ public interface CommentService {
      * @param authorId 评论者ID
      * @param authorType 评论者类型（user/robot）
      * @param content 评论内容
+     * @param innerThoughts 内心活动（可选，主要用于机器人）
      * @return 评论发布结果
      */
-    CommentResult createComment(String postId, String authorId, String authorType, String content);
+    CommentResult createComment(String postId, String authorId, String authorType, String content, String innerThoughts);
+    
+    /**
+     * 发表评论（重载方法，兼容旧版本）
+     * @param postId 动态ID
+     * @param authorId 评论者ID
+     * @param authorType 评论者类型（user/robot）
+     * @param content 评论内容
+     * @return 评论发布结果
+     */
+    default CommentResult createComment(String postId, String authorId, String authorType, String content) {
+        return createComment(postId, authorId, authorType, content, null);
+    }
     
     /**
      * 回复评论
@@ -34,9 +47,22 @@ public interface CommentService {
      * @param authorId 回复者ID
      * @param authorType 回复者类型（user/robot）
      * @param content 回复内容
+     * @param innerThoughts 内心活动（可选，主要用于机器人）
      * @return 回复发布结果
      */
-    CommentResult replyComment(String commentId, String authorId, String authorType, String content);
+    CommentResult replyComment(String commentId, String authorId, String authorType, String content, String innerThoughts);
+    
+    /**
+     * 回复评论（重载方法，兼容旧版本）
+     * @param commentId 评论ID
+     * @param authorId 回复者ID
+     * @param authorType 回复者类型（user/robot）
+     * @param content 回复内容
+     * @return 回复发布结果
+     */
+    default CommentResult replyComment(String commentId, String authorId, String authorType, String content) {
+        return replyComment(commentId, authorId, authorType, content, null);
+    }
     
     /**
      * 获取动态的评论列表
@@ -173,6 +199,7 @@ public interface CommentService {
         private String authorName;
         private String authorAvatar;
         private String content;
+        private String innerThoughts;
         private String parentId;
         private String replyToId;
         private String replyToName;
@@ -183,7 +210,7 @@ public interface CommentService {
         private String updatedAt;
         
         public CommentSummary(String commentId, String postId, String authorId, String authorType, 
-                             String authorName, String authorAvatar, String content, String parentId, 
+                             String authorName, String authorAvatar, String content, String innerThoughts, String parentId, 
                              String replyToId, String replyToName, int likeCount, int replyCount, 
                              boolean isLiked, String createdAt, String updatedAt) {
             this.commentId = commentId;
@@ -193,6 +220,7 @@ public interface CommentService {
             this.authorName = authorName;
             this.authorAvatar = authorAvatar;
             this.content = content;
+            this.innerThoughts = innerThoughts;
             this.parentId = parentId;
             this.replyToId = replyToId;
             this.replyToName = replyToName;
@@ -211,6 +239,7 @@ public interface CommentService {
         public String getAuthorName() { return authorName; }
         public String getAuthorAvatar() { return authorAvatar; }
         public String getContent() { return content; }
+        public String getInnerThoughts() { return innerThoughts; }
         public String getParentId() { return parentId; }
         public String getReplyToId() { return replyToId; }
         public String getReplyToName() { return replyToName; }
@@ -232,6 +261,7 @@ public interface CommentService {
         private String authorName;
         private String authorAvatar;
         private String content;
+        private String innerThoughts;
         private String parentId;
         private String replyToId;
         private String replyToName;
@@ -243,7 +273,7 @@ public interface CommentService {
         private String updatedAt;
         
         public CommentDetail(String commentId, String postId, String authorId, String authorType, 
-                            String authorName, String authorAvatar, String content, String parentId, 
+                            String authorName, String authorAvatar, String content, String innerThoughts, String parentId, 
                             String replyToId, String replyToName, int likeCount, int replyCount, 
                             boolean isLiked, List<String> likedUsers, String createdAt, String updatedAt) {
             this.commentId = commentId;
@@ -253,6 +283,7 @@ public interface CommentService {
             this.authorName = authorName;
             this.authorAvatar = authorAvatar;
             this.content = content;
+            this.innerThoughts = innerThoughts;
             this.parentId = parentId;
             this.replyToId = replyToId;
             this.replyToName = replyToName;
@@ -272,6 +303,7 @@ public interface CommentService {
         public String getAuthorName() { return authorName; }
         public String getAuthorAvatar() { return authorAvatar; }
         public String getContent() { return content; }
+        public String getInnerThoughts() { return innerThoughts; }
         public String getParentId() { return parentId; }
         public String getReplyToId() { return replyToId; }
         public String getReplyToName() { return replyToName; }

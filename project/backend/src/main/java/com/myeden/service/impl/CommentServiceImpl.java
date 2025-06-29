@@ -65,7 +65,7 @@ public class CommentServiceImpl implements CommentService {
     private WebSocketService webSocketService;
     
     @Override
-    public CommentResult createComment(String postId, String authorId, String authorType, String content) {
+    public CommentResult createComment(String postId, String authorId, String authorType, String content, String innerThoughts) {
         try {
             logger.info("开始创建评论，动态ID: {}, 作者ID: {}, 作者类型: {}", postId, authorId, authorType);
             
@@ -123,6 +123,7 @@ public class CommentServiceImpl implements CommentService {
             comment.setAuthorId(authorId);
             comment.setAuthorType(authorType);
             comment.setContent(content);
+            comment.setInnerThoughts(innerThoughts);
             comment.setParentId(null); // 一级评论
             comment.setReplyToId(null); // 一级评论
             comment.setLikeCount(0);
@@ -152,6 +153,7 @@ public class CommentServiceImpl implements CommentService {
                 commentData.put("authorName", authorName);
                 commentData.put("authorAvatar", authorAvatar);
                 commentData.put("content", savedComment.getContent());
+                commentData.put("innerThoughts", savedComment.getInnerThoughts());
                 commentData.put("parentId", savedComment.getParentId());
                 commentData.put("replyToId", savedComment.getReplyToId());
                 commentData.put("createdAt", savedComment.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
@@ -177,7 +179,7 @@ public class CommentServiceImpl implements CommentService {
     }
     
     @Override
-    public CommentResult replyComment(String commentId, String authorId, String authorType, String content) {
+    public CommentResult replyComment(String commentId, String authorId, String authorType, String content, String innerThoughts) {
         try {
             logger.info("开始回复评论，评论ID: {}, 作者ID: {}, 作者类型: {}", commentId, authorId, authorType);
             
@@ -237,6 +239,7 @@ public class CommentServiceImpl implements CommentService {
             reply.setAuthorId(authorId);
             reply.setAuthorType(authorType);
             reply.setContent(content);
+            reply.setInnerThoughts(innerThoughts);
             reply.setParentId(commentId); // 父评论ID
             reply.setReplyToId(parentComment.getAuthorId()); // 回复目标ID
             reply.setLikeCount(0);
@@ -263,6 +266,27 @@ public class CommentServiceImpl implements CommentService {
             }
             
             logger.info("回复评论成功，回复ID: {}", savedReply.getCommentId());
+            
+            // 推送WebSocket消息
+            try {
+                Map<String, Object> replyData = new HashMap<>();
+                replyData.put("commentId", savedReply.getCommentId());
+                replyData.put("postId", savedReply.getPostId());
+                replyData.put("authorId", savedReply.getAuthorId());
+                replyData.put("authorType", savedReply.getAuthorType());
+                replyData.put("authorName", authorName);
+                replyData.put("authorAvatar", authorAvatar);
+                replyData.put("content", savedReply.getContent());
+                replyData.put("innerThoughts", savedReply.getInnerThoughts());
+                replyData.put("parentId", savedReply.getParentId());
+                replyData.put("replyToId", savedReply.getReplyToId());
+                replyData.put("createdAt", savedReply.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                
+                webSocketService.pushCommentUpdate(replyData);
+                logger.info("WebSocket回复更新消息推送成功");
+            } catch (Exception e) {
+                logger.warn("WebSocket消息推送失败", e);
+            }
             
             return new CommentResult(
                 savedReply.getCommentId(),
@@ -406,6 +430,7 @@ public class CommentServiceImpl implements CommentService {
                 authorName,
                 authorAvatar,
                 comment.getContent(),
+                comment.getInnerThoughts(),
                 comment.getParentId(),
                 comment.getReplyToId(),
                 replyToName,
@@ -624,6 +649,7 @@ public class CommentServiceImpl implements CommentService {
             authorName,
             authorAvatar,
             comment.getContent(),
+            comment.getInnerThoughts(),
             comment.getParentId(),
             comment.getReplyToId(),
             replyToName,
