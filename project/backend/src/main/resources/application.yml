@@ -2,7 +2,7 @@
 # 包含数据库、JWT、文件上传等配置
 
 server:
-  port: 38080
+  port: 38081
   servlet:
     context-path: /
 
@@ -15,7 +15,7 @@ spring:
     mongodb:
       host: localhost
       port: 27017
-      database: myeden
+      database: myeden-dev
       username: myeden
       password: password!
       authentication-database: myeden

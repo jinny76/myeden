@@ -86,6 +86,7 @@ public class RobotConfig {
         private String personality;
         private String description;
         private String background;
+        private String example;  // 新增：机器人发帖示例
         
         // 个人基本信息
         private String gender;           // 性别：male/female/other
@@ -126,6 +127,9 @@ public class RobotConfig {
         
         public String getBackground() { return background; }
         public void setBackground(String background) { this.background = background; }
+        
+        public String getExample() { return example; }
+        public void setExample(String example) { this.example = example; }
         
         // 个人基本信息的Getter和Setter
         public String getGender() { return gender; }

@@ -51,22 +51,22 @@ export default defineConfig({
   
   server: {
     host: '0.0.0.0',
-    port: 35000,
+    port: 35001,
     open: true,
     cors: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:38080',
+        target: 'http://localhost:38081',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api')
       },
       '/ws': {
-        target: 'ws://localhost:38080',
+        target: 'ws://localhost:38081',
         ws: true,
         changeOrigin: true
       }
     },
-    allowedHosts: ['localhost', '127.0.0.1', '0.0.0.0', 'myeden.kingfisher.live']
+    allowedHosts: ['localhost', '127.0.0.1', '0.0.0.0', 'myeden-dev.kingfisher.live']
   },
   
   build: {

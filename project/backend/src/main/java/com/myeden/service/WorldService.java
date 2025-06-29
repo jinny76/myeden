@@ -296,6 +296,7 @@ public interface WorldService {
         private String personality;
         private String description;
         private String background;
+        private String example;
         private List<String> traits;
         private List<String> interests;
         private SpeakingStyle speakingStyle;
@@ -304,7 +305,7 @@ public interface WorldService {
         private boolean isActive;
         
         public RobotDetail(String id, String name, String nickname, String avatar, String personality,
-                         String description, String background, List<String> traits, List<String> interests,
+                         String description, String background, String example, List<String> traits, List<String> interests,
                          SpeakingStyle speakingStyle, BehaviorPatterns behaviorPatterns, 
                          List<ActiveHours> activeHours, boolean isActive) {
             this.id = id;
@@ -314,6 +315,7 @@ public interface WorldService {
             this.personality = personality;
             this.description = description;
             this.background = background;
+            this.example = example;
             this.traits = traits;
             this.interests = interests;
             this.speakingStyle = speakingStyle;
@@ -330,6 +332,7 @@ public interface WorldService {
         public String getPersonality() { return personality; }
         public String getDescription() { return description; }
         public String getBackground() { return background; }
+        public String getExample() { return example; }
         public List<String> getTraits() { return traits; }
         public List<String> getInterests() { return interests; }
         public SpeakingStyle getSpeakingStyle() { return speakingStyle; }

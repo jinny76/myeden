@@ -85,10 +85,12 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n\n## 根据以下发帖要求, 和你的性格和当前情况，生成一条纯文本的，自然、真实的朋友圈动态, 仅返回动态本身, 不包含任何标题。");
         prompt.append("\n1. 内容要符合你的性格特征");
         prompt.append("\n2. 语言风格要符合你的说话习惯");
-        prompt.append("\n3. 长度控制在10-150字之间");
-        prompt.append("\n4. 内容要积极向上，贴近生活");
-        prompt.append("\n5. 可以适当使用表情符号");
-        prompt.append("\n6. 必须围绕指定的主题进行创作");
+        prompt.append("\n3. 长度控制在10-150字之间, 以简短内容为主");
+        prompt.append("\n4. 必须围绕指定的主题进行创作");
+        prompt.append("\n5. 内容随意，不要有任何限制");
+        if (robotInfo != null && robotInfo.getExample() != null && !robotInfo.getExample().trim().isEmpty()) {
+            prompt.append(String.format("\n6. 发帖示例参考：\n%s", robotInfo.getExample()));
+        }
 
         log.info(prompt.toString());
         
@@ -130,8 +132,9 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n1. 评论要符合你的性格特征");
         prompt.append("\n2. 语言风格要符合你的说话习惯");
         prompt.append("\n3. 长度控制在20-80字之间");
-        prompt.append("\n4. 内容要积极正面，体现关心或共鸣");
-        prompt.append("\n5. 可以适当使用表情符号");
+        if (robotInfo != null && robotInfo.getExample() != null && !robotInfo.getExample().trim().isEmpty()) {
+            prompt.append(String.format("\n4. 发帖示例参考：\n%s", robotInfo.getExample()));
+        }
 
         log.info(prompt.toString());
         
@@ -175,8 +178,9 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n1. 回复要符合你的性格特征");
         prompt.append("\n2. 语言风格要符合你的说话习惯");
         prompt.append("\n3. 长度控制在15-60字之间");
-        prompt.append("\n4. 内容要积极正面，体现互动和关心");
-        prompt.append("\n5. 可以适当使用表情符号");
+        if (robotInfo != null && robotInfo.getExample() != null && !robotInfo.getExample().trim().isEmpty()) {
+            prompt.append(String.format("\n4. 发帖示例参考：\n%s", robotInfo.getExample()));
+        }
 
         log.info(prompt.toString());
         
@@ -211,7 +215,6 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n2. 语言风格要符合你的说话习惯");
         prompt.append("\n3. 长度控制在30-100字之间");
         prompt.append("\n4. 内容要真实自然，体现内心感受");
-        prompt.append("\n5. 可以适当使用省略号等表达方式");
         
         return prompt.toString();
     }
@@ -223,6 +226,14 @@ public class PromptServiceImpl implements PromptService {
         }
         
         String processedContent = rawContent.trim();
+
+        if (processedContent.startsWith("\"") && processedContent.endsWith("\"")) {
+            processedContent = processedContent.substring(1, processedContent.length() - 1);
+        } else if (processedContent.startsWith("'") && processedContent.endsWith("'")) {
+            processedContent = processedContent.substring(1, processedContent.length() - 1);
+        } else if (processedContent.startsWith("“") && processedContent.endsWith("”")) {
+            processedContent = processedContent.substring(1, processedContent.length() - 1);
+        }
         
         // 移除多余的换行和空格
         processedContent = processedContent.replaceAll("\\n+", "\n").replaceAll(" +", " ");
