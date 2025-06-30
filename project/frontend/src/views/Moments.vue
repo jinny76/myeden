@@ -402,16 +402,39 @@
     </div>
 
     <!-- 下拉刷新指示器 -->
-    <div class="refresh-indicator" :class="{ show: isRefreshing || isPulling }">
-      <el-icon v-if="isRefreshing"><Loading /></el-icon>
-      <svg v-else width="20" height="20" viewBox="0 0 50 50" class="refresh-svg">
-        <circle cx="25" cy="25" r="20" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="90" stroke-dashoffset="30">
-          <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
-        </circle>
-      </svg>
-      <span>
-        {{ isRefreshing ? '正在刷新...' : (isPulling ? '下拉刷新' : '') }}
-      </span>
+    <div class="refresh-indicator" :class="{ 
+      'show': isRefreshing || isPulling,
+      'refreshing': isRefreshing,
+      'pulling': isPulling && !isRefreshing
+    }">
+      <div class="refresh-content">
+        <div class="refresh-icon">
+          <div class="refresh-circle" :style="{ transform: `rotate(${refreshRotation}deg)` }">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle 
+                cx="12" 
+                cy="12" 
+                r="10" 
+                stroke="currentColor" 
+                stroke-width="2" 
+                stroke-linecap="round"
+                stroke-dasharray="31.416"
+                stroke-dashoffset="31.416"
+                :style="{ 
+                  strokeDashoffset: isRefreshing ? '0' : '31.416',
+                  transition: isRefreshing ? 'stroke-dashoffset 1s ease-in-out' : 'none'
+                }"
+              />
+            </svg>
+          </div>
+        </div>
+        <div class="refresh-text">
+          <span v-if="isRefreshing" class="refreshing-text">正在刷新...</span>
+          <span v-else-if="isPulling" class="pulling-text">
+            {{ refreshProgress >= 1 ? '释放刷新' : '下拉刷新' }}
+          </span>
+        </div>
+      </div>
     </div>
 
     <!-- 内心活动弹窗 -->
@@ -489,6 +512,9 @@ const refreshThreshold = 80 // 下拉多少像素触发刷新
 const startY = ref(0)
 const currentY = ref(0)
 const isPulling = ref(false)
+const refreshProgress = ref(0) // 下拉进度 (0-1)
+const refreshRotation = ref(0) // 旋转角度
+const lastVibrationTime = ref(0) // 上次震动时间，用于触觉反馈
 
 // 新动态数据
 const newPost = ref({
@@ -550,6 +576,8 @@ const handleTouchStart = (event) => {
       !isInteractiveElement) {
     startY.value = event.touches[0].clientY
     isPulling.value = true
+    refreshProgress.value = 0
+    refreshRotation.value = 0
   }
 }
 
@@ -564,9 +592,37 @@ const handleTouchMove = (event) => {
     // 阻止默认滚动行为
     event.preventDefault()
     
-    // 添加下拉效果
-    const pullDistance = Math.min(deltaY * 0.5, refreshThreshold)
-    document.body.style.transform = `translateY(${pullDistance}px)`
+    // 计算下拉进度，使用缓动函数让动画更自然
+    const progress = Math.min(deltaY / refreshThreshold, 1.2)
+    refreshProgress.value = progress
+    
+    // 计算旋转角度，使用缓动函数
+    const rotation = Math.min(deltaY / refreshThreshold * 180, 180)
+    refreshRotation.value = rotation
+    
+    // 添加下拉效果 - 使用更微妙的变换
+    const pullDistance = Math.min(deltaY * 0.25, refreshThreshold * 0.6) // 减少移动距离
+    const scale = 1 + (deltaY / refreshThreshold) * 0.01 // 更微妙的缩放效果
+    const opacity = Math.min(deltaY / refreshThreshold * 0.3, 0.3) // 微妙的透明度变化
+    
+    document.body.style.transform = `translateY(${pullDistance}px) scale(${scale})`
+    document.body.style.transformOrigin = 'top center'
+    document.body.style.transition = 'none' // 确保实时响应
+    
+    // 添加微妙的背景模糊效果
+    if (deltaY > refreshThreshold * 0.5) {
+      document.body.style.filter = `blur(${opacity}px)`
+    }
+    
+    // 触觉反馈 - 当达到刷新阈值时
+    const now = Date.now()
+    if (deltaY >= refreshThreshold && now - lastVibrationTime.value > 100) {
+      // 检查是否支持震动API
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50) // 短震动
+        lastVibrationTime.value = now
+      }
+    }
   }
 }
 
@@ -575,14 +631,29 @@ const handleTouchEnd = async (event) => {
   
   const deltaY = currentY.value - startY.value
   
-  // 重置下拉效果
+  // 添加平滑的恢复动画
+  document.body.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
   document.body.style.transform = ''
+  document.body.style.transformOrigin = ''
+  document.body.style.filter = ''
+  
   isPulling.value = false
   
   // 如果下拉距离足够，触发刷新
   if (deltaY > refreshThreshold && window.pageYOffset === 0) {
     await performRefresh()
+  } else {
+    // 重置进度，添加延迟让动画完成
+    setTimeout(() => {
+      refreshProgress.value = 0
+      refreshRotation.value = 0
+    }, 400)
   }
+  
+  // 清除过渡效果
+  setTimeout(() => {
+    document.body.style.transition = ''
+  }, 400)
 }
 
 /**
@@ -592,6 +663,9 @@ const performRefresh = async () => {
   if (isRefreshing.value) return
   try {
     isRefreshing.value = true
+    refreshProgress.value = 1
+    refreshRotation.value = 180
+    
     // 刷新数据
     await momentsStore.loadPosts({}, true)
     await loadAllCommentsAndReplies()
@@ -601,12 +675,28 @@ const performRefresh = async () => {
       searchType.value = 'all'
     }
     filterType.value = ''
+    
+    // 刷新成功时的触觉反馈
+    if ('vibrate' in navigator) {
+      navigator.vibrate([50, 100, 50]) // 成功反馈：短-长-短
+    }
+    
     // 不再弹出任何 message
   } catch (error) {
     // 不弹窗，仅可选地在控制台输出
     console.error('刷新失败:', error)
+    
+    // 刷新失败时的触觉反馈
+    if ('vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200]) // 失败反馈：长-短-长
+    }
   } finally {
     isRefreshing.value = false
+    // 延迟重置状态，让动画完成
+    setTimeout(() => {
+      refreshProgress.value = 0
+      refreshRotation.value = 0
+    }, 300)
   }
 }
 
