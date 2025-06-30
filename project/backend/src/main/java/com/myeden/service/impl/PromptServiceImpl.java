@@ -114,6 +114,9 @@ public class PromptServiceImpl implements PromptService {
         // 添加动态信息
         prompt.append(String.format("\n\n## 你看到的动态内容：%s", post.getContent()));
         prompt.append(String.format("\n作者信息：%s", getAuthorInfo(post)));
+        if (post.getImages() != null && !post.getImages().isEmpty()) {
+            prompt.append(String.format("\n动态图片：%s张", post.getImages().size()));
+        }
         
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
@@ -219,6 +222,15 @@ public class PromptServiceImpl implements PromptService {
 
         // 移除多余的换行和空格
         processedContent = processedContent.replaceAll("\\n+", "\n").replaceAll(" +", " ");
+        if (processedContent.startsWith("“") && processedContent.endsWith("”")) {
+            processedContent = processedContent.substring(1, processedContent.length() - 1);
+        }
+        if (processedContent.startsWith("\"") && processedContent.endsWith("\"")) {
+            processedContent = processedContent.substring(1, processedContent.length() - 1);
+        }
+        if (processedContent.startsWith("'") && processedContent.endsWith("'")) {
+            processedContent = processedContent.substring(1, processedContent.length() - 1);
+        }
         if (processedContent.startsWith("<think>\n</think>\n")) {
             processedContent = processedContent.replaceAll("<think>\n</think>\n", "");
         }

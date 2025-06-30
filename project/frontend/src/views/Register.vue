@@ -13,7 +13,7 @@
       <!-- 页面标题 -->
       <div class="page-header">
         <h1 class="page-title">欢迎加入</h1>
-        <p class="page-subtitle">创建你的伊甸园账户，开启美好之旅</p>
+        <p class="page-subtitle">幸福就差一步，来这里，开启美好之旅</p>
       </div>
 
       <!-- 注册卡片 -->
@@ -37,7 +37,7 @@
             <el-form-item prop="phone">
               <el-input
                 v-model="formData.phone"
-                placeholder="请输入手机号"
+                placeholder="请输入手机号, 可以不是真的, 你记得住就行"
                 size="large"
                 clearable
                 autocomplete="off"
@@ -55,7 +55,7 @@
               <el-input
                 v-model="formData.password"
                 type="password"
-                placeholder="请输入密码"
+                placeholder="请输入密码，不少于6位"
                 size="large"
                 show-password
                 clearable
@@ -147,11 +147,11 @@ const formData = reactive({
 // 表单验证规则
 const registerRules = {
   phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { required: true, message: '请输入手机号, 可以不是真的, 你记得住就行', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
+    { required: true, message: '请输入密码，不少于6位', trigger: 'blur' },
     { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
   ],
   confirmPassword: [

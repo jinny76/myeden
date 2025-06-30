@@ -241,6 +241,16 @@
           </div>
         </div>
       </div>
+
+      <!-- 页脚 -->
+      <footer class="site-footer">
+        <div class="footer-content">
+          <div class="footer-info">
+            <p class="copyright">©2025 Kingfisher Technology Co., Ltd.</p>
+            <p class="icp">京ICP备14027376号-2</p>
+          </div>
+        </div>
+      </footer>
     </div>
   </div>
 </template>
@@ -1044,8 +1054,45 @@ watch(isLoggedIn, (newValue, oldValue) => {
   transition: opacity 0.3s ease;
 }
 
-.post-card:hover .post-card-bg {
-  opacity: 1;
+  .post-card:hover .post-card-bg {
+    opacity: 1;
+  }
+
+/* 页脚样式 */
+.site-footer {
+  margin-top: 80px;
+  padding: 40px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(10px);
+}
+
+.footer-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.footer-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.copyright {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  opacity: 0.7;
+  margin: 0;
+}
+
+.icp {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  opacity: 0.6;
+  margin: 0;
 }
 
 /* 响应式设计 */
@@ -1332,6 +1379,24 @@ watch(isLoggedIn, (newValue, oldValue) => {
   
   .post-stats {
     gap: 12px;
+  }
+  
+  /* 移动端页脚样式 */
+  .site-footer {
+    margin-top: 60px;
+    padding: 30px 0;
+  }
+  
+  .footer-content {
+    padding: 0 16px;
+  }
+  
+  .copyright {
+    font-size: 0.85rem;
+  }
+  
+  .icp {
+    font-size: 0.8rem;
   }
 }
 </style> 

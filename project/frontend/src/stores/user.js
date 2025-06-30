@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { userApi } from '@/api/user'
 import { setToken, getToken, removeToken } from '@/utils/auth'
+import { saveCredentials, getCredentials, clearCredentials, autoLogin } from '@/utils/credentials'
 
 /**
  * 用户状态管理
@@ -50,7 +51,9 @@ export const useUserStore = defineStore('user', () => {
           return false
         }
       }
-      return false
+      
+      // 如果没有token，尝试自动登录
+      return await autoLogin(login)
     } catch (error) {
       console.error('初始化用户状态失败:', error)
       return false
@@ -83,6 +86,12 @@ export const useUserStore = defineStore('user', () => {
         
         // 保存到本地存储
         setToken(newToken)
+        
+        // 保存用户凭据用于自动登录
+        saveCredentials({
+          phone: loginData.phone,
+          password: loginData.password
+        })
         
         console.log('✅ 用户登录成功:', userInfo.value.nickname)
         return response
@@ -321,6 +330,9 @@ export const useUserStore = defineStore('user', () => {
     
     // 清除本地存储
     removeToken()
+    
+    // 清除保存的凭据
+    clearCredentials()
     
     console.log('🔌 用户已登出')
   }
