@@ -212,11 +212,13 @@ public class PromptServiceImpl implements PromptService {
         if (rawContent == null || rawContent.trim().isEmpty()) {
             return "";
         }
-        
         String processedContent = rawContent.trim();
-        
+
         // 移除多余的换行和空格
         processedContent = processedContent.replaceAll("\\n+", "\n").replaceAll(" +", " ");
+        if (processedContent.startsWith("<think>\n</think>\n")) {
+            processedContent = processedContent.replaceAll("<think>\n</think>\n", "");
+        }
 
         log.info(processedContent);
         

@@ -126,20 +126,39 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         return localCache.containsKey(key);
     }
 
+    /**
+     * 检查机器人是否满足发帖/评论/回复的前置条件
+     * @param robotId 机器人ID
+     * @param behaviorType 行为类型（post/comment/reply）
+     * @param context 行为上下文（如"自动发布动态"等）
+     * @param isRobot 是否对机器人内容操作（如评论/回复对象是否为机器人）
+     * @return 满足条件返回Robot对象，否则返回null
+     */
+    private Robot checkRobotPostCondition(String robotId, String behaviorType, String context, boolean isRobot) {
+        Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
+        if (robot == null || !robot.getIsActive()) {
+            logger.warn("机器人不存在或未激活: {}", robotId);
+            return null;
+        }
+        if (!isRobotActive(robot)) {
+            logger.info("机器人不在活跃时间段: {}", robotId);
+            return null;
+        }
+        // 计算触发概率
+        double probability = calculateBehaviorProbability(robot, behaviorType, context, isRobot);
+        if (random.nextDouble() > probability) {
+            logger.info("机器人{}概率未触发: {}, 概率: {}", behaviorType, robotId, probability);
+            return null;
+        }
+        return robot;
+    }
+
     @Override
     public boolean triggerRobotPost(String robotId) {
         try {
-            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
-            if (robot == null || !robot.getIsActive()) {
-                logger.warn("机器人不存在或未激活: {}", robotId);
-                return false;
-            }
-
-            // 检查是否在活跃时间段
-            if (!isRobotActive(robot)) {
-                logger.info("机器人不在活跃时间段: {}", robotId);
-                return false;
-            }
+            // 统一前置条件判断
+            Robot robot = checkRobotPostCondition(robotId, "post", "自动发布动态", true);
+            if (robot == null) return false;
 
             // 检查今日发布数量限制
             RobotDailyStats stats = getDailyStats(robotId);
@@ -149,13 +168,6 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
              * return false;
              * }
              */
-
-            // 计算触发概率
-            double probability = calculateBehaviorProbability(robot, "post", "自动发布动态", true);
-            if (random.nextDouble() > probability) {
-                logger.info("机器人发布动态概率未触发: {}, 概率: {}", robotId, probability);
-                return false;
-            }
 
             // 生成动态内容
             String context = buildPostContext();
@@ -213,15 +225,12 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     @Override
     public boolean triggerRobotComment(String robotId, String postId) {
         try {
-            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
-            if (robot == null || !robot.getIsActive()) {
-                return false;
-            }
-
-            // 检查是否在活跃时间段
-            if (!isRobotActive(robot)) {
-                return false;
-            }
+            // 获取动态内容（先查post，后判断）
+            PostService.PostDetail postDetail = postService.getPostDetail(postId);
+            boolean isRobot = "robot".equals(postDetail.getAuthorType());
+            // 统一前置条件判断
+            Robot robot = checkRobotPostCondition(robotId, "comment", "对动态发表评论", isRobot);
+            if (robot == null) return false;
 
             // 检查今日评论数量限制
             RobotDailyStats stats = getDailyStats(robotId);
@@ -231,17 +240,6 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
              * return false;
              * }
              */
-
-            // 获取动态内容
-            PostService.PostDetail postDetail = postService.getPostDetail(postId);
-
-            // 计算触发概率
-            double probability = calculateBehaviorProbability(robot, "comment", "对动态发表评论",
-                    "robot".equals(postDetail.getAuthorType()));
-            if (random.nextDouble() > probability) {
-                logger.info("机器人评论概率未触发: {}, 概率: {}", robotId, probability);
-                return false;
-            }
 
             String postContent = postDetail.getContent();
             String context = buildCommentContext(postContent);
@@ -286,34 +284,20 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     @Override
     public boolean triggerRobotReply(String robotId, String commentId) {
         try {
-            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
-            if (robot == null || !robot.getIsActive()) {
-                return false;
-            }
-
-            // 检查是否在活跃时间段
-            if (!isRobotActive(robot)) {
-                return false;
-            }
+            // 获取评论内容（先查comment，后判断）
+            CommentService.CommentDetail commentDetail = commentService.getCommentDetail(commentId);
+            PostService.PostDetail postDetail = postService.getPostDetail(commentDetail.getPostId());
+            boolean isRobot = "robot".equals(commentDetail.getAuthorType());
+            // 统一前置条件判断
+            Robot robot = checkRobotPostCondition(robotId, "reply", "回复评论", isRobot);
+            if (robot == null) return false;
 
             // 检查今日回复数量限制
             RobotDailyStats stats = getDailyStats(robotId);
-            if (stats.getReplyCount() >= 15) { // 每日最多15条回复
+            /*if (stats.getReplyCount() >= 15) { // 每日最多15条回复
                 logger.info("机器人回复超限: 每天最多15次 {}", robotId);
                 return false;
-            }
-
-            // 获取评论内容
-            CommentService.CommentDetail commentDetail = commentService.getCommentDetail(commentId);
-            PostService.PostDetail postDetail = postService.getPostDetail(commentDetail.getPostId());
-
-            // 计算触发概率
-            double probability = calculateBehaviorProbability(robot, "reply", "回复评论",
-                    "robot".equals(commentDetail.getAuthorType()));
-            if (random.nextDouble() > probability) {
-                logger.info("机器人回复评论概率未触发: {}, 概率: {}", robotId, probability);
-                return false;
-            }
+            }*/
 
             String commentContent = commentDetail.getContent();
             String context = buildReplyContext(commentContent);
@@ -371,23 +355,23 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
      * 计算行为触发概率 - 增加随机性和情绪影响
      */
     @Override
-    public double calculateBehaviorProbability(Robot robot, String behaviorType, String contex, Boolean isRobot) {
+    public double calculateBehaviorProbability(Robot robot, String behaviorType, String context, Boolean isRobot) {
         try {
             double baseProbability = 1;
 
             // 根据行为类型调整基础概率
             switch (behaviorType) {
                 case "post":
-                    baseProbability = 0.3;
+                    baseProbability = 0.015;
                     break;
                 case "comment":
-                    baseProbability = 0.6;
+                    baseProbability = 0.1;
                     if (!isRobot) {
                         baseProbability = 0.75;
                     }
                     break;
                 case "reply":
-                    baseProbability = 0.6;
+                    baseProbability = 0.1;
                     if (!isRobot) {
                         baseProbability = 0.75;
                     }
@@ -751,11 +735,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         String mood = getMood();
         String activity = getRandomActivity(timeOfDay);
 
-        return String.format("看到一条朋友圈动态：%s，%s，%s，%s, %s, %s, %s",
-                postContent,
+        return String.format("现在是%s，%s，%s，%s, 你感到 %s, 你正在 %s, 你看到一条朋友圈动态：%s",
                 now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
                 weekDay, timeOfDay, weather, mood,
-                activity);
+                activity, postContent);
     }
 
     private String buildReplyContext(String commentContent) {
@@ -767,11 +750,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         String mood = getMood();
         String activity = getRandomActivity(timeOfDay);
 
-        return String.format("有人评论了：%s，%s，%s，%s, %s, %s, %s",
-                commentContent,
+        return String.format("现在是%s，%s，%s，%s, 你感到 %s, 你正在 %s,你看到有人评论了： %s",
                 now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
                 weekDay, timeOfDay, weather, mood,
-                activity);
+                activity, commentContent);
     }
 
     /**
@@ -836,7 +818,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
      * 获取随机活动
      */
     private String getRandomActivity(String timeOfDay) {
-        return "";
+        return "看手机朋友圈";
     }
 
     /**
@@ -931,11 +913,11 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
                     // 检查今日评论数量限制
                     RobotDailyStats stats = getDailyStats(robot.getRobotId());
-                    if (stats.getCommentCount() >= 20) { // 每日最多20条评论
+                    /*if (stats.getCommentCount() >= 20) { // 每日最多20条评论
                         logger.debug("机器人 {} 今日评论数量已达上限，跳过", robot.getName());
                         skippedRobots.add(robot.getName() + "(评论上限)");
                         continue;
-                    }
+                    }*/
 
                     // 触发机器人评论
                     boolean success = triggerRobotComment(robot.getRobotId(), postId);

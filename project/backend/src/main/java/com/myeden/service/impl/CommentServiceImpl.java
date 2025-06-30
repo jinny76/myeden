@@ -678,15 +678,15 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public boolean hasRobotCommentedOnPost(String robotId, String postId) {
         try {
-            logger.debug("检查机器人 {} 是否已评论过帖子 {}", robotId, postId);
+            //logger.debug("检查机器人 {} 是否已评论过帖子 {}", robotId, postId);
             
             // 查询该机器人在指定帖子下的评论数量
             long commentCount = commentRepository.countByPostIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(
                 postId, robotId, "robot");
             
             boolean hasCommented = commentCount > 0;
-            logger.debug("机器人 {} 在帖子 {} 下的评论数量: {}, 已评论: {}", 
-                        robotId, postId, commentCount, hasCommented);
+            //logger.debug("机器人 {} 在帖子 {} 下的评论数量: {}, 已评论: {}",
+            //            robotId, postId, commentCount, hasCommented);
             
             return hasCommented;
             
@@ -717,20 +717,20 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public boolean hasRobotRepliedToComment(String robotId, String commentId) {
         try {
-            logger.debug("检查机器人 {} 是否已回复过评论 {}", robotId, commentId);
+            //logger.debug("检查机器人 {} 是否已回复过评论 {}", robotId, commentId);
             
             // 查询该机器人对指定评论的回复数量
             long replyCount = commentRepository.countByReplyToIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(
                 commentId, robotId, "robot");
             
             boolean hasReplied = replyCount > 0;
-            logger.debug("机器人 {} 对评论 {} 的回复数量: {}, 已回复: {}", 
-                        robotId, commentId, replyCount, hasReplied);
+            //logger.debug("机器人 {} 对评论 {} 的回复数量: {}, 已回复: {}",
+            //            robotId, commentId, replyCount, hasReplied);
             
             return hasReplied;
             
         } catch (Exception e) {
-            logger.error("检查机器人回复状态失败: robotId={}, commentId={}, error={}", 
+            logger.error("检查机器人回复状态失败: robotId={}, commentId={}, error={}",
                         robotId, commentId, e.getMessage(), e);
             return false;
         }
