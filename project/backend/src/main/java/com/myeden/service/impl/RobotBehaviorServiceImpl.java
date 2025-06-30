@@ -378,7 +378,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 根据行为类型调整基础概率
             switch (behaviorType) {
                 case "post":
-                    baseProbability = 0.015;
+                    baseProbability = 0.3;
                     break;
                 case "comment":
                     baseProbability = 0.6;
@@ -733,7 +733,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         String activity = getRandomActivity(timeOfDay);
 
         return String.format(
-                "现在是%s，%s，%s，%s, %s, %s, %s",
+                "现在是%s，%s，%s，%s, %s, %s",
                 now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
                 weekDay,
                 timeOfDay,

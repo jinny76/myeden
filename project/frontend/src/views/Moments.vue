@@ -500,6 +500,14 @@ const currentThoughtsItem = ref(null)
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
 
+watch(showInnerThoughtsDialog, (val) => {
+  if (val) {
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = ''
+  }
+})
+
 // 方法
 const handleUserCommand = async (command) => {
   switch (command) {

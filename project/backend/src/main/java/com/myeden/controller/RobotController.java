@@ -9,6 +9,8 @@ import com.myeden.repository.RobotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,7 @@ import org.springframework.http.HttpStatus;
  * @author MyEden Team
  * @version 1.0.0
  */
+@Tag(name = "机器人相关接口")
 @RestController
 @RequestMapping("/api/v1/robots")
 public class RobotController {
@@ -252,6 +255,7 @@ public class RobotController {
      * @param robotId 机器人ID
      * @return 测试结果
      */
+    @Operation(summary = "测试智能机器人属性选择器")
     @GetMapping("/{robotId}/test-smart-selector")
     public ResponseEntity<String> testSmartSelector(@PathVariable String robotId) {
         try {
