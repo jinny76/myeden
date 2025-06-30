@@ -170,16 +170,19 @@
     gap: 12px;
     align-items: center;
     margin-bottom: 16px;
+    flex-wrap: nowrap; /* 确保不换行 */
   }
   
   .search-input {
     flex: 1;
     min-width: 200px;
+    max-width: none; /* 移除最大宽度限制 */
   }
   
   .search-type-select,
   .filter-select {
     width: 120px;
+    flex-shrink: 0; /* 防止收缩 */
   }
   
   .search-result-info {
@@ -621,16 +624,16 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
-  /* 响应式设计 */
+  /* 移动端适配 */
   @media (max-width: 768px) {
     /* 隐藏桌面端发布区域 */
     .post-editor-section {
-      display: none;
+      display: none !important;
     }
     
     /* 显示移动端浮动按钮 */
     .mobile-fab-container {
-      display: block;
+      display: block !important;
     }
     
     .main-content {
@@ -638,7 +641,7 @@
     }
     
     .page-header {
-      padding-top: 16px;
+      padding-top: 60px;
       margin-bottom: 30px;
     }
     
@@ -650,15 +653,24 @@
       font-size: 1rem;
     }
     
+    /* 搜索和筛选区域移动端适配 */
     .search-container {
-      flex-direction: column;
-      gap: 8px;
+      flex-direction: column !important;
+      gap: 8px !important;
+      align-items: stretch !important;
+      flex-wrap: wrap !important;
     }
     
-    .search-input,
+    .search-input {
+      min-width: auto !important;
+      width: 100% !important;
+      flex: none !important;
+    }
+    
     .search-type-select,
     .filter-select {
-      width: 100%;
+      width: 100% !important;
+      flex: none !important;
     }
     
     .post-card {
@@ -695,8 +707,69 @@
     .like-text {
       font-size: 0.8rem;
     }
+    
+    /* 下拉刷新指示器移动端适配 */
+    .refresh-content {
+      padding: 12px 20px;
+      min-width: 100px;
+      border-radius: 20px;
+      
+      &::before {
+        border-radius: 20px;
+      }
+    }
+    
+    .refresh-icon {
+      width: 28px;
+      height: 28px;
+    }
+    
+    .refresh-circle {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .refresh-text {
+      font-size: 13px;
+    }
+    
+    .inner-thoughts-dialog :deep(.el-dialog) {
+      margin: 10px;
+      width: calc(100% - 20px) !important;
+      max-width: none;
+      max-height: 85vh;
+    }
+    
+    .inner-thoughts-dialog :deep(.el-dialog__body) {
+      max-height: 65vh;
+    }
+    
+    .inner-thoughts-content {
+      padding: 16px;
+    }
+    
+    .thoughts-header {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+    }
+    
+    .thoughts-content,
+    .thoughts-original {
+      padding: 12px;
+    }
+    
+    .thoughts-content h4,
+    .thoughts-original h4 {
+      font-size: 0.95rem;
+    }
+    
+    .thoughts-content p,
+    .thoughts-original p {
+      font-size: 0.9rem;
+    }
   }
   
+  /* 小屏幕适配 */
   @media (max-width: 480px) {
     .main-content {
       padding: 0 12px;
@@ -713,6 +786,15 @@
     
     .page-subtitle {
       font-size: 0.9rem;
+    }
+    
+    .search-container {
+      gap: 6px !important;
+    }
+    
+    .search-type-select,
+    .filter-select {
+      font-size: 14px;
     }
     
     .post-card {
@@ -757,6 +839,7 @@
     .mobile-fab-container {
       bottom: 70px;
       right: 16px;
+      display: block !important;
     }
     
     .mobile-fab {
@@ -925,81 +1008,6 @@
   .mobile-editor-footer .el-button--primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
-  }
-  
-  @media (max-width: 768px) {
-    /* 隐藏桌面端发布区域 */
-    .post-editor-section {
-      display: none;
-    }
-    
-    /* 显示移动端浮动按钮 */
-    .mobile-fab-container {
-      display: block;
-    }
-    
-    .main-content {
-      padding: 0 16px;
-    }
-    
-    .page-header {
-      padding-top: 16px;
-      margin-bottom: 30px;
-    }
-    
-    .page-title {
-      font-size: 2rem;
-    }
-    
-    .page-subtitle {
-      font-size: 1rem;
-    }
-    
-    .search-container {
-      flex-direction: column;
-      gap: 8px;
-    }
-    
-    .search-input,
-    .search-type-select,
-    .filter-select {
-      width: 100%;
-    }
-    
-    .post-card {
-      padding: 20px;
-    }
-    
-    .post-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-    }
-    
-    .post-type-badge {
-      align-self: flex-end;
-    }
-    
-    .post-actions-bar {
-      flex-direction: row;
-      gap: 8px;
-      justify-content: space-around;
-    }
-    
-    .like-button {
-      flex: 1;
-      justify-content: center;
-      padding: 10px 8px;
-      min-width: 0;
-    }
-    
-    .like-button .el-icon {
-      font-size: 14px;
-    }
-    
-    .like-text {
-      font-size: 0.8rem;
-    }
   }
   
   .like-stat {
@@ -1282,33 +1290,6 @@
     }
   }
   
-  /* 响应式设计 */
-  @media (max-width: 768px) {
-    .refresh-content {
-      padding: 12px 20px;
-      min-width: 100px;
-      border-radius: 20px;
-      
-      &::before {
-        border-radius: 20px;
-      }
-    }
-    
-    .refresh-icon {
-      width: 28px;
-      height: 28px;
-    }
-    
-    .refresh-circle {
-      width: 20px;
-      height: 20px;
-    }
-    
-    .refresh-text {
-      font-size: 13px;
-    }
-  }
-  
   /* 内心活动弹窗 */
   .inner-thoughts-dialog {
     border-radius: 16px;
@@ -1442,63 +1423,6 @@
     margin: 0;
     white-space: pre-wrap;
     word-break: break-word;
-  }
-  
-  /* 移动端适配 */
-  @media (max-width: 768px) {
-    .inner-thoughts-dialog :deep(.el-dialog) {
-      margin: 10px;
-      width: calc(100% - 20px) !important;
-      max-width: none;
-      max-height: 85vh;
-    }
-    
-    .inner-thoughts-dialog :deep(.el-dialog__body) {
-      max-height: 65vh;
-    }
-    
-    .inner-thoughts-content {
-      padding: 16px;
-    }
-    
-    .thoughts-header {
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-    }
-    
-    .thoughts-content,
-    .thoughts-original {
-      padding: 12px;
-    }
-    
-    .thoughts-content h4,
-    .thoughts-original h4 {
-      font-size: 0.95rem;
-    }
-    
-    .thoughts-content p,
-    .thoughts-original p {
-      font-size: 0.9rem;
-    }
-  }
-  
-  .like-stat {
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: color 0.2s;
-    user-select: none;
-  }
-  .like-stat:hover .el-icon,
-  .like-stat:active .el-icon {
-    color: #22d36b;
-    transform: scale(1.1);
-  }
-  .like-stat .el-icon.liked {
-    color: #22d36b;
-    transform: scale(1.1);
-    transition: all 0.2s;
   }
   
   /* 内心活动按钮样式 */
