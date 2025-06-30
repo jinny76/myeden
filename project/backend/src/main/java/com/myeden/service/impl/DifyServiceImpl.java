@@ -149,6 +149,6 @@ public class DifyServiceImpl implements DifyService {
 
     // 备用内容生成方法
     private String generateFallbackContent(String operation) {
-        return String.format("[%s] 由于API调用失败，使用备用内容", operation);
+        return String.format("我是谁, 我失忆了, 头好疼", operation);
     }
 } 
