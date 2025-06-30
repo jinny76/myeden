@@ -335,6 +335,84 @@
   .image-item .el-image {
     width: 100%;
     height: 100%;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+  }
+  
+  /* 图片预览优化 */
+  .post-images .image-item .el-image :deep(.el-image__inner) {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+  
+  .post-images .image-item .el-image :deep(.el-image__placeholder) {
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(34, 211, 107, 0.1), rgba(74, 222, 128, 0.05));
+    border: 2px dashed rgba(34, 211, 107, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(34, 211, 107, 0.6);
+  }
+  
+  .post-images .image-item .el-image :deep(.el-image__error) {
+    border-radius: 12px;
+    background: rgba(255, 59, 48, 0.1);
+    border: 2px dashed rgba(255, 59, 48, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 59, 48, 0.6);
+  }
+  
+  /* 防止图片预览时的闪烁 */
+  .post-images .image-item .el-image :deep(.el-image__preview) {
+    z-index: 2000;
+  }
+  
+  /* 优化图片预览遮罩层 */
+  .el-image-viewer__wrapper {
+    z-index: 2001 !important;
+  }
+  
+  .el-image-viewer__mask {
+    background-color: rgba(0, 0, 0, 0.9) !important;
+  }
+  
+  /* 防止事件冲突的样式 */
+  .post-images {
+    pointer-events: auto;
+  }
+  
+  .post-images .image-item {
+    pointer-events: auto;
+  }
+  
+  .post-images .image-item .el-image {
+    pointer-events: auto;
+  }
+  
+  /* 评论区域防止事件冲突 */
+  .comments-section {
+    pointer-events: auto;
+  }
+  
+  .comment-item {
+    pointer-events: auto;
+  }
+  
+  .comment-actions {
+    pointer-events: auto;
+  }
+  
+  .action-link {
+    pointer-events: auto;
   }
   
   .post-stats {
@@ -2089,6 +2167,13 @@
     width: 100%;
     height: 100%;
     border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
   }
   
   /* 移动端图片网格优化 */

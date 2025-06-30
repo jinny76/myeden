@@ -235,21 +235,27 @@
                 <p>{{ post.content }}</p>
                 
                 <!-- 图片展示 -->
-                <div v-if="post.images && post.images.length > 0" class="post-images">
+                <div v-if="post.images && post.images.length > 0" class="post-images" @click.stop>
                   <div 
                     class="image-grid"
                     :class="getImageGridClass(post.images.length)"
                   >
                     <div 
                       v-for="(image, index) in post.images" 
-                      :key="index"
+                      :key="`${post.postId}-${index}`"
                       class="image-item"
+                      @click.stop
                     >
                       <el-image 
                         :src="buildImageUrl(image)" 
                         fit="cover"
-                        :preview-src-list="post.images.map(img => buildImageUrl(img))"
+                        :preview-src-list="getImagePreviewList(post.images)"
                         :initial-index="index"
+                        :preview-teleported="true"
+                        :hide-on-click-modal="false"
+                        @click.stop
+                        @load="handleImagePreviewStart"
+                        @error="handleImagePreviewClose"
                       />
                     </div>
                   </div>
@@ -301,6 +307,7 @@
                     v-for="comment in momentsStore.comments[post.postId] || []" 
                     :key="comment.commentId"
                     class="comment-item"
+                    @click.stop
                   >
                     <div class="comment-header">
                       <el-avatar 
@@ -316,9 +323,9 @@
                     <div class="comment-content">
                       <p>{{ comment.content }}</p>
                     </div>
-                    <div class="comment-actions">
-                      <span class="action-link" @click="showReplyInput(comment)">回复</span>
-                      <span class="action-link" @click="toggleCommentLike(comment)">
+                    <div class="comment-actions" @click.stop>
+                      <span class="action-link" @click.stop="showReplyInput(comment)">回复</span>
+                      <span class="action-link" @click.stop="toggleCommentLike(comment)">
                         <el-icon>
                           <StarFilled v-if="comment.isLiked" />
                           <Star v-else />
@@ -326,7 +333,7 @@
                         {{ comment.likeCount || 0 }}
                       </span>
                       <!-- 添加查看内心活动按钮 -->
-                      <span v-if="comment.innerThoughts" class="action-link" @click="showInnerThoughts(comment)">
+                      <span v-if="comment.innerThoughts" class="action-link" @click.stop="showInnerThoughts(comment)">
                         <el-icon><View /></el-icon>
                       </span>
                     </div>
@@ -353,6 +360,7 @@
                           v-for="reply in replyStates[comment.commentId]?.replies || []" 
                           :key="reply.commentId"
                           class="reply-item"
+                          @click.stop
                         >
                           <div class="reply-header">
                             <el-avatar 
@@ -368,8 +376,8 @@
                           <div class="reply-content">
                             <p>{{ reply.content }}</p>
                           </div>
-                          <div class="reply-actions">
-                            <span class="action-link" @click="toggleCommentLike(reply)">
+                          <div class="reply-actions" @click.stop>
+                            <span class="action-link" @click.stop="toggleCommentLike(reply)">
                               <el-icon>
                                 <StarFilled v-if="reply.isLiked" />
                                 <Star v-else />
@@ -377,7 +385,7 @@
                               {{ reply.likeCount || 0 }}
                             </span>
                             <!-- 添加查看内心活动按钮 -->
-                            <span v-if="reply.innerThoughts" class="action-link" @click="showInnerThoughts(reply)">
+                            <span v-if="reply.innerThoughts" class="action-link" @click.stop="showInnerThoughts(reply)">
                               <el-icon><View /></el-icon>
                             </span>
                           </div>
@@ -564,6 +572,9 @@ const isSearching = ref(false)
 // 内心活动相关状态
 const showInnerThoughtsDialog = ref(false)
 const currentThoughtsItem = ref(null)
+
+// 图片预览状态管理
+const imagePreviewActive = ref(false)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -1331,8 +1342,30 @@ const getImageGridClass = (count) => {
   return 'grid-more'
 }
 
-const previewImage = (images, index) => {
-  // 使用Element Plus的图片预览功能
+/**
+ * 获取图片预览列表，优化性能避免重复计算
+ * @param {Array} images - 图片数组
+ * @returns {Array} 预览URL列表
+ */
+const getImagePreviewList = (images) => {
+  if (!images || images.length === 0) return []
+  return images.map(img => buildImageUrl(img))
+}
+
+/**
+ * 处理图片预览开始
+ */
+const handleImagePreviewStart = () => {
+  imagePreviewActive.value = true
+  console.log('图片预览开始')
+}
+
+/**
+ * 处理图片预览结束
+ */
+const handleImagePreviewClose = () => {
+  imagePreviewActive.value = false
+  console.log('图片预览结束')
 }
 
 const formatTime = (time) => {
