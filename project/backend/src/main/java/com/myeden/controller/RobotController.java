@@ -245,4 +245,26 @@ public class RobotController {
             return ResponseEntity.badRequest().body(EventResponse.error("测试失败: " + e.getMessage()));
         }
     }
+    
+    /**
+     * 测试智能机器人属性选择器
+     * 
+     * @param robotId 机器人ID
+     * @return 测试结果
+     */
+    @GetMapping("/{robotId}/test-smart-selector")
+    public ResponseEntity<String> testSmartSelector(@PathVariable String robotId) {
+        try {
+            Robot robot = robotRepository.findByRobotId(robotId)
+                    .orElseThrow(() -> new RuntimeException("机器人不存在: " + robotId));
+            
+            String testResult = promptService.testSmartSelector(robot);
+            
+            return ResponseEntity.ok(testResult);
+        } catch (Exception e) {
+            logger.error("测试智能选择器失败: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("测试失败: " + e.getMessage());
+        }
+    }
 } 

@@ -124,10 +124,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             
             // 检查今日发布数量限制
             RobotDailyStats stats = getDailyStats(robotId);
-            if (stats.getPostCount() >= 10) { // 每日最多10条动态
+            /*if (stats.getPostCount() >= 10) { // 每日最多10条动态
                 logger.info("机器人今日发布数量已达上限, 最多10条: {}", robotId);
                 return false;
-            }
+            }*/
             
             // 计算触发概率
             double probability = calculateBehaviorProbability(robot, "post", "自动发布动态", true);
@@ -204,10 +204,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             
             // 检查今日评论数量限制
             RobotDailyStats stats = getDailyStats(robotId);
-            if (stats.getCommentCount() >= 20) { // 每日最多20条评论
+            /*if (stats.getCommentCount() >= 20) { // 每日最多20条评论
                 logger.info("机器人评论超限: 每天最多20次 {}", robotId);
                 return false;
-            }
+            }*/
 
             // 获取动态内容
             PostService.PostDetail postDetail = postService.getPostDetail(postId);
@@ -352,7 +352,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 根据行为类型调整基础概率
             switch (behaviorType) {
                 case "post":
-                    baseProbability = 0.02;
+                    baseProbability = 0.015;
                     break;
                 case "comment":
                     baseProbability = 0.6;

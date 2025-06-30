@@ -412,7 +412,7 @@
       :close-on-click-modal="true"
       class="inner-thoughts-dialog"
     >
-      <div class="inner-thoughts-content">
+      <div class="inner-thoughts-content" @click="showInnerThoughtsDialog = false" style="cursor:pointer">
         <div class="thoughts-header">
           <el-avatar 
             :src="currentThoughtsItem ? (currentThoughtsItem.postId ? getAuthorAvatarUrl(currentThoughtsItem) : getCommentAuthorAvatarUrl(currentThoughtsItem)) : ''" 

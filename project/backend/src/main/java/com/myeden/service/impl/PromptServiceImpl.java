@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.Random;
 import java.util.List;
 import java.util.ArrayList;
@@ -63,14 +64,11 @@ public class PromptServiceImpl implements PromptService {
             robotInfo != null ? robotInfo.getNickname() : robot.getName(), 
             robot.getPersonality()));
         
-        // 添加个人基本信息
-        prompt.append(buildPersonalInfo(robot, robotInfo));
+        // 使用智能选择器构建背景信息
+        prompt.append(buildSmartBackground(robot));
         
-        // 添加性格特征和兴趣爱好
-        prompt.append(buildTraitsAndInterests(robot, robotInfo));
-        
-        // 添加说话风格
-        prompt.append(buildSpeakingStyle(robotInfo));
+        // 使用智能选择器构建个人档案
+        prompt.append(buildSmartPersonalInfo(robot));
         
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
@@ -86,11 +84,10 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n1. 内容要符合你的性格特征");
         prompt.append("\n2. 语言风格要符合你的说话习惯");
         prompt.append("\n3. 长度控制在10-150字之间");
-        prompt.append("\n4. 内容要积极向上，贴近生活");
-        prompt.append("\n5. 可以适当使用表情符号");
-        prompt.append("\n6. 必须围绕指定的主题进行创作");
+        prompt.append("\n4. 必须围绕指定的主题进行创作");
+        prompt.append("\n5. 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
 
-        log.info(prompt.toString());
+        log.info("生成的动态提示词: {}", prompt.toString());
         
         return prompt.toString();
     }
@@ -107,14 +104,11 @@ public class PromptServiceImpl implements PromptService {
         prompt.append(String.format("你是%s（昵称：%s），%s。你看到了一条朋友圈动态，想要评论一下。\n\n## 背景信息清单",
             robot.getName(), nickname, robot.getPersonality()));
         
-        // 添加个人基本信息
-        prompt.append(buildPersonalInfo(robot, robotInfo));
+        // 使用智能选择器构建背景信息
+        prompt.append(buildSmartBackground(robot));
         
-        // 添加性格特征和兴趣爱好
-        prompt.append(buildTraitsAndInterests(robot, robotInfo));
-        
-        // 添加说话风格
-        prompt.append(buildSpeakingStyle(robotInfo));
+        // 使用智能选择器构建个人档案
+        prompt.append(buildSmartPersonalInfo(robot));
         
         // 添加动态信息
         prompt.append(String.format("\n\n## 你看到的动态内容：%s", post.getContent()));
@@ -130,10 +124,9 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n1. 评论要符合你的性格特征");
         prompt.append("\n2. 语言风格要符合你的说话习惯");
         prompt.append("\n3. 长度控制在20-80字之间");
-        prompt.append("\n4. 内容要积极正面，体现关心或共鸣");
-        prompt.append("\n5. 可以适当使用表情符号");
+        prompt.append("\n5. 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
 
-        log.info(prompt.toString());
+        log.info("生成的评论提示词: {}", prompt.toString());
         
         return prompt.toString();
     }
@@ -151,14 +144,11 @@ public class PromptServiceImpl implements PromptService {
         prompt.append(String.format("你是%s（昵称：%s），%s。你看到一个朋友圈消息的评论， 要回复一条评论\n\n## 背景信息列表",
             robot.getName(), nickname, robot.getPersonality()));
         
-        // 添加个人基本信息
-        prompt.append(buildPersonalInfo(robot, robotInfo));
+        // 使用智能选择器构建背景信息
+        prompt.append(buildSmartBackground(robot));
         
-        // 添加性格特征和兴趣爱好
-        prompt.append(buildTraitsAndInterests(robot, robotInfo));
-        
-        // 添加说话风格
-        prompt.append(buildSpeakingStyle(robotInfo));
+        // 使用智能选择器构建个人档案
+        prompt.append(buildSmartPersonalInfo(robot));
         
         // 添加动态和评论信息
         prompt.append(String.format("\n\n你看到的朋友圈内容：%s", postDetail.getContent()));
@@ -175,10 +165,9 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n1. 回复要符合你的性格特征");
         prompt.append("\n2. 语言风格要符合你的说话习惯");
         prompt.append("\n3. 长度控制在15-60字之间");
-        prompt.append("\n4. 内容要积极正面，体现互动和关心");
-        prompt.append("\n5. 可以适当使用表情符号");
+        prompt.append("\n5. 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
 
-        log.info(prompt.toString());
+        log.info("生成的回复提示词: {}", prompt.toString());
         
         return prompt.toString();
     }
@@ -195,11 +184,11 @@ public class PromptServiceImpl implements PromptService {
         prompt.append(String.format("你是%s（昵称：%s），一个%s的伊甸园居民。现在你要进行内心独白。", 
             robot.getName(), nickname, robot.getPersonality()));
         
-        // 添加个人基本信息
-        prompt.append(buildPersonalInfo(robot, robotInfo));
+        // 使用智能选择器构建背景信息
+        prompt.append(buildSmartBackground(robot));
         
-        // 添加性格特征和兴趣爱好
-        prompt.append(buildTraitsAndInterests(robot, robotInfo));
+        // 使用智能选择器构建个人档案
+        prompt.append(buildSmartPersonalInfo(robot));
         
         // 添加当前情况
         prompt.append(String.format("\n\n当前情况：%s", situation));
@@ -212,6 +201,8 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n3. 长度控制在30-100字之间");
         prompt.append("\n4. 内容要真实自然，体现内心感受");
         prompt.append("\n5. 可以适当使用省略号等表达方式");
+        
+        log.info("生成的内心活动提示词: {}", prompt.toString());
         
         return prompt.toString();
     }
@@ -771,5 +762,339 @@ public class PromptServiceImpl implements PromptService {
         }
         
         return result.toString();
+    }
+
+    /**
+     * 测试智能机器人属性选择器
+     * 用于验证智能选择器的功能是否正常工作
+     * 
+     * @param robot 机器人信息
+     * @return 测试结果信息
+     */
+    public String testSmartSelector(Robot robot) {
+        StringBuilder result = new StringBuilder();
+        result.append("=== 智能机器人属性选择器测试 ===\n");
+        result.append(String.format("测试机器人: %s (%s)\n", robot.getName(), robot.getRobotId()));
+        
+        // 获取机器人配置信息
+        RobotConfig.RobotInfo robotInfo = getRobotInfo(robot.getName());
+        if (robotInfo == null) {
+            result.append("错误: 未找到机器人配置信息\n");
+            return result.toString();
+        }
+        
+        result.append("机器人配置信息获取成功\n\n");
+        
+        // 测试各种属性路径
+        String[] testPaths = {
+            "traits",
+            "interests", 
+            "speakingStyle.tone",
+            "speakingStyle.favoriteWords",
+            "speakingStyle.speechPatterns",
+            "robot.gender",
+            "robot.age",
+            "robot.occupation",
+            "robot.location"
+        };
+        
+        for (String path : testPaths) {
+            result.append(String.format("测试路径: %s\n", path));
+            
+            // 测试不同的参数组合
+            for (int maxUnits = 1; maxUnits <= 3; maxUnits++) {
+                for (double nullProb = 0.0; nullProb <= 0.8; nullProb += 0.4) {
+                    List<String> values = getRobotValue(robot, path, maxUnits, nullProb);
+                    result.append(String.format("  参数(maxUnits=%d, nullProb=%.1f): %s\n", 
+                            maxUnits, nullProb, values.isEmpty() ? "空值" : values.toString()));
+                }
+            }
+            result.append("\n");
+        }
+        
+        // 测试智能背景构建
+        result.append("=== 智能背景构建测试 ===\n");
+        String smartBackground = buildSmartBackground(robot);
+        result.append("生成的智能背景:\n");
+        result.append(smartBackground);
+        result.append("\n\n");
+        
+        // 测试智能个人档案构建
+        result.append("=== 智能个人档案构建测试 ===\n");
+        String smartPersonalInfo = buildSmartPersonalInfo(robot);
+        result.append("生成的智能个人档案:\n");
+        result.append(smartPersonalInfo);
+        result.append("\n\n");
+        
+        // 测试完整提示词构建
+        result.append("=== 完整提示词构建测试 ===\n");
+        String context = "现在是下午3点，天气晴朗";
+        String postPrompt = buildPostPrompt(robot, context);
+        result.append("生成的动态提示词长度: " + postPrompt.length() + " 字符\n");
+        result.append("提示词预览: " + postPrompt.substring(0, Math.min(200, postPrompt.length())) + "...\n");
+        
+        return result.toString();
+    }
+
+    /**
+     * 智能机器人属性选择器
+     * 根据属性名选择性获取机器人配置信息，支持多级属性获取
+     * 
+     * @param robot 机器人实体
+     * @param attributePath 属性路径，支持多级，如 "speakingStyle.speechPatterns"
+     * @param maxUnits 最大返回单元数量
+     * @param nullProbability 空值几率 (0.0-1.0)
+     * @return 选中的属性值数组
+     */
+    private List<String> getRobotValue(Robot robot, String attributePath, int maxUnits, double nullProbability) {
+        List<String> result = new ArrayList<>();
+        
+        // 获取机器人的详细配置信息
+        RobotConfig.RobotInfo robotInfo = getRobotInfo(robot.getName());
+        
+        // 解析属性路径
+        String[] pathParts = attributePath.split("\\.");
+        Object currentValue = null;
+        
+        // 确定起始对象
+        if (pathParts[0].equals("robot")) {
+            currentValue = robot;
+        } else if (pathParts[0].equals("config")) {
+            currentValue = robotInfo;
+        } else {
+            // 默认从robotInfo开始查找
+            currentValue = robotInfo;
+        }
+        
+        // 遍历属性路径
+        for (int i = 0; i < pathParts.length && currentValue != null; i++) {
+            String part = pathParts[i];
+            if (part.equals("robot") || part.equals("config")) {
+                continue; // 跳过前缀
+            }
+            
+            currentValue = getPropertyValue(currentValue, part);
+        }
+        
+        // 处理最终值
+        if (currentValue != null) {
+            List<String> units = extractUnits(currentValue);
+            result = selectRandomUnits(units, maxUnits, nullProbability);
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 获取对象的属性值
+     */
+    private Object getPropertyValue(Object obj, String propertyName) {
+        if (obj == null) return null;
+        
+        try {
+            // 使用反射获取属性值
+            String getterName = "get" + propertyName.substring(0, 1).toUpperCase() + propertyName.substring(1);
+            java.lang.reflect.Method getter = obj.getClass().getMethod(getterName);
+            return getter.invoke(obj);
+        } catch (Exception e) {
+            log.warn("获取属性值失败: {}.{}, error: {}", 
+                    obj.getClass().getSimpleName(), propertyName, e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * 从值中提取单元
+     */
+    private List<String> extractUnits(Object value) {
+        List<String> units = new ArrayList<>();
+        
+        if (value == null) {
+            return units;
+        }
+        
+        if (value instanceof String) {
+            String strValue = (String) value;
+            if (strValue.contains("\n")) {
+                // 多行字符串，每行一个单元
+                String[] lines = strValue.split("\n");
+                for (String line : lines) {
+                    String trimmed = line.trim();
+                    if (!trimmed.isEmpty()) {
+                        units.add(trimmed);
+                    }
+                }
+            } else {
+                // 单行字符串，按逗号分隔
+                String[] parts = strValue.split(",");
+                for (String part : parts) {
+                    String trimmed = part.trim();
+                    if (!trimmed.isEmpty()) {
+                        units.add(trimmed);
+                    }
+                }
+            }
+        } else if (value instanceof List) {
+            // 列表，每个元素一个单元
+            List<?> list = (List<?>) value;
+            for (Object item : list) {
+                if (item != null) {
+                    units.add(item.toString());
+                }
+            }
+        } else {
+            // 其他类型，直接转换为字符串
+            units.add(value.toString());
+        }
+        
+        return units;
+    }
+    
+    /**
+     * 随机选择单元
+     */
+    private List<String> selectRandomUnits(List<String> units, int maxUnits, double nullProbability) {
+        List<String> result = new ArrayList<>();
+        
+        if (units.isEmpty()) {
+            return result;
+        }
+        
+        // 计算每个单元的出现概率
+        double unitProbability = 1.0 - nullProbability;
+        
+        // 随机选择单元
+        Collections.shuffle(units);
+
+        for (int i = 0; i < maxUnits && i < units.size(); i++) {
+            if (random.nextDouble() < unitProbability) {
+                String selectedUnit = units.get(i);
+                result.add(selectedUnit);
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 构建智能背景信息
+     * 使用智能选择器构建机器人的背景信息
+     */
+    private String buildSmartBackground(Robot robot) {
+        StringBuilder background = new StringBuilder();
+        
+        // 基本信息 - 选择性获取
+        background.append("\n性别:" + robot.getGender());
+        background.append("\n年龄:" + robot.getAge());
+        List<String> occupation = getRobotValue(robot, "occupation", 1, 0.8);
+        background.append("\n职业:" + (occupation.size() > 0 ? occupation.get(0) : ""));
+        
+        
+        // 性格特征 - 选择性获取2-3个
+        List<String> traits = getRobotValue(robot, "traits", 1, 0.4);
+        if (!traits.isEmpty()) {
+            background.append("\n### 性格特征：");
+            for (String trait : traits) {
+                background.append(String.format("\n- %s", trait));
+            }
+        }
+        
+        // 兴趣爱好 - 选择性获取2-4个
+        List<String> interests = getRobotValue(robot, "interests", 1, 0.3);
+        if (!interests.isEmpty()) {
+            background.append("\n### 兴趣爱好：");
+            for (String interest : interests) {
+                background.append(String.format("\n- %s", interest));
+            }
+        }
+        
+        // 说话风格 - 选择性获取
+        List<String> speakingStyle = getRobotValue(robot, "speakingStyle.tone", 1, 0.2);
+        if (!speakingStyle.isEmpty()) {
+            background.append(String.format("\n### 说话风格：%s", speakingStyle.get(0)));
+        }
+        
+        // 常用词汇 - 选择性获取1-3个
+        List<String> favoriteWords = getRobotValue(robot, "speakingStyle.favoriteWords", 1, 0.5);
+        if (!favoriteWords.isEmpty()) {
+            background.append(String.format("\n### 常用词汇：%s", String.join("、", favoriteWords)));
+        }
+        
+        // 说话习惯 - 选择性获取1-2个
+        List<String> speechPatterns = getRobotValue(robot, "speakingStyle.speechPatterns", 2, 0.6);
+        if (!speechPatterns.isEmpty()) {
+            background.append(String.format("\n### 说话习惯：%s", String.join("、", speechPatterns)));
+        }
+
+        // 背景信息 - 选择性获取1-2个
+        List<String> backgroundInfo = getRobotValue(robot, "background", 1, 0.4);
+        if (!backgroundInfo.isEmpty()) {
+            background.append(String.format("\n### 背景信息：%s", String.join("、", backgroundInfo)));
+        }
+        
+        return background.toString();
+    }
+    
+    /**
+     * 构建智能个人档案
+     * 使用智能选择器构建机器人的个人档案
+     */
+    private String buildSmartPersonalInfo(Robot robot) {
+        StringBuilder info = new StringBuilder();
+        
+        info.append("\n### 个人档案：");
+        
+        // 基本信息 - 选择性显示
+        String[] basicFields = {"gender", "age", "mbti", "bloodType", "zodiac", "occupation", "location", "education", "relationship"};
+        for (String field : basicFields) {
+            List<String> values = getRobotValue(robot, "robot." + field, 1, 0.3);
+            if (!values.isEmpty()) {
+                String label = getFieldLabel(field);
+                String value = formatFieldValue(field, values.get(0));
+                info.append(String.format("\n- %s：%s", label, value));
+            }
+        }
+        
+        return info.toString();
+    }
+    
+    /**
+     * 获取字段标签
+     */
+    private String getFieldLabel(String field) {
+        switch (field) {
+            case "gender": return "性别";
+            case "age": return "年龄";
+            case "mbti": return "MBTI";
+            case "bloodType": return "血型";
+            case "zodiac": return "星座";
+            case "occupation": return "职业";
+            case "location": return "所在地";
+            case "education": return "学历";
+            case "relationship": return "感情状态";
+            default: return field;
+        }
+    }
+    
+    /**
+     * 格式化字段值
+     */
+    private String formatFieldValue(String field, String value) {
+        if (value == null || value.isEmpty()) {
+            return "未知";
+        }
+        
+        switch (field) {
+            case "gender":
+                return "male".equals(value) ? "男" : "female".equals(value) ? "女" : value;
+            case "bloodType":
+                return value + "型";
+            case "relationship":
+                return getRelationshipText(value);
+            case "age":
+                return value + "岁";
+            default:
+                return value;
+        }
     }
 } 
