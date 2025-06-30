@@ -159,7 +159,10 @@ $robot-brave: #FF6347; // 小勇的红色
   --color-text: #222;
   --color-border: #e0e0e0;
 }
-[data-theme='dark'] {
+
+// 深色主题 - 支持两种选择器
+[data-theme='dark'],
+.dark-mode {
   --color-primary: #22d36b;
   --color-bg: #18191a;
   --color-card: #232425;

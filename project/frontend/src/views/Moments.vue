@@ -457,6 +457,7 @@ import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
+import { useWebSocketStore } from '@/stores/websocket'
 import { ElMessageBox, ElPopover } from 'element-plus'
 import { message } from '@/utils/message'
 import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View } from '@element-plus/icons-vue'
@@ -469,6 +470,7 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const momentsStore = useMomentsStore()
+const websocketStore = useWebSocketStore()
 const activeMenu = ref('/moments')
 const filterType = ref('')
 const publishing = ref(false)
@@ -519,38 +521,6 @@ watch(showInnerThoughtsDialog, (val) => {
 })
 
 // 方法
-const handleUserCommand = async (command) => {
-  switch (command) {
-    case 'profile-setup':
-      router.push('/profile-setup')
-      break
-    case 'settings':
-      message.info('设置功能开发中...')
-      break
-    case 'logout':
-      await handleLogout()
-      break
-  }
-}
-
-const handleLogout = async () => {
-  try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
-    await userStore.logout()
-    message.success('退出登录成功')
-    router.push('/login')
-  } catch (error) {
-    if (error !== 'cancel') {
-      message.error('退出登录失败')
-    }
-  }
-}
-
 const handleFilterChange = async () => {
   // 如果有搜索关键字，优先使用搜索
   if (searchKeyword.value.trim()) {
@@ -1331,6 +1301,26 @@ onMounted(async () => {
   
   // 添加点击外部关闭移动端菜单的监听
   document.addEventListener('click', handleClickOutside)
+
+  // WebSocket事件处理函数
+  const handlePostUpdate = async () => {
+    await momentsStore.loadPosts({}, true)
+    await loadAllCommentsAndReplies()
+  }
+  const handleCommentUpdate = async () => {
+    await momentsStore.loadPosts({}, true)
+    await loadAllCommentsAndReplies()
+  }
+  const handleRobotAction = async () => {
+    await momentsStore.loadPosts({}, true)
+    await loadAllCommentsAndReplies()
+  }
+  window.addEventListener('post-update', handlePostUpdate)
+  window.addEventListener('comment-update', handleCommentUpdate)
+  window.addEventListener('robot-post', handleRobotAction)
+  window.addEventListener('robot-comment', handleRobotAction)
+  window.addEventListener('robot-like', handleRobotAction)
+  window.addEventListener('robot-reply', handleRobotAction)
 })
 
 // 组件卸载时移除事件监听
@@ -1356,6 +1346,14 @@ onUnmounted(() => {
   }
   
   document.removeEventListener('click', handleClickOutside)
+
+  // WebSocket事件处理函数
+  window.removeEventListener('post-update', handlePostUpdate)
+  window.removeEventListener('comment-update', handleCommentUpdate)
+  window.removeEventListener('robot-post', handleRobotAction)
+  window.removeEventListener('robot-comment', handleRobotAction)
+  window.removeEventListener('robot-like', handleRobotAction)
+  window.removeEventListener('robot-reply', handleRobotAction)
 })
 
 // 点击外部区域关闭移动端菜单

@@ -7,11 +7,27 @@ import request from '@/utils/request'
  * - 提供WebSocket连接状态查询接口
  * - 提供在线用户信息查询接口
  * - 提供手动消息推送接口
+ * - 提供用户上线消息推送接口
  * 
  * @author MyEden Team
  * @version 1.0.0
  * @since 2024-01-01
  */
+
+/**
+ * 发送用户上线消息
+ * 
+ * @param {string} userId 用户ID
+ * @param {Object} userInfo 用户信息
+ * @returns {Promise<Object>} 操作结果
+ */
+export function sendUserOnlineMessage(userId, userInfo) {
+  return request({
+    url: `/websocket/user/${userId}/online`,
+    method: 'post',
+    data: userInfo
+  })
+}
 
 /**
  * 获取在线用户数量

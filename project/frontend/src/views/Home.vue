@@ -273,39 +273,6 @@ const navigateTo = (path) => {
   isMobileMenuOpen.value = false
 }
 
-const handleUserCommand = async (command) => {
-  switch (command) {
-    case 'profile-setup':
-      router.push('/profile-setup')
-      break
-    case 'settings':
-      message.info('设置功能开发中...')
-      break
-    case 'logout':
-      await handleLogout()
-      break
-  }
-}
-
-const handleLogout = async () => {
-  try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
-    await userStore.logout()
-    message.success('退出登录成功')
-    router.push('/login')
-    isMobileMenuOpen.value = false
-  } catch (error) {
-    if (error !== 'cancel') {
-      message.error('退出登录失败')
-    }
-  }
-}
-
 const formatTime = (time) => {
   const date = new Date(time)
   const now = new Date()

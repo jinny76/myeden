@@ -78,7 +78,6 @@
               v-for="robot in worldStore.robotList" 
               :key="robot.id" 
               class="robot-card"
-              @click="viewRobotPosts(robot)"
             >
               <div class="robot-content">
                 <div class="robot-avatar-section">
@@ -110,9 +109,6 @@
                     </span>
                   </div>
                 </div>
-                <div class="robot-arrow">
-                  <el-icon><ArrowRight /></el-icon>
-                </div>
               </div>
               <div class="robot-card-bg"></div>
             </div>
@@ -130,7 +126,7 @@ import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
-import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, ArrowRight } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 
 // 响应式数据
@@ -144,47 +140,6 @@ const isMobileMenuOpen = ref(false)
 const isLoggedIn = computed(() => userStore.isLoggedIn)
 
 // 方法
-const handleUserCommand = async (command) => {
-  switch (command) {
-    case 'profile-setup':
-      router.push('/profile-setup')
-      break
-    case 'settings':
-      message.info('设置功能开发中...')
-      break
-    case 'logout':
-      await handleLogout()
-      break
-  }
-}
-
-const handleLogout = async () => {
-  try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
-    await userStore.logout()
-    worldStore.clearWorld()
-    message.success('退出登录成功')
-    router.push('/login')
-  } catch (error) {
-    if (error !== 'cancel') {
-      message.error('退出登录失败')
-    }
-  }
-}
-
-const viewRobotPosts = (robot) => {
-  // 跳转到朋友圈页面，并传递机器人信息
-  router.push({
-    path: '/moments',
-    query: { robotId: robot.id }
-  })
-}
-
 const retryLoad = async () => {
   try {
     await worldStore.initWorld()
@@ -542,7 +497,6 @@ const navigateTo = (path) => {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   padding: 30px;
-  cursor: pointer;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
@@ -658,18 +612,6 @@ const navigateTo = (path) => {
   color: #ff4d4f;
 }
 
-.robot-arrow {
-  color: #22d36b;
-  opacity: 0.6;
-  transition: all 0.3s ease;
-  margin-top: 4px;
-}
-
-.robot-card:hover .robot-arrow {
-  opacity: 1;
-  transform: translateX(4px);
-}
-
 .robot-card-bg {
   position: absolute;
   top: 0;
@@ -777,17 +719,6 @@ const navigateTo = (path) => {
   
   .robot-tags {
     justify-content: center;
-  }
-  
-  .robot-arrow {
-    position: absolute;
-    top: 50%;
-    right: 20px;
-    transform: translateY(-50%);
-  }
-  
-  .robot-card:hover .robot-arrow {
-    transform: translateY(-50%) translateX(4px);
   }
 }
 

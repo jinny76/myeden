@@ -4,6 +4,8 @@ import { Client } from '@stomp/stompjs'
 import { message } from '@/utils/message'
 import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
+import { useConfigStore } from '@/stores/config'
+import { sendUserOnlineMessage } from '@/api/websocket'
 
 /**
  * WebSocket状态管理
@@ -43,6 +45,15 @@ export const useWebSocketStore = defineStore('websocket', () => {
   const canReconnect = computed(() => {
     return reconnectAttempts.value < maxReconnectAttempts.value
   })
+
+  /**
+   * 获取WebSocket连接URL
+   */
+  const getWebSocketUrl = () => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = window.location.host
+    return `${protocol}//${host}/ws`
+  }
 
   /**
    * 连接WebSocket
@@ -108,30 +119,6 @@ export const useWebSocketStore = defineStore('websocket', () => {
     }
   }
 
-  /**
-   * 根据当前访问的网址推算WebSocket URL
-   */
-  const getWebSocketUrl = () => {
-    // 优先使用环境变量配置
-    if (import.meta.env.VITE_WS_URL) {
-      return import.meta.env.VITE_WS_URL
-    }
-
-    // 根据当前页面URL推算WebSocket URL
-    const currentUrl = window.location
-    const protocol = currentUrl.protocol === 'https:' ? 'wss:' : 'ws:'
-    const host = currentUrl.hostname
-    const port = currentUrl.port || (currentUrl.protocol === 'https:' ? '443' : '80')
-    
-    // 如果是开发环境，使用默认的WebSocket端口
-    if (import.meta.env.DEV) {
-      return `${protocol}//${host}/ws`
-    }
-    
-    // 生产环境使用相同的主机和端口
-    return `${protocol}//${host}:${port}/ws`
-  }
-
   // 开发环境下添加测试函数
   if (import.meta.env.DEV) {
     window.testWebSocketUrl = () => {
@@ -148,18 +135,26 @@ export const useWebSocketStore = defineStore('websocket', () => {
    * 断开WebSocket连接
    */
   const disconnect = () => {
-    if (stompClient.value && isConnected.value) {
-      stompClient.value.deactivate()
-      stompClient.value = null
+    if (stompClient.value) {
+      try {
+        // 取消所有订阅
+        subscriptions.value.forEach((subscription, id) => {
+          subscription.unsubscribe()
+          console.log('📡 取消订阅:', id)
+        })
+        subscriptions.value.clear()
+        
+        // 断开连接
+        stompClient.value.deactivate()
+        console.log('🔌 WebSocket连接已断开')
+      } catch (error) {
+        console.error('❌ 断开WebSocket连接失败:', error)
+      } finally {
+        isConnected.value = false
+        isConnecting.value = false
+        stompClient.value = null
+      }
     }
-    isConnected.value = false
-    isConnecting.value = false
-    reconnectAttempts.value = 0
-    
-    // 清理订阅
-    subscriptions.value.clear()
-    
-    console.log('🔌 WebSocket连接已断开')
   }
 
   /**
@@ -251,8 +246,190 @@ export const useWebSocketStore = defineStore('websocket', () => {
     // 处理消息队列
     processMessageQueue()
     
-    // 重新订阅之前的主题
-    resubscribeTopics()
+    // 订阅消息主题
+    subscribeToTopics()
+    
+    // 发送用户上线消息
+    sendUserOnlineNotification()
+  }
+
+  /**
+   * 发送用户上线通知
+   */
+  const sendUserOnlineNotification = async () => {
+    try {
+      const userStore = useUserStore()
+      if (userStore.userInfo?.userId) {
+        const userInfo = {
+          nickname: userStore.userInfo.nickname,
+          avatar: userStore.userInfo.avatar
+        }
+        
+        await sendUserOnlineMessage(userStore.userInfo.userId, userInfo)
+        console.log('📢 用户上线消息已发送')
+      }
+    } catch (error) {
+      console.error('❌ 发送用户上线消息失败:', error)
+    }
+  }
+
+  /**
+   * 订阅消息主题
+   */
+  const subscribeToTopics = () => {
+    // 订阅广播消息
+    subscribe('/topic/broadcast', handleBroadcastMessage, 'broadcast')
+    
+    // 订阅用户个人消息
+    const userStore = useUserStore()
+    if (userStore.userInfo?.userId) {
+      subscribe(`/user/${userStore.userInfo.userId}/queue/messages`, handleUserMessage, 'user-messages')
+    }
+    
+    console.log('📡 WebSocket消息订阅完成')
+  }
+
+  /**
+   * 处理广播消息
+   */
+  const handleBroadcastMessage = (message) => {
+    console.log('📢 收到广播消息:', message)
+    
+    try {
+      // 根据消息类型处理
+      switch (message.type) {
+        case 'POST_UPDATE':
+          handlePostUpdateMessage(message)
+          break
+        case 'COMMENT_UPDATE':
+          handleCommentUpdateMessage(message)
+          break
+        case 'ROBOT_ACTION':
+          handleRobotActionMessage(message)
+          break
+        case 'NOTIFICATION':
+          handleNotificationMessage(message)
+          break
+        case 'SYSTEM_MESSAGE':
+          handleSystemMessage(message)
+          break
+        case 'HEARTBEAT':
+          // 心跳消息，不需要特殊处理
+          console.log('💓 收到心跳消息')
+          break
+        default:
+          console.log('未知消息类型:', message.type)
+      }
+    } catch (error) {
+      console.error('处理广播消息失败:', error)
+    }
+  }
+
+  /**
+   * 处理用户个人消息
+   */
+  const handleUserMessage = (message) => {
+    console.log('👤 收到用户消息:', message)
+    
+    try {
+      // 显示通知
+      if (message.title && message.content) {
+        message.info(message.content)
+      }
+    } catch (error) {
+      console.error('处理用户消息失败:', error)
+    }
+  }
+
+  /**
+   * 处理动态更新消息
+   */
+  const handlePostUpdateMessage = (message) => {
+    console.log('📝 处理动态更新消息:', message)
+    
+    // 触发动态列表刷新
+    // 这里可以通过事件总线或直接调用store方法来刷新数据
+    window.dispatchEvent(new CustomEvent('post-update', { 
+      detail: message.data 
+    }))
+    
+    // 显示通知
+    if (message.title && message.content) {
+      message.success(message.content)
+    }
+  }
+
+  /**
+   * 处理评论更新消息
+   */
+  const handleCommentUpdateMessage = (message) => {
+    console.log('💬 处理评论更新消息:', message)
+    
+    // 触发评论列表刷新
+    window.dispatchEvent(new CustomEvent('comment-update', { 
+      detail: message.data 
+    }))
+    
+    // 显示通知
+    if (message.title && message.content) {
+      message.info(message.content)
+    }
+  }
+
+  /**
+   * 处理通知消息
+   */
+  const handleNotificationMessage = (message) => {
+    console.log('📢 处理通知消息:', message)
+    
+    // 获取配置Store
+    const configStore = useConfigStore()
+    
+    // 检查是否是用户上线消息
+    if (message.title === '用户上线' && message.data) {
+      const userData = message.data
+      const userStore = useUserStore()
+      
+      // 如果不是自己上线，且用户开启了上线通知，才显示提示
+      if (userStore.userInfo?.userId !== userData.userId && configStore.config.notifications.userOnline) {
+        message.info(`${userData.userName} 来到了伊甸园`)
+      }
+    } else {
+      // 显示其他通知
+      if (message.title && message.content) {
+        message.info(message.content)
+      }
+    }
+  }
+
+  /**
+   * 处理系统消息
+   */
+  const handleSystemMessage = (message) => {
+    console.log('🔧 处理系统消息:', message)
+    
+    // 显示系统通知
+    if (message.title && message.content) {
+      message.warning(message.content)
+    }
+  }
+
+  /**
+   * 获取行为文本描述
+   */
+  const getActionText = (actionType) => {
+    switch (actionType) {
+      case 'post':
+        return '发布了新动态'
+      case 'comment':
+        return '发表了评论'
+      case 'like':
+        return '点赞了动态'
+      case 'reply':
+        return '回复了评论'
+      default:
+        return '执行了操作'
+    }
   }
 
   /**
@@ -287,8 +464,8 @@ export const useWebSocketStore = defineStore('websocket', () => {
    * 重新订阅主题
    */
   const resubscribeTopics = () => {
-    // 这里可以保存和恢复之前的订阅
-    console.log('🔄 重新订阅主题')
+    // 重新订阅之前的主题
+    subscribeToTopics()
   }
 
   /**
@@ -312,21 +489,6 @@ export const useWebSocketStore = defineStore('websocket', () => {
       default:
         console.log('未知消息类型:', message.type)
     }
-  }
-
-  /**
-   * 处理通知消息
-   */
-  const handleNotification = (notification) => {
-    console.log('📢 收到通知:', notification)
-    addToMessageHistory('notification', notification)
-    
-    // 显示通知
-    message({
-      message: notification.message,
-      type: notification.type || 'info',
-      duration: notification.duration || 3000
-    })
   }
 
   /**
@@ -379,11 +541,52 @@ export const useWebSocketStore = defineStore('websocket', () => {
   }
 
   /**
-   * 处理通知消息
+   * 处理机器人行为消息
    */
-  const handleNotificationMessage = (message) => {
-    console.log('📢 处理通知消息:', message)
-    // 处理通知相关的消息
+  const handleRobotActionMessage = (message) => {
+    console.log('🤖 处理机器人行为消息:', message)
+    
+    const actionData = message.data
+    if (!actionData) return
+    
+    // 获取配置Store
+    const configStore = useConfigStore()
+    
+    // 根据机器人行为类型处理
+    switch (actionData.actionType) {
+      case 'post':
+        // 机器人发布动态
+        window.dispatchEvent(new CustomEvent('robot-post', { 
+          detail: actionData 
+        }))
+        break
+      case 'comment':
+        // 机器人发表评论
+        window.dispatchEvent(new CustomEvent('robot-comment', { 
+          detail: actionData 
+        }))
+        break
+      case 'like':
+        // 机器人点赞
+        window.dispatchEvent(new CustomEvent('robot-like', { 
+          detail: actionData 
+        }))
+        break
+      case 'reply':
+        // 机器人回复
+        window.dispatchEvent(new CustomEvent('robot-reply', { 
+          detail: actionData 
+        }))
+        break
+      default:
+        console.log('未知机器人行为类型:', actionData.actionType)
+    }
+    
+    // 显示机器人行为通知（根据配置决定）
+    if (actionData.robotName && actionData.actionType && configStore.config.notifications.robotAction) {
+      const actionText = getActionText(actionData.actionType)
+      message.info(`天使 ${actionData.robotName} ${actionText}`)
+    }
   }
 
   /**
@@ -507,4 +710,4 @@ export const useWebSocketStore = defineStore('websocket', () => {
     clearMessageHistory,
     getMessageHistory
   }
-}) 
+})

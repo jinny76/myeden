@@ -128,8 +128,8 @@ public class FileController {
                 return conditionalResponse;
             }
             
-            // 设置响应头
-            HttpHeaders headers = new HttpHeaders();
+                // 设置响应头
+                HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(metadata.getContentType()));
             headers.setETag("\"" + metadata.getEtag() + "\"");
             headers.setLastModified(metadata.getLastModified());
@@ -138,17 +138,17 @@ public class FileController {
             // 缓存控制头
             headers.setCacheControl("public, max-age=" + cacheTtlSeconds + ", must-revalidate");
             headers.setExpires(System.currentTimeMillis() + (cacheTtlSeconds * 1000L));
-            
-            // 允许跨域访问
-            headers.setAccessControlAllowOrigin("*");
+                
+                // 允许跨域访问
+                headers.setAccessControlAllowOrigin("*");
             headers.setAccessControlAllowMethods(java.util.Arrays.asList(HttpMethod.GET, HttpMethod.HEAD));
             headers.setAccessControlMaxAge(cacheTtlSeconds);
             
             logger.debug("返回文件: {} (ETag: {}, Size: {})", filePath.toString(), metadata.getEtag(), metadata.getFileSize());
-            
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .body(resource);
+                
+                return ResponseEntity.ok()
+                        .headers(headers)
+                        .body(resource);
             
         } catch (MalformedURLException e) {
             logger.error("文件路径错误", e);
