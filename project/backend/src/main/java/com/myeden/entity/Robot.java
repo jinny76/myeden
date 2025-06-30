@@ -616,39 +616,6 @@ public class Robot {
         this.updatedAt = LocalDateTime.now();
     }
     
-    /**
-     * 测试topic功能
-     * 用于验证topic相关方法是否正常工作
-     */
-    public void testTopicFunctionality() {
-        System.out.println("=== Robot Topic功能测试 ===");
-        System.out.println("机器人: " + this.name);
-        System.out.println("当前主题数量: " + (this.topics != null ? this.topics.size() : 0));
-        
-        // 添加测试主题
-        this.addTopic("分享生活", 1, "分享自己最近的生活");
-        this.addTopic("分享心情", 2, "分享自己最近的心情");
-        this.addTopic("分享感悟", 1, "分享自己最近的人生感悟");
-        
-        System.out.println("添加主题后数量: " + this.topics.size());
-        
-        // 测试获取主题
-        Topic topic = this.getTopicByName("分享心情");
-        if (topic != null) {
-            System.out.println("找到主题: " + topic.getName() + ", 频次: " + topic.getFrequency());
-        }
-        
-        // 测试移除主题
-        this.removeTopic("分享感悟");
-        System.out.println("移除主题后数量: " + this.topics.size());
-        
-        // 显示所有主题
-        System.out.println("所有主题:");
-        for (Topic t : this.topics) {
-            System.out.println("- " + t.getName() + " (频次: " + t.getFrequency() + "): " + t.getContent());
-        }
-    }
-    
     @Override
     public String toString() {
         return "Robot{" +

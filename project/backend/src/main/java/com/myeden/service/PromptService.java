@@ -145,13 +145,4 @@ public interface PromptService {
     String generateReplyContent(Robot robot, CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail, String context);
 
     String generateInnerThoughts(Robot robot, String situation);
-
-    /**
-     * 测试智能机器人属性选择器
-     * 用于验证智能选择器的功能是否正常工作
-     * 
-     * @param robot 机器人信息
-     * @return 测试结果信息
-     */
-    String testSmartSelector(Robot robot);
 }

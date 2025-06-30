@@ -714,126 +714,125 @@ public class PromptServiceImpl implements PromptService {
     }
     
     /**
-     * 测试topic选择功能
-     * 用于验证通用主题和个人主题的合并与随机选择是否正常工作
-     * 
-     * @param robot 机器人信息
-     * @return 测试结果信息
+     * 构建智能背景信息
+     * 使用智能选择器构建机器人的背景信息
      */
-    public String testTopicSelection(Robot robot) {
-        StringBuilder result = new StringBuilder();
-        result.append("=== Topic选择功能测试 ===\n");
-        result.append(String.format("测试机器人: %s (%s)\n", robot.getName(), robot.getRobotId()));
+    private String buildSmartBackground(Robot robot) {
+        StringBuilder background = new StringBuilder();
         
-        try {
-            // 获取合并后的主题列表
-            List<TopicItem> mergedTopics = getMergedTopics(robot);
-            result.append(String.format("合并主题总数: %d\n", mergedTopics.size()));
-            
-            // 统计通用主题和个人主题
-            long commonCount = mergedTopics.stream().filter(t -> "common".equals(t.getSource())).count();
-            long personalCount = mergedTopics.stream().filter(t -> "personal".equals(t.getSource())).count();
-            result.append(String.format("通用主题: %d 个\n", commonCount));
-            result.append(String.format("个人主题: %d 个\n", personalCount));
-            
-            // 显示所有主题详情
-            result.append("\n主题详情:\n");
-            for (TopicItem topic : mergedTopics) {
-                result.append(String.format("- %s (频次: %d, 来源: %s): %s\n", 
-                        topic.getName(), topic.getFrequency(), topic.getSource(), topic.getContent()));
+        // 基本信息 - 选择性获取
+        background.append("\n性别:" + robot.getGender());
+        background.append("\n年龄:" + robot.getAge());
+        List<String> occupation = getRobotValue(robot, "occupation", 1, 0.8);
+        background.append("\n职业:" + (occupation.size() > 0 ? occupation.get(0) : ""));
+        
+        
+        // 性格特征 - 选择性获取2-3个
+        List<String> traits = getRobotValue(robot, "traits", 1, 0.4);
+        if (!traits.isEmpty()) {
+            background.append("\n### 性格特征：");
+            for (String trait : traits) {
+                background.append(String.format("\n- %s", trait));
             }
-            
-            // 进行多次随机选择测试
-            result.append("\n随机选择测试 (10次):\n");
-            for (int i = 1; i <= 10; i++) {
-                String selectedTopic = selectRandomTopic(robot);
-                result.append(String.format("%d. %s\n", i, selectedTopic));
-            }
-            
-            // 测试提示词构建
-            result.append("\n提示词构建测试:\n");
-            String context = "现在是下午3点，天气晴朗";
-            String prompt = buildPostPrompt(robot, context);
-            result.append("生成的提示词包含指定主题要求: " + prompt.contains("指定主题"));
-            
-        } catch (Exception e) {
-            result.append(String.format("测试失败: %s\n", e.getMessage()));
-            log.error("Topic选择功能测试失败", e);
         }
         
-        return result.toString();
-    }
+        // 兴趣爱好 - 选择性获取2-4个
+        List<String> interests = getRobotValue(robot, "interests", 1, 0.3);
+        if (!interests.isEmpty()) {
+            background.append("\n### 兴趣爱好：");
+            for (String interest : interests) {
+                background.append(String.format("\n- %s", interest));
+            }
+        }
+        
+        // 说话风格 - 选择性获取
+        List<String> speakingStyle = getRobotValue(robot, "speakingStyle.tone", 1, 0.2);
+        if (!speakingStyle.isEmpty()) {
+            background.append(String.format("\n### 说话风格：%s", speakingStyle.get(0)));
+        }
+        
+        // 常用词汇 - 选择性获取1-3个
+        List<String> favoriteWords = getRobotValue(robot, "speakingStyle.favoriteWords", 1, 0.5);
+        if (!favoriteWords.isEmpty()) {
+            background.append(String.format("\n### 常用词汇：%s", String.join("、", favoriteWords)));
+        }
+        
+        // 说话习惯 - 选择性获取1-2个
+        List<String> speechPatterns = getRobotValue(robot, "speakingStyle.speechPatterns", 2, 0.6);
+        if (!speechPatterns.isEmpty()) {
+            background.append(String.format("\n### 说话习惯：%s", String.join("、", speechPatterns)));
+        }
 
+        // 背景信息 - 选择性获取1-2个
+        List<String> backgroundInfo = getRobotValue(robot, "background", 1, 0.4);
+        if (!backgroundInfo.isEmpty()) {
+            background.append(String.format("\n### 背景信息：%s", String.join("、", backgroundInfo)));
+        }
+        
+        return background.toString();
+    }
+    
     /**
-     * 测试智能机器人属性选择器
-     * 用于验证智能选择器的功能是否正常工作
-     * 
-     * @param robot 机器人信息
-     * @return 测试结果信息
+     * 构建智能个人档案
+     * 使用智能选择器构建机器人的个人档案
      */
-    public String testSmartSelector(Robot robot) {
-        StringBuilder result = new StringBuilder();
-        result.append("=== 智能机器人属性选择器测试 ===\n");
-        result.append(String.format("测试机器人: %s (%s)\n", robot.getName(), robot.getRobotId()));
+    private String buildSmartPersonalInfo(Robot robot) {
+        StringBuilder info = new StringBuilder();
         
-        // 获取机器人配置信息
-        RobotConfig.RobotInfo robotInfo = getRobotInfo(robot.getName());
-        if (robotInfo == null) {
-            result.append("错误: 未找到机器人配置信息\n");
-            return result.toString();
-        }
+        info.append("\n### 个人档案：");
         
-        result.append("机器人配置信息获取成功\n\n");
-        
-        // 测试各种属性路径
-        String[] testPaths = {
-            "traits",
-            "interests", 
-            "speakingStyle.tone",
-            "speakingStyle.favoriteWords",
-            "speakingStyle.speechPatterns",
-            "robot.gender",
-            "robot.age",
-            "robot.occupation",
-            "robot.location"
-        };
-        
-        for (String path : testPaths) {
-            result.append(String.format("测试路径: %s\n", path));
-            
-            // 测试不同的参数组合
-            for (int maxUnits = 1; maxUnits <= 3; maxUnits++) {
-                for (double nullProb = 0.0; nullProb <= 0.8; nullProb += 0.4) {
-                    List<String> values = getRobotValue(robot, path, maxUnits, nullProb);
-                    result.append(String.format("  参数(maxUnits=%d, nullProb=%.1f): %s\n", 
-                            maxUnits, nullProb, values.isEmpty() ? "空值" : values.toString()));
-                }
+        // 基本信息 - 选择性显示
+        String[] basicFields = {"gender", "age", "mbti", "bloodType", "zodiac", "occupation", "location", "education", "relationship"};
+        for (String field : basicFields) {
+            List<String> values = getRobotValue(robot, "robot." + field, 1, 0.3);
+            if (!values.isEmpty()) {
+                String label = getFieldLabel(field);
+                String value = formatFieldValue(field, values.get(0));
+                info.append(String.format("\n- %s：%s", label, value));
             }
-            result.append("\n");
         }
         
-        // 测试智能背景构建
-        result.append("=== 智能背景构建测试 ===\n");
-        String smartBackground = buildSmartBackground(robot);
-        result.append("生成的智能背景:\n");
-        result.append(smartBackground);
-        result.append("\n\n");
+        return info.toString();
+    }
+    
+    /**
+     * 获取字段标签
+     */
+    private String getFieldLabel(String field) {
+        switch (field) {
+            case "gender": return "性别";
+            case "age": return "年龄";
+            case "mbti": return "MBTI";
+            case "bloodType": return "血型";
+            case "zodiac": return "星座";
+            case "occupation": return "职业";
+            case "location": return "所在地";
+            case "education": return "学历";
+            case "relationship": return "感情状态";
+            default: return field;
+        }
+    }
+    
+    /**
+     * 格式化字段值
+     */
+    private String formatFieldValue(String field, String value) {
+        if (value == null || value.isEmpty()) {
+            return "未知";
+        }
         
-        // 测试智能个人档案构建
-        result.append("=== 智能个人档案构建测试 ===\n");
-        String smartPersonalInfo = buildSmartPersonalInfo(robot);
-        result.append("生成的智能个人档案:\n");
-        result.append(smartPersonalInfo);
-        result.append("\n\n");
-        
-        // 测试完整提示词构建
-        result.append("=== 完整提示词构建测试 ===\n");
-        String context = "现在是下午3点，天气晴朗";
-        String postPrompt = buildPostPrompt(robot, context);
-        result.append("生成的动态提示词长度: " + postPrompt.length() + " 字符\n");
-        result.append("提示词预览: " + postPrompt.substring(0, Math.min(200, postPrompt.length())) + "...\n");
-        
-        return result.toString();
+        switch (field) {
+            case "gender":
+                return "male".equals(value) ? "男" : "female".equals(value) ? "女" : value;
+            case "bloodType":
+                return value + "型";
+            case "relationship":
+                return getRelationshipText(value);
+            case "age":
+                return value + "岁";
+            default:
+                return value;
+        }
     }
 
     /**
@@ -974,127 +973,5 @@ public class PromptServiceImpl implements PromptService {
         }
         
         return result;
-    }
-    
-    /**
-     * 构建智能背景信息
-     * 使用智能选择器构建机器人的背景信息
-     */
-    private String buildSmartBackground(Robot robot) {
-        StringBuilder background = new StringBuilder();
-        
-        // 基本信息 - 选择性获取
-        background.append("\n性别:" + robot.getGender());
-        background.append("\n年龄:" + robot.getAge());
-        List<String> occupation = getRobotValue(robot, "occupation", 1, 0.8);
-        background.append("\n职业:" + (occupation.size() > 0 ? occupation.get(0) : ""));
-        
-        
-        // 性格特征 - 选择性获取2-3个
-        List<String> traits = getRobotValue(robot, "traits", 1, 0.4);
-        if (!traits.isEmpty()) {
-            background.append("\n### 性格特征：");
-            for (String trait : traits) {
-                background.append(String.format("\n- %s", trait));
-            }
-        }
-        
-        // 兴趣爱好 - 选择性获取2-4个
-        List<String> interests = getRobotValue(robot, "interests", 1, 0.3);
-        if (!interests.isEmpty()) {
-            background.append("\n### 兴趣爱好：");
-            for (String interest : interests) {
-                background.append(String.format("\n- %s", interest));
-            }
-        }
-        
-        // 说话风格 - 选择性获取
-        List<String> speakingStyle = getRobotValue(robot, "speakingStyle.tone", 1, 0.2);
-        if (!speakingStyle.isEmpty()) {
-            background.append(String.format("\n### 说话风格：%s", speakingStyle.get(0)));
-        }
-        
-        // 常用词汇 - 选择性获取1-3个
-        List<String> favoriteWords = getRobotValue(robot, "speakingStyle.favoriteWords", 1, 0.5);
-        if (!favoriteWords.isEmpty()) {
-            background.append(String.format("\n### 常用词汇：%s", String.join("、", favoriteWords)));
-        }
-        
-        // 说话习惯 - 选择性获取1-2个
-        List<String> speechPatterns = getRobotValue(robot, "speakingStyle.speechPatterns", 2, 0.6);
-        if (!speechPatterns.isEmpty()) {
-            background.append(String.format("\n### 说话习惯：%s", String.join("、", speechPatterns)));
-        }
-
-        // 背景信息 - 选择性获取1-2个
-        List<String> backgroundInfo = getRobotValue(robot, "background", 1, 0.4);
-        if (!backgroundInfo.isEmpty()) {
-            background.append(String.format("\n### 背景信息：%s", String.join("、", backgroundInfo)));
-        }
-        
-        return background.toString();
-    }
-    
-    /**
-     * 构建智能个人档案
-     * 使用智能选择器构建机器人的个人档案
-     */
-    private String buildSmartPersonalInfo(Robot robot) {
-        StringBuilder info = new StringBuilder();
-        
-        info.append("\n### 个人档案：");
-        
-        // 基本信息 - 选择性显示
-        String[] basicFields = {"gender", "age", "mbti", "bloodType", "zodiac", "occupation", "location", "education", "relationship"};
-        for (String field : basicFields) {
-            List<String> values = getRobotValue(robot, "robot." + field, 1, 0.3);
-            if (!values.isEmpty()) {
-                String label = getFieldLabel(field);
-                String value = formatFieldValue(field, values.get(0));
-                info.append(String.format("\n- %s：%s", label, value));
-            }
-        }
-        
-        return info.toString();
-    }
-    
-    /**
-     * 获取字段标签
-     */
-    private String getFieldLabel(String field) {
-        switch (field) {
-            case "gender": return "性别";
-            case "age": return "年龄";
-            case "mbti": return "MBTI";
-            case "bloodType": return "血型";
-            case "zodiac": return "星座";
-            case "occupation": return "职业";
-            case "location": return "所在地";
-            case "education": return "学历";
-            case "relationship": return "感情状态";
-            default: return field;
-        }
-    }
-    
-    /**
-     * 格式化字段值
-     */
-    private String formatFieldValue(String field, String value) {
-        if (value == null || value.isEmpty()) {
-            return "未知";
-        }
-        
-        switch (field) {
-            case "gender":
-                return "male".equals(value) ? "男" : "female".equals(value) ? "女" : value;
-            case "bloodType":
-                return value + "型";
-            case "relationship":
-                return getRelationshipText(value);
-            case "age":
-                return value + "岁";
-            default:
-                return value;
-        }
     }
 } 
