@@ -47,12 +47,30 @@
                 :auto-upload="false"
                 :on-change="handleImageChange"
                 :on-remove="handleImageRemove"
+                :on-exceed="handleImageExceed"
                 :file-list="newPost.images"
                 list-type="picture-card"
                 :limit="9"
                 accept="image/*"
+                multiple
+                drag
+                :show-file-list="true"
+                class="image-uploader"
               >
-                <el-icon><Plus /></el-icon>
+                <template #trigger>
+                  <div class="upload-trigger">
+                    <el-icon class="upload-icon"><Plus /></el-icon>
+                    <div class="upload-text">
+                      <span class="upload-title">点击或拖拽上传图片</span>
+                      <span class="upload-hint">支持 JPG、PNG、GIF 格式，单张不超过 10MB</span>
+                    </div>
+                  </div>
+                </template>
+                <template #tip>
+                  <div class="upload-tip">
+                    <span>最多可上传 9 张图片，总大小不超过 90MB ({{ newPost.images.length }}/9)</span>
+                  </div>
+                </template>
               </el-upload>
             </div>
             
@@ -108,12 +126,24 @@
                 :auto-upload="false"
                 :on-change="handleImageChange"
                 :on-remove="handleImageRemove"
+                :on-exceed="handleImageExceed"
                 :file-list="newPost.images"
                 list-type="picture-card"
                 :limit="9"
                 accept="image/*"
+                multiple
+                :show-file-list="true"
+                class="mobile-image-uploader"
               >
-                <el-icon><Plus /></el-icon>
+                <template #trigger>
+                  <div class="mobile-upload-trigger">
+                    <el-icon class="mobile-upload-icon"><Plus /></el-icon>
+                    <div class="mobile-upload-text">
+                      <span class="mobile-upload-title">选择图片</span>
+                      <span class="mobile-upload-hint">{{ newPost.images.length }}/9 (≤90MB)</span>
+                    </div>
+                  </div>
+                </template>
               </el-upload>
             </div>
           </div>
@@ -797,6 +827,21 @@ const publishPost = async () => {
     return
   }
   
+  // 检查图片总大小
+  if (newPost.value.images && newPost.value.images.length > 0) {
+    const totalSize = newPost.value.images.reduce((total, fileObj) => {
+      return total + (fileObj.raw ? fileObj.raw.size : 0)
+    }, 0)
+    const totalSizeMB = totalSize / 1024 / 1024
+    
+    if (totalSizeMB > 90) {
+      message.error(`图片总大小不能超过 90MB，当前总大小: ${totalSizeMB.toFixed(1)}MB`)
+      return
+    }
+    
+    console.log(`准备发布动态，包含 ${newPost.value.images.length} 张图片，总大小: ${totalSizeMB.toFixed(1)}MB`)
+  }
+  
   try {
     publishing.value = true
     
@@ -859,7 +904,14 @@ const publishPost = async () => {
       message.success('动态发布成功')
     }
   } catch (error) {
-    message.error('动态发布失败')
+    console.error('发布动态失败:', error)
+    if (error.response?.status === 413) {
+      message.error('图片总大小超过服务器限制，请减少图片数量或压缩图片')
+    } else if (error.message?.includes('size')) {
+      message.error('图片大小超过限制，请选择较小的图片')
+    } else {
+      message.error('动态发布失败，请重试')
+    }
   } finally {
     publishing.value = false
   }
@@ -872,6 +924,21 @@ const publishPostMobile = async () => {
   if (!newPost.value.content.trim()) {
     message.warning('请输入动态内容')
     return
+  }
+  
+  // 检查图片总大小
+  if (newPost.value.images && newPost.value.images.length > 0) {
+    const totalSize = newPost.value.images.reduce((total, fileObj) => {
+      return total + (fileObj.raw ? fileObj.raw.size : 0)
+    }, 0)
+    const totalSizeMB = totalSize / 1024 / 1024
+    
+    if (totalSizeMB > 90) {
+      message.error(`图片总大小不能超过 90MB，当前总大小: ${totalSizeMB.toFixed(1)}MB`)
+      return
+    }
+    
+    console.log(`准备发布动态，包含 ${newPost.value.images.length} 张图片，总大小: ${totalSizeMB.toFixed(1)}MB`)
   }
   
   try {
@@ -941,7 +1008,14 @@ const publishPostMobile = async () => {
       message.success('动态发布成功')
     }
   } catch (error) {
-    message.error('动态发布失败')
+    console.error('发布动态失败:', error)
+    if (error.response?.status === 413) {
+      message.error('图片总大小超过服务器限制，请减少图片数量或压缩图片')
+    } else if (error.message?.includes('size')) {
+      message.error('图片大小超过限制，请选择较小的图片')
+    } else {
+      message.error('动态发布失败，请重试')
+    }
   } finally {
     publishing.value = false
   }
@@ -1215,6 +1289,17 @@ const handleImageChange = (file, fileList) => {
     return false
   }
   
+  // 检查总大小限制（9张图片，每张最大10MB，总大小不超过90MB）
+  const totalSize = fileList.reduce((total, fileObj) => {
+    return total + (fileObj.raw ? fileObj.raw.size : 0)
+  }, 0)
+  const totalSizeMB = totalSize / 1024 / 1024
+  
+  if (totalSizeMB > 90) {
+    message.error(`图片总大小不能超过 90MB，当前总大小: ${totalSizeMB.toFixed(1)}MB`)
+    return false
+  }
+  
   // 为文件对象添加URL用于预览
   if (file.raw && !file.url) {
     file.url = URL.createObjectURL(file.raw)
@@ -1222,11 +1307,20 @@ const handleImageChange = (file, fileList) => {
   
   // 更新图片列表，保持完整的文件对象结构
   newPost.value.images = fileList
+  
+  // 显示当前总大小信息
+  if (fileList.length > 0) {
+    console.log(`已选择 ${fileList.length} 张图片，总大小: ${totalSizeMB.toFixed(1)}MB`)
+  }
 }
 
 const handleImageRemove = (file, fileList) => {
   // 更新图片列表
   newPost.value.images = fileList
+}
+
+const handleImageExceed = (files, fileList) => {
+  message.error('图片数量超过限制，最多只能上传 9 张图片')
 }
 
 const getImageGridClass = (count) => {
