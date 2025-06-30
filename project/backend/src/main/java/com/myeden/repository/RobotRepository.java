@@ -64,10 +64,10 @@ public interface RobotRepository extends MongoRepository<Robot, String> {
     
     /**
      * 根据职业查找机器人
-     * @param profession 职业
+     * @param occupation 职业
      * @return 机器人列表
      */
-    List<Robot> findByProfession(String profession);
+    List<Robot> findByOccupation(String occupation);
     
     /**
      * 根据MBTI查找机器人
@@ -216,10 +216,10 @@ public interface RobotRepository extends MongoRepository<Robot, String> {
     
     /**
      * 根据职业统计机器人数量
-     * @param profession 职业
+     * @param occupation 职业
      * @return 机器人数量
      */
-    long countByProfession(String profession);
+    long countByOccupation(String occupation);
     
     /**
      * 根据MBTI统计机器人数量

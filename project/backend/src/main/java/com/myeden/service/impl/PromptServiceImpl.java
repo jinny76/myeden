@@ -296,8 +296,8 @@ public class PromptServiceImpl implements PromptService {
         if (robot.getAge() != null) {
             personality.append(String.format("\n年龄：%d岁", robot.getAge()));
         }
-        if (robot.getProfession() != null) {
-            personality.append(String.format("\n职业：%s", robot.getProfession()));
+        if (robot.getOccupation() != null) {
+            personality.append(String.format("\n职业：%s", robot.getOccupation()));
         }
         if (robot.getLocation() != null) {
             personality.append(String.format("\n所在地：%s", robot.getLocation()));
@@ -328,7 +328,7 @@ public class PromptServiceImpl implements PromptService {
         info.append(String.format("\n- MBTI：%s", robot.getMbti() != null ? robot.getMbti() : "未知"));
         info.append(String.format("\n- 血型：%s型", robot.getBloodType() != null ? robot.getBloodType() : "未知"));
         info.append(String.format("\n- 星座：%s", robot.getZodiac() != null ? robot.getZodiac() : "未知"));
-        info.append(String.format("\n- 职业：%s", robot.getProfession() != null ? robot.getProfession() : "未知"));
+        info.append(String.format("\n- 职业：%s", robot.getOccupation() != null ? robot.getOccupation() : "未知"));
         info.append(String.format("\n- 所在地：%s", robot.getLocation() != null ? robot.getLocation() : "未知"));
         info.append(String.format("\n- 学历：%s", robot.getEducation() != null ? robot.getEducation() : "未知"));
         info.append(String.format("\n- 感情状态：%s", getRelationshipText(robot.getRelationship())));

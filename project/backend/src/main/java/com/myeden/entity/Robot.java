@@ -66,11 +66,6 @@ public class Robot {
     private String personality;
     
     /**
-     * 职业
-     */
-    private String profession;
-    
-    /**
      * MBTI
      */
     private String mbti;
@@ -89,7 +84,17 @@ public class Robot {
      * 所在地
      */
     private String location;
-    
+
+    /**
+     * 职业
+     */
+    private String occupation;
+
+    /**
+     * 背景
+     */
+    private String background;
+
     /**
      * 学历
      */
@@ -339,14 +344,6 @@ public class Robot {
         this.personality = personality;
     }
     
-    public String getProfession() {
-        return profession;
-    }
-    
-    public void setProfession(String profession) {
-        this.profession = profession;
-    }
-    
     public String getMbti() {
         return mbti;
     }
@@ -377,6 +374,22 @@ public class Robot {
     
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public String getOccupation() {
+        return occupation;
+    }
+    
+    public void setOccupation(String occupation) {
+        this.occupation = occupation;
+    }
+
+    public String getBackground() {
+        return background;
+    }
+    
+    public void setBackground(String background) {
+        this.background = background;
     }
     
     public String getEducation() {
@@ -583,7 +596,7 @@ public class Robot {
         this.age = robot.getAge();
         this.introduction = robot.getIntroduction();
         this.personality = robot.getPersonality();
-        this.profession = robot.getProfession();
+        this.occupation = robot.getOccupation();
         this.mbti = robot.getMbti();
         this.bloodType = robot.getBloodType();
         this.zodiac = robot.getZodiac();
@@ -643,7 +656,7 @@ public class Robot {
                 ", robotId='" + robotId + '\'' +
                 ", name='" + name + '\'' +
                 ", gender='" + gender + '\'' +
-                ", profession='" + profession + '\'' +
+                ", occupation='" + occupation + '\'' +
                 ", isActive=" + isActive +
                 ", topicsCount=" + (topics != null ? topics.size() : 0) +
                 ", createdAt=" + createdAt +
