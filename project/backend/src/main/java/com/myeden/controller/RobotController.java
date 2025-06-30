@@ -9,6 +9,8 @@ import com.myeden.repository.RobotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,7 @@ import org.springframework.http.HttpStatus;
  * @author MyEden Team
  * @version 1.0.0
  */
+@Tag(name = "机器人相关接口")
 @RestController
 @RequestMapping("/api/v1/robots")
 public class RobotController {
@@ -214,35 +217,6 @@ public class RobotController {
             return ResponseEntity.ok(EventResponse.success(null, "刷新机器人在线状态成功"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(EventResponse.error("刷新机器人在线状态失败: " + e.getMessage()));
-        }
-    }
-    
-    /**
-     * 测试机器人topic选择功能
-     * 验证通用主题和个人主题的合并与随机选择是否正常工作
-     * @param robotId 机器人ID
-     * @return 测试结果
-     */
-    @GetMapping("/{robotId}/test-topic")
-    public ResponseEntity<EventResponse> testRobotTopicSelection(@PathVariable String robotId) {
-        try {
-            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
-            if (robot == null) {
-                return ResponseEntity.badRequest().body(EventResponse.error("机器人不存在: " + robotId));
-            }
-            
-            // 调用PromptService的测试方法
-            String testResult = ((com.myeden.service.impl.PromptServiceImpl) promptService).testTopicSelection(robot);
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("robotId", robotId);
-            result.put("robotName", robot.getName());
-            result.put("testResult", testResult);
-            
-            return ResponseEntity.ok(EventResponse.success(result, "Topic选择功能测试完成"));
-        } catch (Exception e) {
-            logger.error("测试机器人topic选择功能失败", e);
-            return ResponseEntity.badRequest().body(EventResponse.error("测试失败: " + e.getMessage()));
         }
     }
 } 

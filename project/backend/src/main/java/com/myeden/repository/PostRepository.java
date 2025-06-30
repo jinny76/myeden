@@ -135,28 +135,34 @@ public interface PostRepository extends MongoRepository<Post, String> {
      * 根据关键字搜索动态（内容和作者ID）
      * @param keyword 搜索关键字
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 动态分页结果
      */
-    @Query("{$or: [{'content': {$regex: ?0, $options: 'i'}}, {'authorId': {$regex: ?0, $options: 'i'}}], 'isDeleted': false}")
-    Page<Post> findByKeywordAndIsDeletedFalse(String keyword, Pageable pageable);
+    @Query("{$or: [{'content': {$regex: ?0, $options: 'i'}}, {'authorId': {$regex: ?0, $options: 'i'}}], 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    Page<Post> findByKeywordAndIsDeletedFalse(String keyword, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
      * 根据内容关键字搜索动态（分页）
      * @param keyword 内容关键字
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 动态分页结果
      */
-    @Query("{'content': {$regex: ?0, $options: 'i'}, 'isDeleted': false}")
-    Page<Post> findByContentKeywordAndIsDeletedFalse(String keyword, Pageable pageable);
+    @Query("{'content': {$regex: ?0, $options: 'i'}, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    Page<Post> findByContentKeywordAndIsDeletedFalse(String keyword, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
      * 根据作者关键字搜索动态（分页）
      * @param keyword 作者关键字
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 动态分页结果
      */
-    @Query("{'authorId': {$regex: ?0, $options: 'i'}, 'isDeleted': false}")
-    Page<Post> findByAuthorKeywordAndIsDeletedFalse(String keyword, Pageable pageable);
+    @Query("{'authorId': {$regex: ?0, $options: 'i'}, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    Page<Post> findByAuthorKeywordAndIsDeletedFalse(String keyword, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
      * 查找有图片的动态
@@ -338,24 +344,32 @@ public interface PostRepository extends MongoRepository<Post, String> {
      * 根据作者ID和未删除分页查找动态
      * @param authorId 作者ID
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
      * @return 动态分页结果
      */
-    Page<Post> findByAuthorIdAndIsDeletedFalse(String authorId, Pageable pageable);
+    @Query(value = "{'authorId': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}]}")
+    Page<Post> findByAuthorIdAndIsDeletedFalse(String authorId, Pageable pageable, String currentUserId);
     
     /**
      * 根据作者类型和未删除分页查找动态
      * @param authorType 作者类型
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 动态分页结果
      */
-    Page<Post> findByAuthorTypeAndIsDeletedFalse(String authorType, Pageable pageable);
+    @Query(value = "{'authorType': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    Page<Post> findByAuthorTypeAndIsDeletedFalse(String authorType, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
      * 根据未删除分页查找动态
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 动态分页结果
      */
-    Page<Post> findByIsDeletedFalse(Pageable pageable);
+    @Query(value = "{'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?0}, {'authorId': {$in: ?1}}]}")
+    Page<Post> findByIsDeletedFalse(Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
      * 根据创建时间查找指定时间之后的未删除动态，按创建时间倒序排列

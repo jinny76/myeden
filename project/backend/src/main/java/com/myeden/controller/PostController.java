@@ -97,8 +97,12 @@ public class PostController {
                 size = 10;
             }
             
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
             // 获取动态列表
-            PostService.PostListResult result = postService.getPostList(page, size, authorType);
+            PostService.PostListResult result = postService.getPostList(page, size, authorType, currentUserId);
             
             logger.info("获取动态列表成功，总数: {}", result.getTotal());
             

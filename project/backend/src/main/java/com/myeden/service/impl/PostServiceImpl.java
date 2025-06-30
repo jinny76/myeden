@@ -4,6 +4,7 @@ import com.myeden.entity.Post;
 import com.myeden.entity.User;
 import com.myeden.entity.Robot;
 import com.myeden.entity.PostLike;
+import com.myeden.entity.UserPrivacySettings;
 import com.myeden.repository.PostRepository;
 import com.myeden.repository.UserRepository;
 import com.myeden.repository.RobotRepository;
@@ -12,6 +13,7 @@ import com.myeden.service.PostService;
 import com.myeden.service.FileService;
 import com.myeden.service.WebSocketService;
 import com.myeden.service.RobotBehaviorService;
+import com.myeden.service.UserRobotLinkService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,6 +73,9 @@ public class PostServiceImpl implements PostService {
     
     @Autowired
     private ApplicationContext applicationContext;
+    
+    @Autowired
+    private UserRobotLinkService userRobotLinkService;
     
     @Override
     public PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images) {
@@ -138,6 +143,30 @@ public class PostServiceImpl implements PostService {
             post.setCreatedAt(LocalDateTime.now());
             post.setUpdatedAt(LocalDateTime.now());
             
+            // 根据作者类型设置可见性
+            if ("user".equals(authorType)) {
+                // 获取用户的隐私设置
+                Optional<User> userOpt = userRepository.findByUserId(authorId);
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    UserPrivacySettings privacySettings = user.getPrivacySettings();
+                    if (privacySettings != null) {
+                        post.setVisibility(privacySettings.getPostVisibility());
+                        logger.info("用户动态可见性设置为: {}", privacySettings.getPostVisibility());
+                    } else {
+                        post.setVisibility("private"); // 默认私有
+                        logger.info("用户隐私设置为空，动态可见性默认为: private");
+                    }
+                } else {
+                    post.setVisibility("private"); // 默认私有
+                    logger.info("用户不存在，动态可见性默认为: private");
+                }
+            } else if ("robot".equals(authorType)) {
+                // 机器人发帖默认为公开
+                post.setVisibility("public");
+                logger.info("机器人动态可见性设置为: public");
+            }
+            
             // 保存到数据库
             Post savedPost = postRepository.save(post);
             
@@ -178,24 +207,33 @@ public class PostServiceImpl implements PostService {
     }
     
     @Override
-    public PostListResult getPostList(int page, int size, String authorType) {
+    public PostListResult getPostList(int page, int size, String authorType, String currentUserId) {
         try {
-            logger.info("获取动态列表，页码: {}, 大小: {}, 作者类型: {}", page, size, authorType);
+            logger.info("获取动态列表，页码: {}, 大小: {}, 作者类型: {}, 当前用户: {}", page, size, authorType, currentUserId);
             
             // 创建分页请求
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
             
-            // 查询动态
+            // 获取用户已连接的机器人ID列表
+            List<String> connectedRobotIds = new ArrayList<>();
+            if (currentUserId != null) {
+                List<UserRobotLinkService.LinkSummary> activeLinks = userRobotLinkService.getUserActiveLinks(currentUserId);
+                connectedRobotIds = activeLinks.stream()
+                    .map(UserRobotLinkService.LinkSummary::getRobotId)
+                    .collect(Collectors.toList());
+            }
+            
+            // 查询动态（在分页前完成过滤）
             Page<Post> postPage;
             if (StringUtils.hasText(authorType)) {
-                postPage = postRepository.findByAuthorTypeAndIsDeletedFalse(authorType, pageable);
+                postPage = postRepository.findByAuthorTypeAndIsDeletedFalse(authorType, pageable, currentUserId, connectedRobotIds);
             } else {
-                postPage = postRepository.findByIsDeletedFalse(pageable);
+                postPage = postRepository.findByIsDeletedFalse(pageable, currentUserId, connectedRobotIds);
             }
             
             // 转换为摘要信息
             List<PostSummary> postSummaries = postPage.getContent().stream()
-                .map(this::convertToPostSummary)
+                .map(post -> convertToPostSummary(post, currentUserId))
                 .collect(Collectors.toList());
             
             logger.info("获取动态列表成功，总数: {}", postPage.getTotalElements());
@@ -211,6 +249,28 @@ public class PostServiceImpl implements PostService {
             logger.error("获取动态列表失败", e);
             throw e;
         }
+    }
+    
+    /**
+     * 检查动态是否对用户可见
+     * 
+     * @param post 动态
+     * @param currentUserId 当前用户ID
+     * @return 是否可见
+     */
+    private boolean isPostVisibleToUser(Post post, String currentUserId) {
+        // 如果是公开内容，所有人都可见
+        if ("public".equals(post.getVisibility())) {
+            return true;
+        }
+        
+        // 如果是私有内容，只有作者本人可见
+        if ("private".equals(post.getVisibility())) {
+            return post.getAuthorId().equals(currentUserId);
+        }
+        
+        // 默认可见
+        return true;
     }
     
     @Override
@@ -400,8 +460,8 @@ public class PostServiceImpl implements PostService {
             // 创建分页请求
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
             
-            // 查询用户的动态
-            Page<Post> postPage = postRepository.findByAuthorIdAndIsDeletedFalse(authorId, pageable);
+            // 查询用户的动态（传入authorId作为currentUserId，确保用户只能看到自己的私有动态）
+            Page<Post> postPage = postRepository.findByAuthorIdAndIsDeletedFalse(authorId, pageable, authorId);
             
             // 转换为摘要信息
             List<PostSummary> postSummaries = postPage.getContent().stream()
@@ -431,21 +491,25 @@ public class PostServiceImpl implements PostService {
             // 创建分页请求
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
             
+            // 获取用户已连接的机器人ID列表（这里暂时传null，实际使用时需要传入当前用户ID）
+            String currentUserId = null;
+            List<String> connectedRobotIds = new ArrayList<>();
+            
             // 根据搜索类型执行不同的查询
             Page<Post> postPage;
             switch (searchType.toLowerCase()) {
                 case "content":
                     // 只搜索内容
-                    postPage = postRepository.findByContentKeywordAndIsDeletedFalse(keyword, pageable);
+                    postPage = postRepository.findByContentKeywordAndIsDeletedFalse(keyword, pageable, currentUserId, connectedRobotIds);
                     break;
                 case "author":
                     // 只搜索作者
-                    postPage = postRepository.findByAuthorKeywordAndIsDeletedFalse(keyword, pageable);
+                    postPage = postRepository.findByAuthorKeywordAndIsDeletedFalse(keyword, pageable, currentUserId, connectedRobotIds);
                     break;
                 case "all":
                 default:
                     // 搜索内容和作者
-                    postPage = postRepository.findByKeywordAndIsDeletedFalse(keyword, pageable);
+                    postPage = postRepository.findByKeywordAndIsDeletedFalse(keyword, pageable, currentUserId, connectedRobotIds);
                     break;
             }
             

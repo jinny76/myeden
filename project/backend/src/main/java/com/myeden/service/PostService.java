@@ -30,12 +30,14 @@ public interface PostService {
     
     /**
      * 获取动态列表
-     * @param page 页码（从1开始）
+     * 
+     * @param page 页码，从1开始
      * @param size 每页大小
-     * @param authorType 作者类型过滤（可选）
-     * @return 动态列表和分页信息
+     * @param authorType 作者类型（可选）
+     * @param currentUserId 当前用户ID，用于隐私控制
+     * @return 动态列表结果
      */
-    PostListResult getPostList(int page, int size, String authorType);
+    PostListResult getPostList(int page, int size, String authorType, String currentUserId);
     
     /**
      * 获取动态详情

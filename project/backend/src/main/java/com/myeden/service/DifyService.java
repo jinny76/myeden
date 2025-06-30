@@ -46,13 +46,4 @@ public interface DifyService {
      * @return API配置信息
      */
     String getApiConfiguration();
-    
-    /**
-     * 测试API调用
-     * 发送测试请求验证API功能
-     * 
-     * @param testPrompt 测试提示词
-     * @return 测试结果
-     */
-    String testApiCall(String testPrompt);
 } 

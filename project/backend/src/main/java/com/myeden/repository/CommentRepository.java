@@ -314,41 +314,55 @@ public interface CommentRepository extends MongoRepository<Comment, String> {
      * 根据动态ID和父评论ID为null且未删除分页查找评论
      * @param postId 动态ID
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 评论分页结果
      */
-    Page<Comment> findByPostIdAndParentIdIsNullAndIsDeletedFalse(String postId, Pageable pageable);
+    @Query(value = "{'postId': ?0, 'parentId': null, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    Page<Comment> findByPostIdAndParentIdIsNullAndIsDeletedFalse(String postId, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
      * 根据父评论ID和未删除分页查找回复
      * @param parentId 父评论ID
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 回复分页结果
      */
-    Page<Comment> findByParentIdAndIsDeletedFalse(String parentId, Pageable pageable);
+    @Query(value = "{'parentId': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    Page<Comment> findByParentIdAndIsDeletedFalse(String parentId, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
      * 根据动态ID和未删除分页查找评论
      * @param postId 动态ID
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 评论分页结果
      */
-    Page<Comment> findByPostIdAndIsDeletedFalse(String postId, Pageable pageable);
+    @Query(value = "{'postId': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    Page<Comment> findByPostIdAndIsDeletedFalse(String postId, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
      * 根据作者ID和未删除分页查找评论
      * @param authorId 作者ID
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
      * @return 评论分页结果
      */
-    Page<Comment> findByAuthorIdAndIsDeletedFalse(String authorId, Pageable pageable);
+    @Query(value = "{'authorId': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}]}")
+    Page<Comment> findByAuthorIdAndIsDeletedFalse(String authorId, Pageable pageable, String currentUserId);
     
     /**
      * 根据作者类型和未删除分页查找评论
      * @param authorType 作者类型
      * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 评论分页结果
      */
-    Page<Comment> findByAuthorTypeAndIsDeletedFalse(String authorType, Pageable pageable);
+    @Query(value = "{'authorType': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    Page<Comment> findByAuthorTypeAndIsDeletedFalse(String authorType, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
      * 根据评论ID和未删除查找评论
@@ -387,4 +401,15 @@ public interface CommentRepository extends MongoRepository<Comment, String> {
      */
     @Query(value = "{'replyToId': ?0, 'authorId': ?1, 'authorType': ?2, 'isDeleted': false}", count = true)
     long countByReplyToIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(String replyToId, String authorId, String authorType);
+    
+    /**
+     * 根据内容模糊查询评论（分页）
+     * @param content 内容关键词
+     * @param pageable 分页参数
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
+     * @return 评论分页结果
+     */
+    @Query(value = "{'content': {$regex: ?0, $options: 'i'}, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    Page<Comment> findByContentContainingAndIsDeletedFalse(String content, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
 } 

@@ -412,7 +412,7 @@
       :close-on-click-modal="true"
       class="inner-thoughts-dialog"
     >
-      <div class="inner-thoughts-content">
+      <div class="inner-thoughts-content" @click="showInnerThoughtsDialog = false" style="cursor:pointer">
         <div class="thoughts-header">
           <el-avatar 
             :src="currentThoughtsItem ? (currentThoughtsItem.postId ? getAuthorAvatarUrl(currentThoughtsItem) : getCommentAuthorAvatarUrl(currentThoughtsItem)) : ''" 
@@ -499,6 +499,14 @@ const currentThoughtsItem = ref(null)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
+
+watch(showInnerThoughtsDialog, (val) => {
+  if (val) {
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = ''
+  }
+})
 
 // 方法
 const handleUserCommand = async (command) => {

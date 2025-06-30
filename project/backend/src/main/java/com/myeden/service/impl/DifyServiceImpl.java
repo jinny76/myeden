@@ -99,22 +99,6 @@ public class DifyServiceImpl implements DifyService {
                            difyConfig.isEnabled() ? "启用" : "禁用");
     }
 
-    @Override
-    public String testApiCall(String testPrompt) {
-        try {
-            Map<String, Object> inputs = new HashMap<>();
-            inputs.put("test", "api_call");
-            DifyRequest request = new DifyRequest(inputs, testPrompt);
-            request.setUser("test_user");
-            request.setResponseMode("blocking");
-
-            return callDifyApiInternal(request, "API测试");
-        } catch (Exception e) {
-            logger.error("API测试失败: {}", e.getMessage());
-            return "API测试失败: " + e.getMessage();
-        }
-    }
-
     /**
      * 内部调用Dify API的方法
      */

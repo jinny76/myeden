@@ -84,6 +84,11 @@ public class Comment {
     private Boolean isDeleted = false;
     
     /**
+     * 可见性：private/public，继承用户设置
+     */
+    private String visibility = "public";
+    
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;
@@ -205,6 +210,14 @@ public class Comment {
         this.isDeleted = isDeleted;
     }
     
+    public String getVisibility() {
+        return visibility;
+    }
+    
+    public void setVisibility(String visibility) {
+        this.visibility = visibility;
+    }
+    
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -316,6 +329,7 @@ public class Comment {
                 ", likeCount=" + likeCount +
                 ", replyCount=" + replyCount +
                 ", isDeleted=" + isDeleted +
+                ", visibility='" + visibility + '\'' +
                 ", createdAt=" + createdAt +
                 '}';
     }

@@ -111,6 +111,11 @@ public class User {
     private List<String> dislikes = new ArrayList<>();
     
     /**
+     * 隐私设置
+     */
+    private UserPrivacySettings privacySettings = new UserPrivacySettings();
+    
+    /**
      * 是否首次登录
      */
     private Boolean isFirstLogin = true;
@@ -273,6 +278,14 @@ public class User {
     
     public void setDislikes(List<String> dislikes) {
         this.dislikes = dislikes;
+    }
+    
+    public UserPrivacySettings getPrivacySettings() {
+        return privacySettings;
+    }
+    
+    public void setPrivacySettings(UserPrivacySettings privacySettings) {
+        this.privacySettings = privacySettings;
     }
     
     public Boolean getIsFirstLogin() {

@@ -75,7 +75,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/files/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
-                
+                // 允许Swagger UI相关路径
+                .requestMatchers("/swagger-ui.html").permitAll()
+                .requestMatchers("/swagger-ui/**").permitAll()
+                .requestMatchers("/v3/api-docs/**").permitAll()
+                .requestMatchers("/swagger-resources/**").permitAll()
+                .requestMatchers("/webjars/**").permitAll()
                 // 其他接口需要认证
                 .anyRequest().authenticated()
             )

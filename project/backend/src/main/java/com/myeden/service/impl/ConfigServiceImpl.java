@@ -371,7 +371,8 @@ public class ConfigServiceImpl implements ConfigService {
         robot.setMbti(robotConfig.getMbti());
         robot.setBloodType(robotConfig.getBloodType());
         robot.setZodiac(robotConfig.getZodiac());
-        robot.setProfession(robotConfig.getOccupation());
+        robot.setOccupation(robotConfig.getOccupation());
+        robot.setBackground(robotConfig.getBackground());
         robot.setLocation(robotConfig.getLocation());
         robot.setEducation(robotConfig.getEducation());
         robot.setRelationship(robotConfig.getRelationship());
@@ -459,8 +460,8 @@ public class ConfigServiceImpl implements ConfigService {
         if (robot.getGender() == null) {
             robot.setGender("未知");
         }
-        if (robot.getProfession() == null) {
-            robot.setProfession("AI助手");
+        if (robot.getOccupation() == null) {
+            robot.setOccupation("AI助手");
         }
         if (robot.getMbti() == null) {
             robot.setMbti("未知");
@@ -508,7 +509,7 @@ public class ConfigServiceImpl implements ConfigService {
         existing.setMbti(newConfig.getMbti());
         existing.setBloodType(newConfig.getBloodType());
         existing.setZodiac(newConfig.getZodiac());
-        existing.setProfession(newConfig.getProfession());
+        existing.setOccupation(newConfig.getOccupation());
         existing.setLocation(newConfig.getLocation());
         existing.setEducation(newConfig.getEducation());
         existing.setRelationship(newConfig.getRelationship());

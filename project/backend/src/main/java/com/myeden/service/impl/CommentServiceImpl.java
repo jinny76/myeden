@@ -5,6 +5,7 @@ import com.myeden.entity.Post;
 import com.myeden.entity.User;
 import com.myeden.entity.Robot;
 import com.myeden.entity.CommentLike;
+import com.myeden.entity.UserPrivacySettings;
 import com.myeden.repository.CommentRepository;
 import com.myeden.repository.PostRepository;
 import com.myeden.repository.UserRepository;
@@ -12,6 +13,7 @@ import com.myeden.repository.RobotRepository;
 import com.myeden.repository.CommentLikeRepository;
 import com.myeden.service.CommentService;
 import com.myeden.service.WebSocketService;
+import com.myeden.service.UserRobotLinkService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +65,9 @@ public class CommentServiceImpl implements CommentService {
     
     @Autowired
     private WebSocketService webSocketService;
+    
+    @Autowired
+    private UserRobotLinkService userRobotLinkService;
     
     @Override
     public CommentResult createComment(String postId, String authorId, String authorType, String content, String innerThoughts) {
@@ -131,6 +136,30 @@ public class CommentServiceImpl implements CommentService {
             comment.setIsDeleted(false);
             comment.setCreatedAt(LocalDateTime.now());
             comment.setUpdatedAt(LocalDateTime.now());
+            
+            // 根据作者类型设置可见性
+            if ("user".equals(authorType)) {
+                // 获取用户的隐私设置
+                Optional<User> userOpt = userRepository.findByUserId(authorId);
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    UserPrivacySettings privacySettings = user.getPrivacySettings();
+                    if (privacySettings != null) {
+                        comment.setVisibility(privacySettings.getReplyVisibility());
+                        logger.info("用户评论可见性设置为: {}", privacySettings.getReplyVisibility());
+                    } else {
+                        comment.setVisibility("private"); // 默认私有
+                        logger.info("用户隐私设置为空，评论可见性默认为: private");
+                    }
+                } else {
+                    comment.setVisibility("private"); // 默认私有
+                    logger.info("用户不存在，评论可见性默认为: private");
+                }
+            } else if ("robot".equals(authorType)) {
+                // 机器人评论默认为公开
+                comment.setVisibility("public");
+                logger.info("机器人评论可见性设置为: public");
+            }
             
             // 保存到数据库
             Comment savedComment = commentRepository.save(comment);
@@ -248,6 +277,30 @@ public class CommentServiceImpl implements CommentService {
             reply.setCreatedAt(LocalDateTime.now());
             reply.setUpdatedAt(LocalDateTime.now());
             
+            // 根据作者类型设置可见性
+            if ("user".equals(authorType)) {
+                // 获取用户的隐私设置
+                Optional<User> userOpt = userRepository.findByUserId(authorId);
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    UserPrivacySettings privacySettings = user.getPrivacySettings();
+                    if (privacySettings != null) {
+                        reply.setVisibility(privacySettings.getReplyVisibility());
+                        logger.info("用户回复可见性设置为: {}", privacySettings.getReplyVisibility());
+                    } else {
+                        reply.setVisibility("private"); // 默认私有
+                        logger.info("用户隐私设置为空，回复可见性默认为: private");
+                    }
+                } else {
+                    reply.setVisibility("private"); // 默认私有
+                    logger.info("用户不存在，回复可见性默认为: private");
+                }
+            } else if ("robot".equals(authorType)) {
+                // 机器人回复默认为公开
+                reply.setVisibility("public");
+                logger.info("机器人回复可见性设置为: public");
+            }
+            
             // 保存到数据库
             Comment savedReply = commentRepository.save(reply);
             
@@ -303,19 +356,28 @@ public class CommentServiceImpl implements CommentService {
     }
     
     @Override
-    public CommentListResult getCommentList(String postId, int page, int size) {
+    public CommentListResult getCommentList(String postId, int page, int size, String currentUserId) {
         try {
-            logger.info("获取动态评论列表，动态ID: {}, 页码: {}, 大小: {}", postId, page, size);
+            logger.info("获取动态评论列表，动态ID: {}, 页码: {}, 大小: {}, 当前用户: {}", postId, page, size, currentUserId);
             
             // 创建分页请求
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.ASC, "createdAt"));
             
-            // 查询一级评论（parentId为null）
-            Page<Comment> commentPage = commentRepository.findByPostIdAndParentIdIsNullAndIsDeletedFalse(postId, pageable);
+            // 获取用户已连接的机器人ID列表
+            List<String> connectedRobotIds = new ArrayList<>();
+            if (currentUserId != null) {
+                List<UserRobotLinkService.LinkSummary> activeLinks = userRobotLinkService.getUserActiveLinks(currentUserId);
+                connectedRobotIds = activeLinks.stream()
+                    .map(UserRobotLinkService.LinkSummary::getRobotId)
+                    .collect(Collectors.toList());
+            }
+            
+            // 查询一级评论（parentId为null，在分页前完成过滤）
+            Page<Comment> commentPage = commentRepository.findByPostIdAndParentIdIsNullAndIsDeletedFalse(postId, pageable, currentUserId, connectedRobotIds);
             
             // 转换为摘要信息
             List<CommentSummary> commentSummaries = commentPage.getContent().stream()
-                .map(this::convertToCommentSummary)
+                .map(comment -> convertToCommentSummary(comment, currentUserId))
                 .collect(Collectors.toList());
             
             logger.info("获取动态评论列表成功，总数: {}", commentPage.getTotalElements());
@@ -333,20 +395,51 @@ public class CommentServiceImpl implements CommentService {
         }
     }
     
+    /**
+     * 检查评论是否对用户可见
+     * 
+     * @param comment 评论
+     * @param currentUserId 当前用户ID
+     * @return 是否可见
+     */
+    private boolean isCommentVisibleToUser(Comment comment, String currentUserId) {
+        // 如果是公开内容，所有人都可见
+        if ("public".equals(comment.getVisibility())) {
+            return true;
+        }
+        
+        // 如果是私有内容，只有作者本人可见
+        if ("private".equals(comment.getVisibility())) {
+            return comment.getAuthorId().equals(currentUserId);
+        }
+        
+        // 默认可见
+        return true;
+    }
+    
     @Override
-    public CommentListResult getReplyList(String commentId, int page, int size) {
+    public CommentListResult getReplyList(String commentId, int page, int size, String currentUserId) {
         try {
-            logger.info("获取评论回复列表，评论ID: {}, 页码: {}, 大小: {}", commentId, page, size);
+            logger.info("获取评论回复列表，评论ID: {}, 页码: {}, 大小: {}, 当前用户: {}", commentId, page, size, currentUserId);
             
             // 创建分页请求
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.ASC, "createdAt"));
             
-            // 查询回复（parentId为commentId）
-            Page<Comment> replyPage = commentRepository.findByParentIdAndIsDeletedFalse(commentId, pageable);
+            // 获取用户已连接的机器人ID列表
+            List<String> connectedRobotIds = new ArrayList<>();
+            if (currentUserId != null) {
+                List<UserRobotLinkService.LinkSummary> activeLinks = userRobotLinkService.getUserActiveLinks(currentUserId);
+                connectedRobotIds = activeLinks.stream()
+                    .map(UserRobotLinkService.LinkSummary::getRobotId)
+                    .collect(Collectors.toList());
+            }
+            
+            // 查询回复（parentId为commentId，在分页前完成过滤）
+            Page<Comment> replyPage = commentRepository.findByParentIdAndIsDeletedFalse(commentId, pageable, currentUserId, connectedRobotIds);
             
             // 转换为摘要信息
             List<CommentSummary> replySummaries = replyPage.getContent().stream()
-                .map(this::convertToCommentSummary)
+                .map(reply -> convertToCommentSummary(reply, currentUserId))
                 .collect(Collectors.toList());
             
             logger.info("获取评论回复列表成功，总数: {}", replyPage.getTotalElements());

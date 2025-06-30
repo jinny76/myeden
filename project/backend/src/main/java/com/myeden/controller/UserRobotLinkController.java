@@ -1,0 +1,504 @@
+package com.myeden.controller;
+
+import com.myeden.service.UserRobotLinkService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * 用户机器人链接管理控制器
+ * 
+ * 功能说明：
+ * - 提供用户机器人链接的CRUD API接口
+ * - 支持链接状态管理和强度评估
+ * - 提供链接统计和分析功能
+ * - 支持链接查询和过滤
+ * 
+ * @author MyEden Team
+ * @version 1.0.1
+ * @since 2025-01-27
+ */
+@RestController
+@RequestMapping("/api/v1/user-robot-links")
+public class UserRobotLinkController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(UserRobotLinkController.class);
+    
+    @Autowired
+    private UserRobotLinkService userRobotLinkService;
+    
+    /**
+     * 创建用户机器人链接
+     * @param request 创建链接请求
+     * @return 创建结果
+     */
+    @PostMapping
+    public ResponseEntity<EventResponse> createLink(@RequestBody CreateLinkRequest request) {
+        try {
+            logger.info("收到创建用户机器人链接请求，用户ID: {}, 机器人ID: {}", request.getUserId(), request.getRobotId());
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 验证权限（只能为自己创建链接）
+            if (!currentUserId.equals(request.getUserId())) {
+                return ResponseEntity.badRequest().body(new EventResponse(
+                    400,
+                    "无权限为其他用户创建链接",
+                    null
+                ));
+            }
+            
+            // 创建链接
+            UserRobotLinkService.LinkResult result = userRobotLinkService.createLink(request.getUserId(), request.getRobotId());
+            
+            logger.info("用户机器人链接创建成功，链接ID: {}", result.getLinkId());
+            
+            return ResponseEntity.ok(new EventResponse(
+                200,
+                "链接创建成功",
+                result
+            ));
+            
+        } catch (Exception e) {
+            logger.error("创建用户机器人链接失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "创建链接失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 删除用户机器人链接
+     * @param robotId 机器人ID
+     * @return 删除结果
+     */
+    @DeleteMapping("/{robotId}")
+    public ResponseEntity<EventResponse> deleteLink(@PathVariable String robotId) {
+        try {
+            logger.info("收到删除用户机器人链接请求，机器人ID: {}", robotId);
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 删除链接
+            boolean result = userRobotLinkService.deleteLink(currentUserId, robotId);
+            
+            if (result) {
+                logger.info("用户机器人链接删除成功");
+                return ResponseEntity.ok(new EventResponse(
+                    200,
+                    "链接删除成功",
+                    null
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(new EventResponse(
+                    400,
+                    "链接不存在或删除失败",
+                    null
+                ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("删除用户机器人链接失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "删除链接失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 激活链接
+     * @param robotId 机器人ID
+     * @return 激活结果
+     */
+    @PostMapping("/{robotId}/activate")
+    public ResponseEntity<EventResponse> activateLink(@PathVariable String robotId) {
+        try {
+            logger.info("收到激活用户机器人链接请求，机器人ID: {}", robotId);
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 激活链接
+            boolean result = userRobotLinkService.activateLink(currentUserId, robotId);
+            
+            if (result) {
+                logger.info("用户机器人链接激活成功");
+                return ResponseEntity.ok(new EventResponse(
+                    200,
+                    "链接激活成功",
+                    null
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(new EventResponse(
+                    400,
+                    "链接不存在或激活失败",
+                    null
+                ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("激活用户机器人链接失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "激活链接失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 停用链接
+     * @param robotId 机器人ID
+     * @return 停用结果
+     */
+    @PostMapping("/{robotId}/deactivate")
+    public ResponseEntity<EventResponse> deactivateLink(@PathVariable String robotId) {
+        try {
+            logger.info("收到停用用户机器人链接请求，机器人ID: {}", robotId);
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 停用链接
+            boolean result = userRobotLinkService.deactivateLink(currentUserId, robotId);
+            
+            if (result) {
+                logger.info("用户机器人链接停用成功");
+                return ResponseEntity.ok(new EventResponse(
+                    200,
+                    "链接停用成功",
+                    null
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(new EventResponse(
+                    400,
+                    "链接不存在或停用失败",
+                    null
+                ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("停用用户机器人链接失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "停用链接失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 更新链接强度
+     * @param robotId 机器人ID
+     * @param request 更新强度请求
+     * @return 更新结果
+     */
+    @PutMapping("/{robotId}/strength")
+    public ResponseEntity<EventResponse> updateLinkStrength(@PathVariable String robotId, @RequestBody UpdateStrengthRequest request) {
+        try {
+            logger.info("收到更新用户机器人链接强度请求，机器人ID: {}, 强度: {}", robotId, request.getStrength());
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 更新链接强度
+            boolean result = userRobotLinkService.updateLinkStrength(currentUserId, robotId, request.getStrength());
+            
+            if (result) {
+                logger.info("用户机器人链接强度更新成功");
+                return ResponseEntity.ok(new EventResponse(
+                    200,
+                    "链接强度更新成功",
+                    null
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(new EventResponse(
+                    400,
+                    "链接不存在或更新失败",
+                    null
+                ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("更新用户机器人链接强度失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "更新链接强度失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 获取用户的链接列表
+     * @return 链接列表
+     */
+    @GetMapping
+    public ResponseEntity<EventResponse> getUserLinks() {
+        try {
+            logger.info("收到获取用户链接列表请求");
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 获取链接列表
+            List<UserRobotLinkService.LinkSummary> links = userRobotLinkService.getUserLinks(currentUserId);
+            
+            logger.info("获取用户链接列表成功，总数: {}", links.size());
+            
+            return ResponseEntity.ok(new EventResponse(
+                200,
+                "获取链接列表成功",
+                links
+            ));
+            
+        } catch (Exception e) {
+            logger.error("获取用户链接列表失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "获取链接列表失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 获取用户的激活链接列表
+     * @return 激活链接列表
+     */
+    @GetMapping("/active")
+    public ResponseEntity<EventResponse> getUserActiveLinks() {
+        try {
+            logger.info("收到获取用户激活链接列表请求");
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 获取激活链接列表
+            List<UserRobotLinkService.LinkSummary> links = userRobotLinkService.getUserActiveLinks(currentUserId);
+            
+            logger.info("获取用户激活链接列表成功，总数: {}", links.size());
+            
+            return ResponseEntity.ok(new EventResponse(
+                200,
+                "获取激活链接列表成功",
+                links
+            ));
+            
+        } catch (Exception e) {
+            logger.error("获取用户激活链接列表失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "获取激活链接列表失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 获取链接详情
+     * @param robotId 机器人ID
+     * @return 链接详情
+     */
+    @GetMapping("/{robotId}")
+    public ResponseEntity<EventResponse> getLinkDetail(@PathVariable String robotId) {
+        try {
+            logger.info("收到获取链接详情请求，机器人ID: {}", robotId);
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 获取链接详情
+            UserRobotLinkService.LinkDetail detail = userRobotLinkService.getLinkDetail(currentUserId, robotId);
+            
+            logger.info("获取链接详情成功");
+            
+            return ResponseEntity.ok(new EventResponse(
+                200,
+                "获取链接详情成功",
+                detail
+            ));
+            
+        } catch (Exception e) {
+            logger.error("获取链接详情失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "获取链接详情失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 获取用户最强链接
+     * @return 最强链接
+     */
+    @GetMapping("/strongest")
+    public ResponseEntity<EventResponse> getStrongestLink() {
+        try {
+            logger.info("收到获取用户最强链接请求");
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 获取最强链接
+            UserRobotLinkService.LinkSummary link = userRobotLinkService.getStrongestLink(currentUserId);
+            
+            if (link != null) {
+                logger.info("获取用户最强链接成功");
+                return ResponseEntity.ok(new EventResponse(
+                    200,
+                    "获取最强链接成功",
+                    link
+                ));
+            } else {
+                return ResponseEntity.ok(new EventResponse(
+                    200,
+                    "用户没有链接",
+                    null
+                ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("获取用户最强链接失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "获取最强链接失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 获取用户最活跃链接
+     * @return 最活跃链接
+     */
+    @GetMapping("/most-active")
+    public ResponseEntity<EventResponse> getMostActiveLink() {
+        try {
+            logger.info("收到获取用户最活跃链接请求");
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 获取最活跃链接
+            UserRobotLinkService.LinkSummary link = userRobotLinkService.getMostActiveLink(currentUserId);
+            
+            if (link != null) {
+                logger.info("获取用户最活跃链接成功");
+                return ResponseEntity.ok(new EventResponse(
+                    200,
+                    "获取最活跃链接成功",
+                    link
+                ));
+            } else {
+                return ResponseEntity.ok(new EventResponse(
+                    200,
+                    "用户没有链接",
+                    null
+                ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("获取用户最活跃链接失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "获取最活跃链接失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 获取链接统计信息
+     * @return 统计信息
+     */
+    @GetMapping("/statistics")
+    public ResponseEntity<EventResponse> getLinkStatistics() {
+        try {
+            logger.info("收到获取用户链接统计请求");
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 获取统计信息
+            UserRobotLinkService.LinkStatistics statistics = userRobotLinkService.getLinkStatistics(currentUserId);
+            
+            logger.info("获取用户链接统计成功");
+            
+            return ResponseEntity.ok(new EventResponse(
+                200,
+                "获取链接统计成功",
+                statistics
+            ));
+            
+        } catch (Exception e) {
+            logger.error("获取用户链接统计失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "获取链接统计失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 创建链接请求类
+     */
+    public static class CreateLinkRequest {
+        private String userId;
+        private String robotId;
+        
+        public CreateLinkRequest() {}
+        
+        public CreateLinkRequest(String userId, String robotId) {
+            this.userId = userId;
+            this.robotId = robotId;
+        }
+        
+        public String getUserId() { return userId; }
+        public void setUserId(String userId) { this.userId = userId; }
+        
+        public String getRobotId() { return robotId; }
+        public void setRobotId(String robotId) { this.robotId = robotId; }
+    }
+    
+    /**
+     * 更新强度请求类
+     */
+    public static class UpdateStrengthRequest {
+        private Integer strength;
+        
+        public UpdateStrengthRequest() {}
+        
+        public UpdateStrengthRequest(Integer strength) {
+            this.strength = strength;
+        }
+        
+        public Integer getStrength() { return strength; }
+        public void setStrength(Integer strength) { this.strength = strength; }
+    }
+} 

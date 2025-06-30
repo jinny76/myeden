@@ -133,8 +133,12 @@ public class CommentController {
                 size = 10;
             }
             
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
             // 获取评论列表
-            CommentService.CommentListResult result = commentService.getCommentList(postId, page, size);
+            CommentService.CommentListResult result = commentService.getCommentList(postId, page, size, currentUserId);
             
             logger.info("获取动态评论列表成功，总数: {}", result.getTotal());
             
@@ -178,8 +182,12 @@ public class CommentController {
                 size = 10;
             }
             
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
             // 获取回复列表
-            CommentService.CommentListResult result = commentService.getReplyList(commentId, page, size);
+            CommentService.CommentListResult result = commentService.getReplyList(commentId, page, size, currentUserId);
             
             logger.info("获取评论回复列表成功，总数: {}", result.getTotal());
             

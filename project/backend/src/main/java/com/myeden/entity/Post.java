@@ -76,6 +76,11 @@ public class Post {
     private Boolean isDeleted = false;
     
     /**
+     * 可见性：private/public，继承用户设置
+     */
+    private String visibility = "public";
+    
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;
@@ -178,6 +183,14 @@ public class Post {
     
     public void setIsDeleted(Boolean isDeleted) {
         this.isDeleted = isDeleted;
+    }
+    
+    public String getVisibility() {
+        return visibility;
+    }
+    
+    public void setVisibility(String visibility) {
+        this.visibility = visibility;
     }
     
     public LocalDateTime getCreatedAt() {

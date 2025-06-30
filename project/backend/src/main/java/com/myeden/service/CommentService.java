@@ -65,22 +65,26 @@ public interface CommentService {
     }
     
     /**
-     * 获取动态的评论列表
+     * 获取动态评论列表
+     * 
      * @param postId 动态ID
-     * @param page 页码（从1开始）
+     * @param page 页码，从1开始
      * @param size 每页大小
-     * @return 评论列表和分页信息
+     * @param currentUserId 当前用户ID，用于隐私控制
+     * @return 评论列表结果
      */
-    CommentListResult getCommentList(String postId, int page, int size);
+    CommentListResult getCommentList(String postId, int page, int size, String currentUserId);
     
     /**
-     * 获取评论的回复列表
+     * 获取评论回复列表
+     * 
      * @param commentId 评论ID
-     * @param page 页码（从1开始）
+     * @param page 页码，从1开始
      * @param size 每页大小
-     * @return 回复列表和分页信息
+     * @param currentUserId 当前用户ID，用于隐私控制
+     * @return 回复列表结果
      */
-    CommentListResult getReplyList(String commentId, int page, int size);
+    CommentListResult getReplyList(String commentId, int page, int size, String currentUserId);
     
     /**
      * 获取评论详情
