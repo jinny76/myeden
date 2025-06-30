@@ -138,14 +138,17 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
      */
     private Robot checkRobotPostCondition(String robotId, String behaviorType, String context, boolean isRobot) {
             Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
-            if (robot == null || !robot.getIsActive()) {
-                logger.warn("机器人不存在或未激活: {}", robotId);
-            return null;
+            if (robot == null) {
+                logger.warn("机器人不存在: {}", robotId);
+                return null;
             }
+            
+            // 直接检查机器人是否在活跃时间段，不依赖数据库中的isActive字段
             if (!isRobotActive(robot)) {
                 logger.info("机器人不在活跃时间段: {}", robotId);
-            return null;
+                return null;
             }
+            
             // 计算触发概率
         double probability = calculateBehaviorProbability(robot, behaviorType, context, isRobot);
             if (random.nextDouble() > probability) {
@@ -446,12 +449,26 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     
     @Override
     public boolean isRobotActive(Robot robot) {
-        if (robot == null || !robot.getIsActive()) {
+        if (robot == null) {
             return false;
         }
         
         // 使用机器人配置的活跃时间段进行判断
-        return robot.isInActiveTimeSlot();
+        boolean isActive = robot.isInActiveTimeSlot();
+        
+        // 添加调试日志
+        if (logger.isDebugEnabled()) {
+            LocalTime currentTime = LocalTime.now();
+            logger.debug("机器人 {} 活跃状态检查 - 当前时间: {}, 活跃时间段: {}, 结果: {}", 
+                        robot.getName(), 
+                        currentTime.format(DateTimeFormatter.ofPattern("HH:mm")),
+                        robot.getActiveTimeRanges().stream()
+                            .map(range -> range.getStartTime() + "-" + range.getEndTime())
+                            .collect(java.util.stream.Collectors.joining(", ")),
+                        isActive ? "在线" : "离线");
+        }
+        
+        return isActive;
     }
     
     /**
@@ -606,8 +623,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     @Scheduled(fixedRate = 60000) // 1分钟
     public void scheduledRobotBehavior() {
         try {
-            List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
-            for (Robot robot : activeRobots) {
+            // 获取所有机器人，然后逐个检查活跃状态
+            List<Robot> allRobots = robotRepository.findAll();
+            for (Robot robot : allRobots) {
+                // 直接检查机器人是否在活跃时间段，不依赖数据库中的isActive字段
                 if (isRobotActive(robot)) {
                     // 随机触发机器人行为
                     double randomValue = random.nextDouble();
@@ -636,11 +655,11 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     private void triggerRobotCommentOnRecentPosts(String robotId) {
         try {
             Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
-            if (robot == null || !robot.getIsActive()) {
+            if (robot == null) {
                 return;
             }
             
-            // 检查是否在活跃时间段
+            // 直接检查机器人是否在活跃时间段，不依赖数据库中的isActive字段
             if (!isRobotActive(robot)) {
                 return;
             }
@@ -719,11 +738,11 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     private void triggerRobotReplyOnRecentComments(String robotId) {
         try {
             Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
-            if (robot == null || !robot.getIsActive()) {
+            if (robot == null) {
                 return;
             }
             
-            // 检查是否在活跃时间段
+            // 直接检查机器人是否在活跃时间段，不依赖数据库中的isActive字段
             if (!isRobotActive(robot)) {
                 return;
             }
@@ -993,21 +1012,21 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             logger.info("开始触发所有在线机器人评论，动态ID: {}, 内容: {}", postId, 
                        postContent != null ? postContent.substring(0, Math.min(postContent.length(), 50)) + "..." : "无内容");
             
-            // 获取所有激活的机器人
-            List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
-            if (activeRobots.isEmpty()) {
-                logger.info("没有找到激活的机器人");
+            // 获取所有机器人，然后逐个检查活跃状态
+            List<Robot> allRobots = robotRepository.findAll();
+            if (allRobots.isEmpty()) {
+                logger.info("没有找到机器人");
                 return;
             }
             
             int triggeredCount = 0;
-            int totalRobots = activeRobots.size();
+            int totalRobots = allRobots.size();
             List<String> triggeredRobots = new ArrayList<>();
             List<String> skippedRobots = new ArrayList<>();
             
-            for (Robot robot : activeRobots) {
+            for (Robot robot : allRobots) {
                 try {
-                    // 检查机器人是否在活跃时间段
+                    // 直接检查机器人是否在活跃时间段，不依赖数据库中的isActive字段
                     if (!isRobotActive(robot)) {
                         logger.debug("机器人 {} 不在活跃时间段，跳过", robot.getName());
                         skippedRobots.add(robot.getName() + "(非活跃时间)");

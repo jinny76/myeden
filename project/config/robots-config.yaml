@@ -9,6 +9,15 @@ robots:
     max_daily_comments: 25
     max_daily_replies: 20
     common_topic:
+      - name: "发感叹"
+        frequency: 10
+        content: "随便发点感叹, 简短的"
+      - name: "吐槽"
+        frequency: 5
+        content: "随便吐槽点什么, 简短的"
+      - name: "分享日常"
+        frequency: 1
+        content: "分享自己最近的生活日常"
       - name: "分享生活"
         frequency: 1
         content: "分享自己最近的生活"
@@ -137,9 +146,6 @@ robots:
         - start: "20:00"
           end: "23:00"
           probability: 0.9
-        - start: "23:00"
-          end: "08:00"
-          probability: 0
           
     - id: "robot_002"
       name: "林家杰"
@@ -227,9 +233,6 @@ robots:
         - start: "00:00"
           end: "02:00"
           probability: 0.5
-        - start: "02:00"
-          end: "09:00"
-          probability: 0.1
           
     - id: "robot_003"
       name: "何烟黛"
@@ -314,9 +317,6 @@ robots:
         - start: "08:00"
           end: "23:59"
           probability: 0.8
-        - start: "00:00"
-          end: "08:00"
-          probability: 0.1
           
     - id: "robot_004"
       name: "张国联"
@@ -404,9 +404,6 @@ robots:
         - start: "06:00"
           end: "22:00"
           probability: 0.7
-        - start: "22:00"
-          end: "06:00"
-          probability: 0
           
     - id: "robot_005"
       name: "戴立强"
@@ -483,9 +480,6 @@ robots:
         - start: "06:00"
           end: "22:00"
           probability: 0.8
-        - start: "22:00"
-          end: "06:00"
-          probability: 0
           
     - id: "robot_006"
       name: "苄雅"
@@ -560,9 +554,6 @@ robots:
         - start: "07:00"
           end: "23:00"
           probability: 0.7
-        - start: "23:00"
-          end: "07:00"
-          probability: 0
           
     - id: "robot_007"
       name: "王文"
@@ -637,9 +628,6 @@ robots:
         - start: "06:00"
           end: "21:00"
           probability: 0.8
-        - start: "21:00"
-          end: "06:00"
-          probability: 0
           
     - id: "robot_008"
       name: "曾现妮"
@@ -714,9 +702,6 @@ robots:
         - start: "09:00"
           end: "23:59"
           probability: 0.9
-        - start: "00:00"
-          end: "09:00"
-          probability: 0.4
           
     - id: "robot_009"
       name: "林雅"
@@ -800,9 +785,6 @@ robots:
         - start: "20:00"
           end: "23:59"
           probability: 0.7
-        - start: "00:00"
-          end: "10:00"
-          probability: 0
           
     - id: "robot_010"
       name: "吴莫愁"
@@ -951,7 +933,7 @@ robots:
       active_hours:
         - start: "09:00"
           end: "23:59"
-          probability: 0.2
+          probability: 0.4
         - start: "00:00"
           end: "09:00"
           probability: 0.9
@@ -1026,9 +1008,7 @@ robots:
         - start: "09:00"
           end: "23:59"
           probability: 0.9
-        - start: "00:00"
-          end: "09:00"
-          probability: 0.1
+
     - id: "robot_013"
       name: "王丽梅"
       nickname: "Lily"
@@ -1094,7 +1074,7 @@ robots:
         social_energy: 0.6
 
       active_hours:
-        - start: "10:00"
+        - start: "06:00"
           end: "15:00"
           probability: 0.7
         - start: "20:00"

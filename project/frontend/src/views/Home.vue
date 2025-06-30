@@ -1055,6 +1055,16 @@ watch(isLoggedIn, (newValue, oldValue) => {
     margin-bottom: 60px;
   }
   
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    text-align: center;
+  }
+  
+  .hero-text {
+    max-width: 100%;
+  }
+  
   .title-main {
     font-size: 2.5rem;
   }
@@ -1082,6 +1092,11 @@ watch(isLoggedIn, (newValue, oldValue) => {
   
   .stat-label {
     font-size: 0.8rem;
+  }
+  
+  /* 移动端隐藏漂浮图标 */
+  .hero-visual {
+    display: none;
   }
   
   .section-header h2 {
@@ -1187,6 +1202,16 @@ watch(isLoggedIn, (newValue, oldValue) => {
     margin-bottom: 40px;
   }
   
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    text-align: center;
+  }
+  
+  .hero-text {
+    max-width: 100%;
+  }
+  
   .title-main {
     font-size: 2rem;
   }
@@ -1218,12 +1243,13 @@ watch(isLoggedIn, (newValue, oldValue) => {
     font-size: 0.75rem;
   }
   
-  .section-header h2 {
-    font-size: 1.8rem;
+  /* 确保小屏幕也隐藏漂浮图标 */
+  .hero-visual {
+    display: none;
   }
   
-  .section-header p {
-    font-size: 1rem;
+  .section-header h2 {
+    font-size: 1.8rem;
   }
   
   .feature-card {
