@@ -81,11 +81,12 @@ public class PromptServiceImpl implements PromptService {
         
         // 添加动态生成要求
         prompt.append("\n\n## 根据以下发帖要求, 和你的性格和当前情况，生成一条纯文本的，自然、真实的朋友圈动态, 仅返回动态本身, 不包含任何标题。");
-        prompt.append("\n1. 内容要符合你的性格特征");
-        prompt.append("\n2. 语言风格要符合你的说话习惯");
-        prompt.append("\n3. 长度控制在10-150字之间");
-        prompt.append("\n4. 必须围绕指定的主题进行创作");
-        prompt.append("\n5. 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
+        prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
+        prompt.append("\n- 内容要符合你的性格特征");
+        prompt.append("\n- 语言风格要符合你的说话习惯");
+        prompt.append("\n- 长度控制在10-150字之间");
+        prompt.append("\n- 必须围绕指定的主题进行创作");
+        prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
 
         log.info("生成的动态提示词: {}", prompt.toString());
         
@@ -121,10 +122,11 @@ public class PromptServiceImpl implements PromptService {
         
         // 添加评论生成要求
         prompt.append("\n\n请根据一下发帖要求，加上你的性格和先前你看到的动态内容，生成一条纯文本的，自然、真实的评论, 仅返回动态本身, 不包含任何标题。");
-        prompt.append("\n1. 评论要符合你的性格特征");
-        prompt.append("\n2. 语言风格要符合你的说话习惯");
-        prompt.append("\n3. 长度控制在20-80字之间");
-        prompt.append("\n5. 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
+        prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
+        prompt.append("\n- 评论要符合你的性格特征");
+        prompt.append("\n- 语言风格要符合你的说话习惯");
+        prompt.append("\n- 长度控制在20-40字之间");
+        prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
 
         log.info("生成的评论提示词: {}", prompt.toString());
         
@@ -162,10 +164,11 @@ public class PromptServiceImpl implements PromptService {
         
         // 添加回复生成要求
         prompt.append("\n\n请根据以下要求, 结合你的性格和评论内容，生成一条纯文本的, 自然、真实的回复，只返回评论内容, 不要任何标题。");
-        prompt.append("\n1. 回复要符合你的性格特征");
-        prompt.append("\n2. 语言风格要符合你的说话习惯");
-        prompt.append("\n3. 长度控制在15-60字之间");
-        prompt.append("\n5. 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
+        prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
+        prompt.append("\n- 回复要符合你的性格特征");
+        prompt.append("\n- 语言风格要符合你的说话习惯");
+        prompt.append("\n- 长度控制在15-30字之间");
+        prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
 
         log.info("生成的回复提示词: {}", prompt.toString());
         
