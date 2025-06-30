@@ -229,8 +229,11 @@
               <!-- 动态统计（点赞/评论） -->
               <div class="post-stats">
                 <span class="stat-item like-stat" @click="toggleLike(post)">
-                  <el-icon :class="{ 'liked': post.isLiked }"><Star /></el-icon>
-                  <span>{{ post.likeCount }}</span>
+                  <el-icon :class="{ 'liked': post.isLiked }">
+                    <StarFilled v-if="post.isLiked" />
+                    <Star v-else />
+                  </el-icon>
+                  <span>{{ (post.likes || []).length }}</span>
                 </span>
                 <span class="stat-item">
                   <el-icon><ChatDotRound /></el-icon>
@@ -240,6 +243,24 @@
                 <span v-if="post.innerThoughts" class="stat-item inner-thoughts-stat" @click="showInnerThoughts(post)">
                   <el-icon><View /></el-icon>
                 </span>
+              </div>
+              
+              <!-- 点赞用户头像列表 -->
+              <div v-if="(post.likes || []).length > 0" class="liked-users-section">
+                <div class="liked-users-list">
+                  <div 
+                    v-for="like in post.likes || []" 
+                    :key="like.userId"
+                    class="liked-user-item"
+                    :title="`${like.userName} (${like.userType === 'robot' ? '天使' : '用户'})`"
+                  >
+                    <el-avatar 
+                      :src="getLikedUserAvatarUrl(like)" 
+                      :size="24"
+                      @error="(event) => handleLikedUserAvatarError(event, like)"
+                    />
+                  </div>
+                </div>
               </div>
               
               <!-- 评论区域 -->
@@ -268,8 +289,11 @@
                     <div class="comment-actions">
                       <span class="action-link" @click="showReplyInput(comment)">回复</span>
                       <span class="action-link" @click="toggleCommentLike(comment)">
-                        <el-icon><Star /></el-icon>
-                        {{ comment.likeCount }}
+                        <el-icon>
+                          <StarFilled v-if="comment.isLiked" />
+                          <Star v-else />
+                        </el-icon>
+                        {{ comment.likeCount || 0 }}
                       </span>
                       <!-- 添加查看内心活动按钮 -->
                       <span v-if="comment.innerThoughts" class="action-link" @click="showInnerThoughts(comment)">
@@ -316,8 +340,11 @@
                           </div>
                           <div class="reply-actions">
                             <span class="action-link" @click="toggleCommentLike(reply)">
-                              <el-icon><Star /></el-icon>
-                              {{ reply.likeCount }}
+                              <el-icon>
+                                <StarFilled v-if="reply.isLiked" />
+                                <Star v-else />
+                              </el-icon>
+                              {{ reply.likeCount || 0 }}
                             </span>
                             <!-- 添加查看内心活动按钮 -->
                             <span v-if="reply.innerThoughts" class="action-link" @click="showInnerThoughts(reply)">
@@ -326,23 +353,6 @@
                           </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <!-- 加载更多回复 -->
-                    <div v-if="replyStates[comment.commentId]?.hasMore" class="load-more-replies">
-                      <el-button 
-                        @click="loadMoreReplies(comment.commentId)" 
-                        :loading="replyStates[comment.commentId]?.loading"
-                        size="small"
-                        type="text"
-                      >
-                        加载更多回复
-                      </el-button>
-                    </div>
-                    
-                    <!-- 没有更多回复 -->
-                    <div v-else-if="replyStates[comment.commentId]?.replies.length > 0" class="no-more-replies">
-                      <span class="no-more-text">没有更多回复了</span>
                     </div>
                     
                     <!-- 加载中状态 -->
@@ -449,10 +459,10 @@ import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { ElMessageBox, ElPopover } from 'element-plus'
 import { message } from '@/utils/message'
-import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, View } from '@element-plus/icons-vue'
+import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
-import { createPost, searchPosts } from '@/api/post'
+import { createPost, searchPosts, getPostLikes } from '@/api/post'
 
 // 响应式数据
 const router = useRouter()
@@ -702,6 +712,8 @@ const loadMorePosts = async () => {
       try {
         await momentsStore.loadComments(post.postId, {}, true)
         await loadAllReplies(post.postId)
+        // 加载点赞信息
+        await refreshPostLikes(post)
       } catch (error) {
         console.error(`加载动态 ${post.postId} 的评论失败:`, error)
       }
@@ -760,6 +772,7 @@ const publishPost = async () => {
         likeCount: 0,
         commentCount: 0,
         isLiked: false,
+        likes: [], // 初始化点赞信息为空数组
         createdAt: newPostData.createdAt,
         updatedAt: newPostData.createdAt,
         showComments: true // 设置评论区域为展开状态
@@ -836,6 +849,7 @@ const publishPostMobile = async () => {
         likeCount: 0,
         commentCount: 0,
         isLiked: false,
+        likes: [], // 初始化点赞信息为空数组
         createdAt: newPostData.createdAt,
         updatedAt: newPostData.createdAt,
         showComments: true // 设置评论区域为展开状态
@@ -846,6 +860,8 @@ const publishPostMobile = async () => {
       // 为新发布的动态加载评论和回复
       await momentsStore.loadComments(postData.postId, {}, true)
       await loadAllReplies(postData.postId)
+      // 加载点赞信息
+      await refreshPostLikes(postData)
     
       // 清空表单
       newPost.value.content = ''
@@ -891,14 +907,82 @@ const handlePostAction = async (command, post) => {
 }
 
 const toggleLike = async (post) => {
+  // 保存原始状态
+  const originalIsLiked = post.isLiked
+  
   try {
     if (post.isLiked) {
       await momentsStore.unlikePostAction(post.postId)
+      // 立即更新本地状态
+      post.isLiked = false
     } else {
       await momentsStore.likePostAction(post.postId)
+      // 立即更新本地状态
+      post.isLiked = true
+    }
+    
+    // 点赞操作成功后，立即刷新点赞信息
+    await refreshPostLikes(post)
+  } catch (error) {
+    // 如果操作失败，恢复原始状态
+    post.isLiked = originalIsLiked
+    message.error('操作失败')
+  }
+}
+
+/**
+ * 刷新动态的点赞信息
+ * @param {Object} post - 动态对象
+ */
+const refreshPostLikes = async (post) => {
+  try {
+    const response = await getPostLikes(post.postId)
+    if (response.code === 200) {
+      // 更新动态的点赞信息
+      post.likes = response.data.likes || []
+      
+      // 检查当前用户是否在点赞列表中
+      const currentUserId = userStore.userInfo?.userId
+      if (currentUserId) {
+        const currentUserLike = post.likes.find(like => like.userId === currentUserId)
+        const shouldBeLiked = !!currentUserLike
+        
+        // 只有当状态不一致时才更新，避免覆盖刚刚的操作
+        if (post.isLiked !== shouldBeLiked) {
+          post.isLiked = shouldBeLiked
+        }
+      }
+      
+      console.log(`刷新点赞信息成功，动态ID: ${post.postId}，点赞数量: ${post.likes.length}`)
     }
   } catch (error) {
-    message.error('操作失败')
+    console.error('刷新点赞信息失败:', error)
+  }
+}
+
+/**
+ * 获取点赞用户的头像URL
+ * @param {Object} like - 点赞信息对象
+ * @returns {string} 头像URL
+ */
+const getLikedUserAvatarUrl = (like) => {
+  if (like.userType === 'robot') {
+    return getRobotAvatarUrl({ avatar: like.userAvatar, name: like.userName, id: like.userId })
+  } else {
+    return getUserAvatarUrl({ avatar: like.userAvatar, nickname: like.userName })
+  }
+}
+
+/**
+ * 处理点赞用户头像加载错误
+ * @param {Event} event - 错误事件
+ * @param {Object} like - 点赞信息对象
+ */
+const handleLikedUserAvatarError = (event, like) => {
+  if (like.userType === 'robot') {
+    handleRobotAvatarError(event, like.userName)
+  } else {
+    event.target.src = getUserAvatarUrl({ nickname: like.userName })
   }
 }
 
@@ -943,9 +1027,7 @@ const loadReplies = async (commentId, refresh = false) => {
     replyStates.value[commentId] = {
       showReplies: true, // 默认显示回复
       replies: [],
-      loading: false,
-      hasMore: true,
-      currentPage: 1
+      loading: false
     }
   }
   
@@ -954,25 +1036,21 @@ const loadReplies = async (commentId, refresh = false) => {
   try {
     replyState.loading = true
     
+    // 一次性加载所有回复，使用较大的size
     const params = {
-      page: refresh ? 1 : replyState.currentPage,
-      size: 10
+      page: 1,
+      size: 100 // 设置较大的size以一次性加载所有回复
     }
     
     const response = await getReplyList(commentId, params)
     
     if (response.code === 200) {
-      const { comments: newReplies, total, page, size } = response.data
+      const { comments: newReplies } = response.data
       
-      if (refresh) {
+      // 直接设置所有回复
         replyState.replies = newReplies
-        replyState.currentPage = 1
-      } else {
-        replyState.replies.push(...newReplies)
-      }
       
-      replyState.currentPage = page
-      replyState.hasMore = page < Math.ceil(total / size)
+      console.log(`加载回复完成，评论ID: ${commentId}，回复数量: ${newReplies.length}`)
     }
   } catch (error) {
     console.error('加载回复列表失败:', error)
@@ -1012,14 +1090,6 @@ const showReplyInput = (comment) => {
   }
 }
 
-const loadMoreReplies = async (commentId) => {
-  const replyState = replyStates.value[commentId]
-  if (replyState && replyState.hasMore && !replyState.loading) {
-    replyState.currentPage++
-    await loadReplies(commentId, false)
-  }
-}
-
 const submitReply = async (comment) => {
   if (!comment.replyContent.trim()) {
     message.warning('请输入回复内容')
@@ -1051,13 +1121,22 @@ const submitReply = async (comment) => {
 }
 
 const toggleCommentLike = async (comment) => {
+  // 保存原始状态
+  const originalIsLiked = comment.isLiked
+  
   try {
     if (comment.isLiked) {
       await momentsStore.unlikeCommentAction(comment.commentId)
+      // 立即更新本地状态
+      comment.isLiked = false
     } else {
       await momentsStore.likeCommentAction(comment.commentId)
+      // 立即更新本地状态
+      comment.isLiked = true
     }
   } catch (error) {
+    // 如果操作失败，恢复原始状态
+    comment.isLiked = originalIsLiked
     message.error('操作失败')
   }
 }
@@ -1300,6 +1379,8 @@ const loadAllCommentsAndReplies = async () => {
       await momentsStore.loadComments(post.postId, {}, true)
       // 加载回复
       await loadAllReplies(post.postId)
+      // 加载点赞信息
+      await refreshPostLikes(post)
     } catch (error) {
       console.error(`加载动态 ${post.postId} 的评论失败:`, error)
     }
@@ -1427,1308 +1508,5 @@ const showInnerThoughts = (item) => {
 </script>
 
 <style scoped>
-.moments-container {
-  min-height: 100vh;
-  background: var(--color-bg);
-  position: relative;
-  overflow-x: hidden;
-}
-
-/* 背景装饰 */
-.background-decoration {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.floating-orb {
-  position: absolute;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(34, 211, 107, 0.1), rgba(74, 222, 128, 0.05));
-  filter: blur(40px);
-  animation: float 20s ease-in-out infinite;
-}
-
-.orb-1 {
-  width: 300px;
-  height: 300px;
-  top: 10%;
-  left: 10%;
-  animation-delay: 0s;
-}
-
-.orb-2 {
-  width: 200px;
-  height: 200px;
-  top: 60%;
-  right: 15%;
-  animation-delay: -7s;
-}
-
-.orb-3 {
-  width: 150px;
-  height: 150px;
-  bottom: 20%;
-  left: 20%;
-  animation-delay: -14s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-30px) rotate(120deg); }
-  66% { transform: translateY(20px) rotate(240deg); }
-}
-
-.gradient-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.02) 100%);
-}
-
-.main-content {
-  position: relative;
-  z-index: 1;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-/* 页面标题 */
-.page-header {
-  text-align: center;
-  margin-bottom: 40px;
-  padding-top: 80px;
-}
-
-.page-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #22d36b, #4ade80, #86efac);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 12px;
-}
-
-.page-subtitle {
-  font-size: 1.1rem;
-  color: var(--color-text);
-  opacity: 0.8;
-}
-
-/* 动态发布区域 */
-.post-editor-section {
-  margin-bottom: 40px;
-}
-
-.post-editor-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 30px;
-  margin-bottom: 16px;
-  transition: all 0.3s ease;
-}
-
-.post-editor-card:hover {
-  border-color: rgba(34, 211, 107, 0.2);
-  box-shadow: 0 8px 32px rgba(34, 211, 107, 0.1);
-}
-
-.editor-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.editor-info {
-  margin-left: 16px;
-}
-
-.editor-name {
-  font-weight: 600;
-  color: var(--color-text);
-  display: block;
-  font-size: 1.1rem;
-}
-
-.editor-hint {
-  color: var(--color-text);
-  font-size: 0.9rem;
-  opacity: 0.7;
-}
-
-.editor-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.publish-button {
-  background: linear-gradient(135deg, #22d36b, #4ade80);
-  border: none;
-  padding: 12px 24px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
-}
-
-.publish-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
-}
-
-/* 搜索和筛选区域 */
-.search-filter-section {
-  margin-bottom: 30px;
-}
-
-.search-container {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.search-input {
-  flex: 1;
-  min-width: 200px;
-}
-
-.search-type-select,
-.filter-select {
-  width: 120px;
-}
-
-.search-result-info {
-  margin-bottom: 16px;
-}
-
-.search-result-info .el-tag {
-  cursor: pointer;
-  background: rgba(34, 211, 107, 0.1);
-  border-color: rgba(34, 211, 107, 0.2);
-  color: #22d36b;
-}
-
-/* 动态列表 */
-.posts-section {
-  margin-bottom: 40px;
-}
-
-.posts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.post-card {
-  position: relative;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 24px;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-}
-
-.post-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(34, 211, 107, 0.2);
-  box-shadow: 0 12px 40px rgba(34, 211, 107, 0.1);
-}
-
-.post-card-content {
-  position: relative;
-  z-index: 2;
-}
-
-.post-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
-
-.post-author {
-  display: flex;
-  align-items: center;
-}
-
-.author-avatar {
-  width: 48px;
-  height: 48px;
-}
-
-.author-info {
-  margin-left: 12px;
-}
-
-.author-name {
-  font-weight: 600;
-  color: var(--color-text);
-  display: block;
-  font-size: 1rem;
-}
-
-.post-time {
-  color: var(--color-text);
-  font-size: 0.8rem;
-  opacity: 0.6;
-}
-
-.post-type-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.post-type-badge.robot {
-  background: rgba(34, 211, 107, 0.1);
-  color: #22d36b;
-}
-
-.post-type-badge.user {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-}
-
-.post-content {
-  margin-bottom: 20px;
-}
-
-.post-content p {
-  margin: 0 0 16px 0;
-  line-height: 1.6;
-  color: var(--color-text);
-  font-size: 0.95rem;
-}
-
-.post-images {
-  margin-top: 16px;
-}
-
-.image-grid {
-  display: grid;
-  gap: 8px;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.grid-1 {
-  grid-template-columns: 1fr;
-}
-
-.grid-2 {
-  grid-template-columns: 1fr 1fr;
-}
-
-.grid-3 {
-  grid-template-columns: 1fr 1fr 1fr;
-}
-
-.grid-4 {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-}
-
-.grid-more {
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
-}
-
-.image-item {
-  aspect-ratio: 1;
-  cursor: pointer;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.image-item .el-image {
-  width: 100%;
-  height: 100%;
-}
-
-.post-stats {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--color-text);
-  opacity: 0.7;
-  font-size: 0.9rem;
-}
-
-.stat-item .el-icon {
-  font-size: 16px;
-  color: #22d36b;
-}
-
-.post-actions-bar {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  justify-content: flex-start;
-}
-
-.like-button {
-  justify-content: center;
-  padding: 10px 12px;
-  min-width: 0;
-}
-
-.like-button .el-icon {
-  font-size: 14px;
-}
-
-.like-text {
-  font-size: 0.8rem;
-}
-
-.comments-section {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.comments-list {
-  margin-bottom: 20px;
-}
-
-.comment-item {
-  margin-bottom: 16px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.comment-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.comment-info {
-  margin-left: 12px;
-}
-
-.comment-author {
-  font-weight: 600;
-  color: var(--color-text);
-  font-size: 0.9rem;
-}
-
-.comment-time {
-  color: var(--color-text);
-  font-size: 0.75rem;
-  margin-left: 8px;
-  opacity: 0.6;
-}
-
-.comment-content {
-  margin-bottom: 12px;
-}
-
-.comment-content p {
-  margin: 0;
-  color: var(--color-text);
-  line-height: 1.5;
-  font-size: 0.9rem;
-}
-
-.comment-actions {
-  display: flex;
-  gap: 16px;
-}
-
-.action-link {
-  color: #22d36b;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.3s ease;
-}
-
-.action-link:hover {
-  opacity: 0.8;
-  transform: translateY(-1px);
-}
-
-.action-link .el-icon {
-  font-size: 14px;
-}
-
-.reply-input {
-  margin-top: 12px;
-}
-
-.comment-input {
-  margin-top: 16px;
-}
-
-.replies-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.replies-list {
-  margin-bottom: 12px;
-}
-
-.reply-item {
-  margin-bottom: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 8px;
-  border-left: 3px solid rgba(34, 211, 107, 0.2);
-}
-
-.reply-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.reply-info {
-  margin-left: 8px;
-  display: flex;
-  align-items: center;
-}
-
-.reply-author {
-  font-weight: 600;
-  color: var(--color-text);
-  font-size: 0.8rem;
-}
-
-.reply-time {
-  color: var(--color-text);
-  font-size: 0.7rem;
-  margin-left: 8px;
-  opacity: 0.6;
-}
-
-.reply-content {
-  margin-bottom: 8px;
-}
-
-.reply-content p {
-  margin: 0;
-  color: var(--color-text);
-  line-height: 1.4;
-  font-size: 0.8rem;
-}
-
-.reply-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.reply-actions .action-link {
-  font-size: 0.75rem;
-}
-
-.load-more-replies {
-  text-align: center;
-  margin-top: 12px;
-}
-
-.no-more-replies {
-  text-align: center;
-  margin-top: 12px;
-}
-
-.no-more-text {
-  color: var(--color-text);
-  font-size: 0.8rem;
-  opacity: 0.6;
-}
-
-.loading-replies {
-  text-align: center;
-  margin-top: 12px;
-  color: var(--color-text);
-  font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.loading-replies .el-icon {
-  font-size: 14px;
-}
-
-.post-card-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(34, 211, 107, 0.02), transparent);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.post-card:hover .post-card-bg {
-  opacity: 1;
-}
-
-/* 滚动加载指示器样式 */
-.scroll-loading-indicator {
-  text-align: center;
-  margin: 20px 0;
-  padding: 16px;
-  color: var(--color-text);
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.scroll-loading-indicator .el-icon {
-  font-size: 16px;
-  color: #22d36b;
-}
-
-/* 没有更多内容提示样式 */
-.no-more-content {
-  text-align: center;
-  margin: 20px 0;
-  padding: 16px;
-  color: var(--color-text);
-  font-size: 0.9rem;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* 空状态样式 */
-.empty-state {
-  text-align: center;
-  margin: 40px 0;
-  padding: 40px 20px;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  /* 隐藏桌面端发布区域 */
-  .post-editor-section {
-    display: none;
-  }
-  
-  /* 显示移动端浮动按钮 */
-  .mobile-fab-container {
-    display: block;
-  }
-  
-  .main-content {
-    padding: 0 16px;
-  }
-  
-  .page-header {
-    padding-top: 16px;
-    margin-bottom: 30px;
-  }
-  
-  .page-title {
-    font-size: 2rem;
-  }
-  
-  .page-subtitle {
-    font-size: 1rem;
-  }
-  
-  .search-container {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .search-input,
-  .search-type-select,
-  .filter-select {
-    width: 100%;
-  }
-  
-  .post-card {
-    padding: 20px;
-  }
-  
-  .post-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .post-type-badge {
-    align-self: flex-end;
-  }
-  
-  .post-actions-bar {
-    flex-direction: row;
-    gap: 8px;
-    justify-content: space-around;
-  }
-  
-  .like-button {
-    flex: 1;
-    justify-content: center;
-    padding: 10px 8px;
-    min-width: 0;
-  }
-  
-  .like-button .el-icon {
-    font-size: 14px;
-  }
-  
-  .like-text {
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .main-content {
-    padding: 0 12px;
-  }
-  
-  .page-header {
-    padding-top: 16px;
-    margin-bottom: 24px;
-  }
-  
-  .page-title {
-    font-size: 1.8rem;
-  }
-  
-  .page-subtitle {
-    font-size: 0.9rem;
-  }
-  
-  .post-card {
-    padding: 16px;
-  }
-  
-  .author-avatar {
-    width: 40px;
-    height: 40px;
-  }
-  
-  .post-stats {
-    gap: 12px;
-  }
-  
-  .post-actions-bar {
-    gap: 6px;
-  }
-  
-  .like-button {
-    padding: 8px 6px;
-    gap: 4px;
-  }
-  
-  .like-button .el-icon {
-    font-size: 13px;
-  }
-  
-  .like-text {
-    font-size: 0.75rem;
-  }
-  
-  .comment-item {
-    padding: 12px;
-  }
-  
-  .reply-item {
-    padding: 8px;
-  }
-  
-  /* 移动端浮动按钮位置调整 */
-  .mobile-fab-container {
-    bottom: 70px;
-    right: 16px;
-  }
-  
-  .mobile-fab {
-    width: 52px;
-    height: 52px;
-    font-size: 22px;
-  }
-  
-  /* 移动端弹窗样式调整 */
-  .mobile-editor-dialog :deep(.el-dialog) {
-    margin: 10px;
-    width: calc(100% - 20px) !important;
-  }
-  
-  .mobile-editor-content {
-    padding: 16px;
-  }
-  
-  .mobile-editor-header {
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-  }
-  
-  .mobile-editor-footer {
-    padding: 16px;
-  }
-  
-  .mobile-editor-footer .el-button {
-    padding: 10px 16px;
-    font-size: 0.9rem;
-  }
-}
-
-/* 移动端浮动按钮 */
-.mobile-fab-container {
-  display: none;
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  z-index: 1000;
-}
-
-.mobile-fab {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #22d36b, #4ade80);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 24px;
-  box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: none;
-}
-
-.mobile-fab:hover {
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 12px 35px rgba(34, 211, 107, 0.4);
-}
-
-.mobile-fab:active {
-  transform: translateY(-2px) scale(1.02);
-}
-
-/* 移动端编辑器弹窗 */
-.mobile-editor-dialog {
-  border-radius: 16px;
-}
-
-.mobile-editor-dialog :deep(.el-dialog) {
-  border-radius: 16px;
-  background: var(--color-bg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.mobile-editor-dialog :deep(.el-dialog__header) {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px 16px 0 0;
-  padding: 20px;
-}
-
-.mobile-editor-dialog :deep(.el-dialog__title) {
-  color: var(--color-text);
-  font-weight: 600;
-  font-size: 1.2rem;
-}
-
-.mobile-editor-dialog :deep(.el-dialog__body) {
-  padding: 0;
-}
-
-.mobile-editor-dialog :deep(.el-dialog__footer) {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0 0 16px 16px;
-  padding: 20px;
-}
-
-.mobile-editor-content {
-  padding: 20px;
-}
-
-.mobile-editor-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.mobile-editor-info {
-  margin-left: 16px;
-}
-
-.mobile-editor-name {
-  font-weight: 600;
-  color: var(--color-text);
-  display: block;
-  font-size: 1.1rem;
-}
-
-.mobile-editor-hint {
-  color: var(--color-text);
-  font-size: 0.9rem;
-  opacity: 0.7;
-}
-
-.mobile-editor-body {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.mobile-image-selector {
-  margin-top: 8px;
-}
-
-.mobile-editor-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.mobile-editor-footer .el-button {
-  flex: 1;
-  padding: 12px 20px;
-  font-weight: 600;
-  border-radius: 12px;
-}
-
-.mobile-editor-footer .el-button--primary {
-  background: linear-gradient(135deg, #22d36b, #4ade80);
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.mobile-editor-footer .el-button--primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
-}
-
-@media (max-width: 768px) {
-  /* 隐藏桌面端发布区域 */
-  .post-editor-section {
-    display: none;
-  }
-  
-  /* 显示移动端浮动按钮 */
-  .mobile-fab-container {
-    display: block;
-  }
-  
-  .main-content {
-    padding: 0 16px;
-  }
-  
-  .page-header {
-    padding-top: 16px;
-    margin-bottom: 30px;
-  }
-  
-  .page-title {
-    font-size: 2rem;
-  }
-  
-  .page-subtitle {
-    font-size: 1rem;
-  }
-  
-  .search-container {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .search-input,
-  .search-type-select,
-  .filter-select {
-    width: 100%;
-  }
-  
-  .post-card {
-    padding: 20px;
-  }
-  
-  .post-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .post-type-badge {
-    align-self: flex-end;
-  }
-  
-  .post-actions-bar {
-    flex-direction: row;
-    gap: 8px;
-    justify-content: space-around;
-  }
-  
-  .like-button {
-    flex: 1;
-    justify-content: center;
-    padding: 10px 8px;
-    min-width: 0;
-  }
-  
-  .like-button .el-icon {
-    font-size: 14px;
-  }
-  
-  .like-text {
-    font-size: 0.8rem;
-  }
-}
-
-.like-stat {
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: color 0.2s;
-  user-select: none;
-}
-.like-stat:hover .el-icon,
-.like-stat:active .el-icon {
-  color: #22d36b;
-  transform: scale(1.1);
-}
-.like-stat .el-icon.liked {
-  color: #22d36b;
-  transform: scale(1.1);
-  transition: all 0.2s;
-}
-
-/* 分享高亮效果 */
-.post-card.highlight-post {
-  animation: highlightPulse 3s ease-in-out;
-  border-color: #22d36b !important;
-  box-shadow: 0 0 20px rgba(34, 211, 107, 0.3) !important;
-}
-
-@keyframes highlightPulse {
-  0% {
-    transform: scale(1);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  }
-  20% {
-    transform: scale(1.02);
-    border-color: #22d36b;
-    box-shadow: 0 0 30px rgba(34, 211, 107, 0.4);
-  }
-  100% {
-    transform: scale(1);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  }
-}
-
-/* 下拉刷新指示器 */
-.refresh-indicator {
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(34, 211, 107, 0.95);
-  color: white;
-  padding: 8px 24px;
-  border-radius: 0 0 16px 16px;
-  font-size: 1rem;
-  font-weight: 500;
-  z-index: 1001;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s;
-  box-shadow: 0 4px 16px rgba(34,211,107,0.15);
-}
-
-.refresh-indicator.show {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.refresh-indicator .el-icon {
-  font-size: 20px;
-  animation: spin 1s linear infinite;
-}
-
-.refresh-svg {
-  display: block;
-  margin-right: 4px;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg);}
-  to { transform: rotate(360deg);}
-}
-
-/* 下拉刷新时的页面效果 */
-body.pulling {
-  transition: transform 0.3s ease;
-}
-
-body.refreshing {
-  transition: transform 0.3s ease;
-}
-
-/* 内心活动弹窗 */
-.inner-thoughts-dialog {
-  border-radius: 16px;
-}
-
-.inner-thoughts-dialog :deep(.el-dialog) {
-  border-radius: 16px;
-  background: var(--color-bg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  max-width: 90vw;
-  max-height: 80vh;
-  overflow: hidden;
-}
-
-.inner-thoughts-dialog :deep(.el-dialog__header) {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px 16px 0 0;
-  padding: 20px;
-}
-
-.inner-thoughts-dialog :deep(.el-dialog__title) {
-  color: var(--color-text);
-  font-weight: 600;
-  font-size: 1.2rem;
-}
-
-.inner-thoughts-dialog :deep(.el-dialog__body) {
-  padding: 0;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-.inner-thoughts-dialog :deep(.el-dialog__footer) {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0 0 16px 16px;
-  padding: 20px;
-}
-
-.inner-thoughts-content {
-  padding: 20px;
-}
-
-.thoughts-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.thoughts-info {
-  margin-left: 16px;
-}
-
-.thoughts-author {
-  font-weight: 600;
-  color: var(--color-text);
-  display: block;
-  font-size: 1.1rem;
-}
-
-.thoughts-time {
-  color: var(--color-text);
-  font-size: 0.9rem;
-  opacity: 0.7;
-}
-
-.thoughts-type {
-  color: var(--color-text);
-  font-size: 0.8rem;
-  opacity: 0.6;
-  margin-top: 4px;
-  display: block;
-  padding: 2px 8px;
-  background: rgba(34, 211, 107, 0.1);
-  border-radius: 12px;
-  width: fit-content;
-}
-
-.thoughts-body {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.thoughts-content,
-.thoughts-original {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 16px;
-  transition: all 0.3s ease;
-}
-
-.thoughts-content:hover,
-.thoughts-original:hover {
-  border-color: rgba(34, 211, 107, 0.2);
-  background: rgba(34, 211, 107, 0.02);
-}
-
-.thoughts-content h4,
-.thoughts-original h4 {
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 12px;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.thoughts-content h4::before {
-  content: "💭";
-  font-size: 1.2rem;
-}
-
-.thoughts-original h4::before {
-  content: "💬";
-  font-size: 1.2rem;
-}
-
-.thoughts-content p,
-.thoughts-original p {
-  color: var(--color-text);
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .inner-thoughts-dialog :deep(.el-dialog) {
-    margin: 10px;
-    width: calc(100% - 20px) !important;
-    max-width: none;
-    max-height: 85vh;
-  }
-  
-  .inner-thoughts-dialog :deep(.el-dialog__body) {
-    max-height: 65vh;
-  }
-  
-  .inner-thoughts-content {
-    padding: 16px;
-  }
-  
-  .thoughts-header {
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-  }
-  
-  .thoughts-content,
-  .thoughts-original {
-    padding: 12px;
-  }
-  
-  .thoughts-content h4,
-  .thoughts-original h4 {
-    font-size: 0.95rem;
-  }
-  
-  .thoughts-content p,
-  .thoughts-original p {
-    font-size: 0.9rem;
-  }
-}
-
-.like-stat {
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: color 0.2s;
-  user-select: none;
-}
-.like-stat:hover .el-icon,
-.like-stat:active .el-icon {
-  color: #22d36b;
-  transform: scale(1.1);
-}
-.like-stat .el-icon.liked {
-  color: #22d36b;
-  transform: scale(1.1);
-  transition: all 0.2s;
-}
-
-/* 内心活动按钮样式 */
-.inner-thoughts-stat {
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.2s;
-  user-select: none;
-}
-
-.inner-thoughts-stat:hover .el-icon,
-.inner-thoughts-stat:active .el-icon {
-  color: #667eea;
-  transform: scale(1.1);
-}
-
-.inner-thoughts-stat .el-icon {
-  color: #667eea;
-  transition: all 0.2s;
-}
+@import url('../styles/moment.scss');
 </style> 

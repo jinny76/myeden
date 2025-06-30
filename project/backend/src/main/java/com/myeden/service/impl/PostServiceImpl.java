@@ -72,6 +72,9 @@ public class PostServiceImpl implements PostService {
     @Autowired
     private ApplicationContext applicationContext;
     
+    @Autowired
+    private RobotBehaviorService robotBehaviorService;
+    
     @Override
     public PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images) {
         try {
@@ -549,16 +552,156 @@ public class PostServiceImpl implements PostService {
         try {
             logger.info("开始触发AI机器人评论，动态ID: {}", postId);
             
-            // 通过ApplicationContext获取RobotBehaviorService实例，避免循环依赖
-            RobotBehaviorService robotBehaviorService = applicationContext.getBean(RobotBehaviorService.class);
+            // 获取所有活跃的机器人
+            List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
+            if (activeRobots.isEmpty()) {
+                logger.info("没有活跃的机器人，跳过评论触发");
+                return;
+            }
             
-            // 调用RobotBehaviorService的批量触发方法
-            robotBehaviorService.triggerAllRobotsComment(postId, postContent);
+            // 随机选择1-3个机器人进行评论
+            int commentCount = new Random().nextInt(3) + 1;
+            commentCount = Math.min(commentCount, activeRobots.size());
             
-            logger.info("AI机器人评论触发完成，动态ID: {}", postId);
+            // 随机打乱机器人列表
+            Collections.shuffle(activeRobots);
+            
+            List<String> skippedRobots = new ArrayList<>();
+            
+            for (int i = 0; i < commentCount; i++) {
+                Robot robot = activeRobots.get(i);
+                
+                try {
+                    // 检查机器人是否在活跃时间段
+                    if (!robotBehaviorService.isRobotActive(robot)) {
+                        logger.debug("机器人 {} 不在活跃时间段，跳过", robot.getName());
+                        skippedRobots.add(robot.getName() + "(非活跃时间)");
+                        continue;
+                    }
+                    
+                    // 检查今日评论数量限制
+                    RobotDailyStats stats = getDailyStats(robot.getRobotId());
+                    /*if (stats.getCommentCount() >= 20) { // 每日最多20条评论
+                        logger.debug("机器人 {} 今日评论数量已达上限，跳过", robot.getName());
+                        skippedRobots.add(robot.getName() + "(评论上限)");
+                        continue;
+                    }*/
+                    
+                    // 触发机器人评论
+                    boolean success = robotBehaviorService.triggerRobotComment(robot.getRobotId(), postId);
+                    
+                    if (success) {
+                        logger.info("机器人 {} 评论成功", robot.getName());
+                    } else {
+                        logger.debug("机器人 {} 评论未触发", robot.getName());
+                        skippedRobots.add(robot.getName() + "(概率未触发)");
+                    }
+                    
+                } catch (Exception e) {
+                    logger.error("机器人 {} 评论失败", robot.getName(), e);
+                    skippedRobots.add(robot.getName() + "(评论失败)");
+                }
+            }
+            
+            if (!skippedRobots.isEmpty()) {
+                logger.info("跳过的机器人: {}", String.join(", ", skippedRobots));
+            }
             
         } catch (Exception e) {
-            logger.error("异步触发AI机器人评论失败: {}", e.getMessage(), e);
+            logger.error("触发AI机器人评论失败", e);
         }
+    }
+    
+    @Override
+    public LikeInfoResult getPostLikes(String postId) {
+        try {
+            logger.info("获取动态点赞信息，动态ID: {}", postId);
+            
+            // 验证动态是否存在
+            Optional<Post> postOpt = postRepository.findByPostId(postId);
+            if (postOpt.isEmpty()) {
+                throw new IllegalArgumentException("动态不存在");
+            }
+            
+            // 查询所有点赞记录
+            List<PostLike> postLikes = postLikeRepository.findByPostId(postId);
+            
+            // 转换为点赞详情
+            List<LikeDetail> likeDetails = new ArrayList<>();
+            
+            for (PostLike postLike : postLikes) {
+                String userId = postLike.getUserId();
+                String userName = "";
+                String userAvatar = "";
+                String userType = "user";
+                
+                // 查询用户信息
+                Optional<User> userOpt = userRepository.findByUserId(userId);
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    userName = user.getNickname();
+                    userAvatar = user.getAvatar();
+                    userType = "user";
+                } else {
+                    // 如果不是用户，可能是机器人
+                    Optional<Robot> robotOpt = robotRepository.findByRobotId(userId);
+                    if (robotOpt.isPresent()) {
+                        Robot robot = robotOpt.get();
+                        userName = robot.getName();
+                        userAvatar = robot.getAvatar();
+                        userType = "robot";
+                    } else {
+                        // 如果用户和机器人都找不到，使用默认信息
+                        userName = "未知用户";
+                        userAvatar = "";
+                        userType = "unknown";
+                    }
+                }
+                
+                LikeDetail likeDetail = new LikeDetail(
+                    userId,
+                    userName,
+                    userAvatar,
+                    userType,
+                    postLike.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                );
+                
+                likeDetails.add(likeDetail);
+            }
+            
+            // 按点赞时间倒序排列
+            likeDetails.sort((a, b) -> b.getLikedAt().compareTo(a.getLikedAt()));
+            
+            logger.info("获取动态点赞信息成功，动态ID: {}, 点赞数量: {}", postId, likeDetails.size());
+            
+            return new LikeInfoResult(postId, likeDetails.size(), likeDetails);
+            
+        } catch (Exception e) {
+            logger.error("获取动态点赞信息失败，动态ID: {}", postId, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * 机器人每日行为统计内部类
+     */
+    private static class RobotDailyStats {
+        private int commentCount = 0;
+        
+        public int getCommentCount() {
+            return commentCount;
+        }
+        
+        public void incrementComment() {
+            commentCount++;
+        }
+    }
+    
+    /**
+     * 获取机器人每日统计
+     */
+    private RobotDailyStats getDailyStats(String robotId) {
+        // 简化实现，实际项目中应该使用缓存或数据库
+        return new RobotDailyStats();
     }
 } 

@@ -10,6 +10,7 @@ import com.myeden.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Async;
@@ -50,6 +51,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     private PromptService promptService;
 
     @Autowired
+    @Lazy
     private PostService postService;
 
     @Autowired
@@ -232,11 +234,112 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             Robot robot = checkRobotPostCondition(robotId, "comment", "对动态发表评论", isRobot);
             if (robot == null) return false;
 
+            // 随机决定行为：点赞、评论或点赞加评论
+            return triggerRandomRobotAction(robot, postId, postDetail);
+            
+        } catch (Exception e) {
+            logger.error("触发机器人发表评论失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 随机决定机器人的行为：点赞、评论或点赞加评论
+     * @param robot 机器人对象
+     * @param postId 动态ID
+     * @param postDetail 动态详情
+     * @return 是否成功执行了行为
+     */
+    private boolean triggerRandomRobotAction(Robot robot, String postId, PostService.PostDetail postDetail) {
+        try {
+            // 随机决定行为类型
+            int actionType = random.nextInt(3); // 0: 只点赞, 1: 只评论, 2: 点赞加评论
+            boolean success = false;
+            
+            switch (actionType) {
+                case 0: // 只点赞
+                    success = performRobotLike(robot, postId);
+                    break;
+                case 1: // 只评论
+                    success = performRobotComment(robot, postId, postDetail);
+                    break;
+                case 2: // 点赞加评论
+                    boolean likeSuccess = performRobotLike(robot, postId);
+                    boolean commentSuccess = performRobotComment(robot, postId, postDetail);
+                    success = likeSuccess || commentSuccess; // 只要有一个成功就算成功
+                    break;
+            }
+            
+            return success;
+            
+        } catch (Exception e) {
+            logger.error("随机机器人行为执行失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 执行机器人点赞行为
+     * @param robot 机器人对象
+     * @param postId 动态ID
+     * @return 是否成功点赞
+     */
+    private boolean performRobotLike(Robot robot, String postId) {
+        try {
+            // 检查是否已经点赞过 - 通过查询点赞记录来判断
+            List<PostService.LikeDetail> likes = postService.getPostLikes(postId).getLikes();
+            boolean alreadyLiked = likes.stream()
+                    .anyMatch(like -> like.getUserId().equals(robot.getRobotId()));
+            
+            if (alreadyLiked) {
+                logger.info("机器人 {} 已经点赞过动态 {}", robot.getRobotId(), postId);
+                return false;
+            }
+            
+            // 执行点赞
+            boolean likeResult = postService.likePost(postId, robot.getRobotId());
+            if (likeResult) {
+                logger.info("机器人 {} 成功点赞动态 {}", robot.getRobotId(), postId);
+                
+                // 推送WebSocket消息
+                try {
+                    Map<String, Object> actionData = new HashMap<>();
+                    actionData.put("robotId", robot.getRobotId());
+                    actionData.put("robotName", robot.getName());
+                    actionData.put("actionType", "like");
+                    actionData.put("postId", postId);
+                    actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+
+                    webSocketService.pushRobotAction(actionData);
+                    logger.info("WebSocket机器人点赞消息推送成功");
+                } catch (Exception e) {
+                    logger.warn("WebSocket消息推送失败", e);
+                }
+                
+                return true;
+            }
+            
+            return false;
+        } catch (Exception e) {
+            logger.error("机器人点赞失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 执行机器人评论行为
+     * @param robot 机器人对象
+     * @param postId 动态ID
+     * @param postDetail 动态详情
+     * @return 是否成功评论
+     */
+    private boolean performRobotComment(Robot robot, String postId, PostService.PostDetail postDetail) {
+        try {
             // 检查今日评论数量限制
-            RobotDailyStats stats = getDailyStats(robotId);
+            RobotDailyStats stats = getDailyStats(robot.getRobotId());
             /*
              * if (stats.getCommentCount() >= 20) { // 每日最多20条评论
-             * logger.info("机器人评论超限: 每天最多20次 {}", robotId);
+             * logger.info("机器人评论超限: 每天最多20次 {}", robot.getRobotId());
              * return false;
              * }
              */
@@ -247,16 +350,16 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             String innerThoughts = promptService.generateInnerThoughts(robot, "评论动态: " + postContent);
 
             // 发表评论
-            CommentService.CommentResult commentResult = commentService.createComment(postId, robotId, "robot", content,
+            CommentService.CommentResult commentResult = commentService.createComment(postId, robot.getRobotId(), "robot", content,
                     innerThoughts);
             if (commentResult != null) {
                 stats.incrementComment();
-                logger.info("机器人成功发表评论: {}, 内容: {}, 内心活动: {}", robotId, content, innerThoughts);
+                logger.info("机器人成功发表评论: {}, 内容: {}, 内心活动: {}", robot.getRobotId(), content, innerThoughts);
 
                 // 推送WebSocket消息
                 try {
                     Map<String, Object> actionData = new HashMap<>();
-                    actionData.put("robotId", robotId);
+                    actionData.put("robotId", robot.getRobotId());
                     actionData.put("robotName", robot.getName());
                     actionData.put("actionType", "comment");
                     actionData.put("actionContent", content);
@@ -276,7 +379,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
             return false;
         } catch (Exception e) {
-            logger.error("触发机器人发表评论失败: {}", e.getMessage(), e);
+            logger.error("机器人评论失败: {}", e.getMessage(), e);
             return false;
         }
     }

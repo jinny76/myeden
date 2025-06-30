@@ -88,6 +88,13 @@ public interface PostService {
     PostListResult searchPosts(String keyword, String searchType, int page, int size);
     
     /**
+     * 获取动态的所有点赞信息
+     * @param postId 动态ID
+     * @return 点赞信息列表
+     */
+    LikeInfoResult getPostLikes(String postId);
+    
+    /**
      * 动态发布结果
      */
     class PostResult {
@@ -236,5 +243,51 @@ public interface PostService {
         public List<String> getLikedUsers() { return likedUsers; }
         public String getCreatedAt() { return createdAt; }
         public String getUpdatedAt() { return updatedAt; }
+    }
+    
+    /**
+     * 点赞信息结果
+     */
+    class LikeInfoResult {
+        private String postId;
+        private int totalLikes;
+        private List<LikeDetail> likes;
+        
+        public LikeInfoResult(String postId, int totalLikes, List<LikeDetail> likes) {
+            this.postId = postId;
+            this.totalLikes = totalLikes;
+            this.likes = likes;
+        }
+        
+        // Getter方法
+        public String getPostId() { return postId; }
+        public int getTotalLikes() { return totalLikes; }
+        public List<LikeDetail> getLikes() { return likes; }
+    }
+    
+    /**
+     * 点赞详情
+     */
+    class LikeDetail {
+        private String userId;
+        private String userName;
+        private String userAvatar;
+        private String userType; // user/robot
+        private String likedAt;
+        
+        public LikeDetail(String userId, String userName, String userAvatar, String userType, String likedAt) {
+            this.userId = userId;
+            this.userName = userName;
+            this.userAvatar = userAvatar;
+            this.userType = userType;
+            this.likedAt = likedAt;
+        }
+        
+        // Getter方法
+        public String getUserId() { return userId; }
+        public String getUserName() { return userName; }
+        public String getUserAvatar() { return userAvatar; }
+        public String getUserType() { return userType; }
+        public String getLikedAt() { return likedAt; }
     }
 } 
