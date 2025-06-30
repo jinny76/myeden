@@ -108,6 +108,13 @@ public interface UserService {
     UserStatistics getStatistics();
     
     /**
+     * 获取用户个人统计信息
+     * @param userId 用户ID
+     * @return 用户个人统计信息
+     */
+    UserPersonalStatistics getUserPersonalStatistics(String userId);
+    
+    /**
      * 用户注册结果
      */
     class UserRegisterResult {
@@ -195,5 +202,78 @@ public interface UserService {
         
         public Long getFirstLoginUsers() { return firstLoginUsers; }
         public void setFirstLoginUsers(Long firstLoginUsers) { this.firstLoginUsers = firstLoginUsers; }
+    }
+    
+    /**
+     * 用户个人统计信息
+     */
+    class UserPersonalStatistics {
+        private String userId;
+        private String nickname;
+        private String avatar;
+        private Long registrationDays; // 注册天数
+        private Long totalPosts; // 发帖数
+        private Long totalComments; // 评论数
+        private Long totalLikes; // 获得的点赞数
+        private Long totalPostLikes; // 动态获得的点赞数
+        private Long totalCommentLikes; // 评论获得的点赞数
+        private Long todayPosts; // 今日发帖数
+        private Long todayComments; // 今日评论数
+        private String lastActiveTime; // 最后活跃时间
+        
+        public UserPersonalStatistics(String userId, String nickname, String avatar, 
+                                    Long registrationDays, Long totalPosts, Long totalComments,
+                                    Long totalLikes, Long totalPostLikes, Long totalCommentLikes,
+                                    Long todayPosts, Long todayComments, String lastActiveTime) {
+            this.userId = userId;
+            this.nickname = nickname;
+            this.avatar = avatar;
+            this.registrationDays = registrationDays;
+            this.totalPosts = totalPosts;
+            this.totalComments = totalComments;
+            this.totalLikes = totalLikes;
+            this.totalPostLikes = totalPostLikes;
+            this.totalCommentLikes = totalCommentLikes;
+            this.todayPosts = todayPosts;
+            this.todayComments = todayComments;
+            this.lastActiveTime = lastActiveTime;
+        }
+        
+        // Getter和Setter方法
+        public String getUserId() { return userId; }
+        public void setUserId(String userId) { this.userId = userId; }
+        
+        public String getNickname() { return nickname; }
+        public void setNickname(String nickname) { this.nickname = nickname; }
+        
+        public String getAvatar() { return avatar; }
+        public void setAvatar(String avatar) { this.avatar = avatar; }
+        
+        public Long getRegistrationDays() { return registrationDays; }
+        public void setRegistrationDays(Long registrationDays) { this.registrationDays = registrationDays; }
+        
+        public Long getTotalPosts() { return totalPosts; }
+        public void setTotalPosts(Long totalPosts) { this.totalPosts = totalPosts; }
+        
+        public Long getTotalComments() { return totalComments; }
+        public void setTotalComments(Long totalComments) { this.totalComments = totalComments; }
+        
+        public Long getTotalLikes() { return totalLikes; }
+        public void setTotalLikes(Long totalLikes) { this.totalLikes = totalLikes; }
+        
+        public Long getTotalPostLikes() { return totalPostLikes; }
+        public void setTotalPostLikes(Long totalPostLikes) { this.totalPostLikes = totalPostLikes; }
+        
+        public Long getTotalCommentLikes() { return totalCommentLikes; }
+        public void setTotalCommentLikes(Long totalCommentLikes) { this.totalCommentLikes = totalCommentLikes; }
+        
+        public Long getTodayPosts() { return todayPosts; }
+        public void setTodayPosts(Long todayPosts) { this.todayPosts = todayPosts; }
+        
+        public Long getTodayComments() { return todayComments; }
+        public void setTodayComments(Long todayComments) { this.todayComments = todayComments; }
+        
+        public String getLastActiveTime() { return lastActiveTime; }
+        public void setLastActiveTime(String lastActiveTime) { this.lastActiveTime = lastActiveTime; }
     }
 } 

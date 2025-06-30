@@ -161,6 +161,29 @@ export function getUserStatistics() {
   })
 }
 
+/**
+ * 获取用户个人统计信息
+ * @param {string} userId - 用户ID
+ * @returns {Promise} 用户个人统计信息
+ */
+export function getUserPersonalStatistics(userId) {
+  return request({
+    url: `/users/${userId}/statistics`,
+    method: 'get'
+  })
+}
+
+/**
+ * 获取当前用户个人统计信息
+ * @returns {Promise} 当前用户个人统计信息
+ */
+export function getCurrentUserPersonalStatistics() {
+  return request({
+    url: '/users/me/statistics',
+    method: 'get'
+  })
+}
+
 // 导出所有API方法
 export const userApi = {
   register,
@@ -173,5 +196,7 @@ export const userApi = {
   checkNickname,
   searchUsers,
   getRecentUsers,
-  getUserStatistics
+  getUserStatistics,
+  getUserPersonalStatistics,
+  getCurrentUserPersonalStatistics
 } 

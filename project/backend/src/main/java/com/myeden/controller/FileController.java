@@ -90,6 +90,77 @@ public class FileController {
     }
     
     /**
+     * 获取文件（支持多级目录）
+     * GET /api/v1/files/{*filepath}
+     * 
+     * @param filepath 文件路径（包含目录和文件名）
+     * @param ifNoneMatch ETag条件请求头
+     * @param ifModifiedSince 修改时间条件请求头
+     * @return 文件资源
+     */
+    @GetMapping("/{*filepath}")
+    public ResponseEntity<Resource> getFileByPath(
+            @PathVariable String filepath,
+            @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch,
+            @RequestHeader(value = "If-Modified-Since", required = false) String ifModifiedSince) {
+        
+        try {
+            // 获取绝对路径
+            String absoluteUploadPath = getAbsoluteUploadPath();
+            Path filePath = Paths.get(absoluteUploadPath, filepath);
+            Resource resource = new UrlResource(filePath.toUri());
+            
+            if (!resource.exists() || !resource.isReadable()) {
+                logger.warn("文件不存在或不可读: {}", filePath.toString());
+                return ResponseEntity.notFound().build();
+            }
+            
+            // 获取文件名
+            String filename = filePath.getFileName().toString();
+            
+            // 获取或生成文件元数据
+            String cacheKey = filepath;
+            FileMetadata metadata = getFileMetadata(cacheKey, filePath, filename);
+            
+            // 处理条件请求
+            ResponseEntity<Resource> conditionalResponse = handleConditionalRequest(
+                metadata, ifNoneMatch, ifModifiedSince);
+            if (conditionalResponse != null) {
+                return conditionalResponse;
+            }
+            
+            // 设置响应头
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(metadata.getContentType()));
+            headers.setETag("\"" + metadata.getEtag() + "\"");
+            headers.setLastModified(metadata.getLastModified());
+            headers.setContentLength(metadata.getFileSize());
+            
+            // 缓存控制头
+            headers.setCacheControl("public, max-age=" + cacheTtlSeconds + ", must-revalidate");
+            headers.setExpires(System.currentTimeMillis() + (cacheTtlSeconds * 1000L));
+            
+            // 允许跨域访问
+            headers.setAccessControlAllowOrigin("*");
+            headers.setAccessControlAllowMethods(java.util.Arrays.asList(HttpMethod.GET, HttpMethod.HEAD));
+            headers.setAccessControlMaxAge(cacheTtlSeconds);
+            
+            logger.debug("返回文件: {} (ETag: {}, Size: {})", filePath.toString(), metadata.getEtag(), metadata.getFileSize());
+            
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(resource);
+            
+        } catch (MalformedURLException e) {
+            logger.error("文件路径错误", e);
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            logger.error("文件访问失败: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    /**
      * 获取文件
      * GET /api/v1/files/{subDirectory}/{filename}
      * 
@@ -109,7 +180,18 @@ public class FileController {
         try {
             // 获取绝对路径
             String absoluteUploadPath = getAbsoluteUploadPath();
-            Path filePath = Paths.get(absoluteUploadPath, subDirectory, filename);
+            
+            // 处理多级目录路径
+            String[] pathParts = subDirectory.split("/");
+            Path filePath;
+            if (pathParts.length > 1) {
+                // 多级目录，直接使用subDirectory作为完整路径
+                filePath = Paths.get(absoluteUploadPath, subDirectory, filename);
+            } else {
+                // 单级目录
+                filePath = Paths.get(absoluteUploadPath, subDirectory, filename);
+            }
+            
             Resource resource = new UrlResource(filePath.toUri());
             
             if (!resource.exists() || !resource.isReadable()) {
@@ -128,8 +210,8 @@ public class FileController {
                 return conditionalResponse;
             }
             
-                // 设置响应头
-                HttpHeaders headers = new HttpHeaders();
+            // 设置响应头
+            HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(metadata.getContentType()));
             headers.setETag("\"" + metadata.getEtag() + "\"");
             headers.setLastModified(metadata.getLastModified());
@@ -138,17 +220,17 @@ public class FileController {
             // 缓存控制头
             headers.setCacheControl("public, max-age=" + cacheTtlSeconds + ", must-revalidate");
             headers.setExpires(System.currentTimeMillis() + (cacheTtlSeconds * 1000L));
-                
-                // 允许跨域访问
-                headers.setAccessControlAllowOrigin("*");
+            
+            // 允许跨域访问
+            headers.setAccessControlAllowOrigin("*");
             headers.setAccessControlAllowMethods(java.util.Arrays.asList(HttpMethod.GET, HttpMethod.HEAD));
             headers.setAccessControlMaxAge(cacheTtlSeconds);
             
             logger.debug("返回文件: {} (ETag: {}, Size: {})", filePath.toString(), metadata.getEtag(), metadata.getFileSize());
-                
-                return ResponseEntity.ok()
-                        .headers(headers)
-                        .body(resource);
+            
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(resource);
             
         } catch (MalformedURLException e) {
             logger.error("文件路径错误", e);
