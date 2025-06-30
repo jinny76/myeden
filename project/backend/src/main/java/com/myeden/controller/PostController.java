@@ -387,4 +387,45 @@ public class PostController {
             ));
         }
     }
+    
+    /**
+     * 获取动态的所有点赞信息
+     * @param postId 动态ID
+     * @return 点赞信息列表
+     */
+    @GetMapping("/{postId}/likes")
+    public ResponseEntity<EventResponse> getPostLikes(@PathVariable String postId) {
+        
+        try {
+            logger.info("获取动态点赞信息，动态ID: {}", postId);
+            
+            // 参数验证
+            if (postId == null || postId.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(new EventResponse(
+                    400,
+                    "动态ID不能为空",
+                    null
+                ));
+            }
+            
+            // 获取点赞信息
+            PostService.LikeInfoResult result = postService.getPostLikes(postId.trim());
+            
+            logger.info("获取动态点赞信息成功，动态ID: {}, 点赞数量: {}", postId, result.getTotalLikes());
+            
+            return ResponseEntity.ok(new EventResponse(
+                200,
+                "获取点赞信息成功",
+                result
+            ));
+            
+        } catch (Exception e) {
+            logger.error("获取动态点赞信息失败，动态ID: {}", postId, e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "获取点赞信息失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
 } 

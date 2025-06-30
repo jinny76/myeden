@@ -102,6 +102,10 @@
             <el-icon><User /></el-icon>
             <span>个人资料</span>
           </div>
+          <div class="mobile-nav-item" @click="navigateTo('/settings')">
+            <el-icon><Setting /></el-icon>
+            <span>设置</span>
+          </div>
           <div class="mobile-nav-item" @click="handleLogout">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
@@ -151,7 +155,7 @@ const handleUserCommand = async (command) => {
       router.push('/profile-setup')
       break
     case 'settings':
-      message.info('设置功能开发中...')
+      router.push('/settings')
       break
     case 'logout':
       await handleLogout()

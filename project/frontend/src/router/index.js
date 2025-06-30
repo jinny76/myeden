@@ -76,6 +76,15 @@ const routes = [
           title: '完善资料 - 我的伊甸园',
           requiresAuth: true
         }
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('@/views/Settings.vue'),
+        meta: {
+          title: '设置 - 我的伊甸园',
+          requiresAuth: true
+        }
       }
     ]
   }

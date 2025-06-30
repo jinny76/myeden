@@ -117,58 +117,24 @@
             </div>
           </el-form-item>
         </el-form>
-
-        <div class="divider">
-          <span>个性化设置</span>
-        </div>
-
-        <div class="theme-setting">
-          <div class="setting-header">
-            <el-icon><Brush /></el-icon>
-            <span>主题配色</span>
-          </div>
-          <div class="theme-options">
-            <div 
-              class="theme-option" 
-              :class="{ active: theme === 'light' }"
-              @click="onThemeChange('light')"
-            >
-              <div class="theme-preview light-theme">
-                <div class="preview-header"></div>
-                <div class="preview-content"></div>
-              </div>
-              <span>亮色主题</span>
-            </div>
-            <div 
-              class="theme-option" 
-              :class="{ active: theme === 'dark' }"
-              @click="onThemeChange('dark')"
-            >
-              <div class="theme-preview dark-theme">
-                <div class="preview-header"></div>
-                <div class="preview-content"></div>
-              </div>
-              <span>暗色主题</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from '@/utils/message'
 import { Plus, Camera, Male, Female, User, Check, Brush } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import { useConfigStore } from '@/stores/config'
 import { userApi } from '@/api/user'
 import { getUserAvatarUrl, buildAvatarUrl, generateDefaultAvatar, handleAvatarError as handleAvatarErrorUtil } from '@/utils/avatar'
-import { setTheme, getTheme } from '@/utils/theme'
 
 const router = useRouter()
 const userStore = useUserStore()
+const configStore = useConfigStore()
 
 // 表单引用
 const profileForm = ref(null)
@@ -205,8 +171,10 @@ const profileRules = {
 }
 
 // 主题
-const theme = ref(getTheme())
-const onThemeChange = (val) => { setTheme(val) }
+const theme = computed(() => configStore.config.theme.mode)
+const onThemeChange = (val) => { 
+  configStore.updateTheme('mode', val)
+}
 
 // 初始化头像URL
 const initAvatarUrl = () => {
@@ -251,7 +219,6 @@ onMounted(() => {
   setTimeout(() => {
     initUserProfile()
   }, 100)
-  theme.value = getTheme()
 })
 
 // 头像上传前的验证

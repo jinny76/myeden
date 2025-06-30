@@ -4,7 +4,6 @@ import com.myeden.entity.Post;
 import com.myeden.entity.User;
 import com.myeden.entity.Robot;
 import com.myeden.entity.PostLike;
-import com.myeden.entity.UserPrivacySettings;
 import com.myeden.repository.PostRepository;
 import com.myeden.repository.UserRepository;
 import com.myeden.repository.RobotRepository;
@@ -13,7 +12,6 @@ import com.myeden.service.PostService;
 import com.myeden.service.FileService;
 import com.myeden.service.WebSocketService;
 import com.myeden.service.RobotBehaviorService;
-import com.myeden.service.UserRobotLinkService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,7 +73,7 @@ public class PostServiceImpl implements PostService {
     private ApplicationContext applicationContext;
     
     @Autowired
-    private UserRobotLinkService userRobotLinkService;
+    private RobotBehaviorService robotBehaviorService;
     
     @Override
     public PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images) {
@@ -143,30 +141,6 @@ public class PostServiceImpl implements PostService {
             post.setCreatedAt(LocalDateTime.now());
             post.setUpdatedAt(LocalDateTime.now());
             
-            // 根据作者类型设置可见性
-            if ("user".equals(authorType)) {
-                // 获取用户的隐私设置
-                Optional<User> userOpt = userRepository.findByUserId(authorId);
-                if (userOpt.isPresent()) {
-                    User user = userOpt.get();
-                    UserPrivacySettings privacySettings = user.getPrivacySettings();
-                    if (privacySettings != null) {
-                        post.setVisibility(privacySettings.getPostVisibility());
-                        logger.info("用户动态可见性设置为: {}", privacySettings.getPostVisibility());
-                    } else {
-                        post.setVisibility("private"); // 默认私有
-                        logger.info("用户隐私设置为空，动态可见性默认为: private");
-                    }
-                } else {
-                    post.setVisibility("private"); // 默认私有
-                    logger.info("用户不存在，动态可见性默认为: private");
-                }
-            } else if ("robot".equals(authorType)) {
-                // 机器人发帖默认为公开
-                post.setVisibility("public");
-                logger.info("机器人动态可见性设置为: public");
-            }
-            
             // 保存到数据库
             Post savedPost = postRepository.save(post);
             
@@ -207,33 +181,24 @@ public class PostServiceImpl implements PostService {
     }
     
     @Override
-    public PostListResult getPostList(int page, int size, String authorType, String currentUserId) {
+    public PostListResult getPostList(int page, int size, String authorType) {
         try {
-            logger.info("获取动态列表，页码: {}, 大小: {}, 作者类型: {}, 当前用户: {}", page, size, authorType, currentUserId);
+            logger.info("获取动态列表，页码: {}, 大小: {}, 作者类型: {}", page, size, authorType);
             
             // 创建分页请求
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
             
-            // 获取用户已连接的机器人ID列表
-            List<String> connectedRobotIds = new ArrayList<>();
-            if (currentUserId != null) {
-                List<UserRobotLinkService.LinkSummary> activeLinks = userRobotLinkService.getUserActiveLinks(currentUserId);
-                connectedRobotIds = activeLinks.stream()
-                    .map(UserRobotLinkService.LinkSummary::getRobotId)
-                    .collect(Collectors.toList());
-            }
-            
-            // 查询动态（在分页前完成过滤）
+            // 查询动态
             Page<Post> postPage;
             if (StringUtils.hasText(authorType)) {
-                postPage = postRepository.findByAuthorTypeAndIsDeletedFalse(authorType, pageable, currentUserId, connectedRobotIds);
+                postPage = postRepository.findByAuthorTypeAndIsDeletedFalse(authorType, pageable);
             } else {
-                postPage = postRepository.findByIsDeletedFalse(pageable, currentUserId, connectedRobotIds);
+                postPage = postRepository.findByIsDeletedFalse(pageable);
             }
             
             // 转换为摘要信息
             List<PostSummary> postSummaries = postPage.getContent().stream()
-                .map(post -> convertToPostSummary(post, currentUserId))
+                .map(this::convertToPostSummary)
                 .collect(Collectors.toList());
             
             logger.info("获取动态列表成功，总数: {}", postPage.getTotalElements());
@@ -249,28 +214,6 @@ public class PostServiceImpl implements PostService {
             logger.error("获取动态列表失败", e);
             throw e;
         }
-    }
-    
-    /**
-     * 检查动态是否对用户可见
-     * 
-     * @param post 动态
-     * @param currentUserId 当前用户ID
-     * @return 是否可见
-     */
-    private boolean isPostVisibleToUser(Post post, String currentUserId) {
-        // 如果是公开内容，所有人都可见
-        if ("public".equals(post.getVisibility())) {
-            return true;
-        }
-        
-        // 如果是私有内容，只有作者本人可见
-        if ("private".equals(post.getVisibility())) {
-            return post.getAuthorId().equals(currentUserId);
-        }
-        
-        // 默认可见
-        return true;
     }
     
     @Override
@@ -460,8 +403,8 @@ public class PostServiceImpl implements PostService {
             // 创建分页请求
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
             
-            // 查询用户的动态（传入authorId作为currentUserId，确保用户只能看到自己的私有动态）
-            Page<Post> postPage = postRepository.findByAuthorIdAndIsDeletedFalse(authorId, pageable, authorId);
+            // 查询用户的动态
+            Page<Post> postPage = postRepository.findByAuthorIdAndIsDeletedFalse(authorId, pageable);
             
             // 转换为摘要信息
             List<PostSummary> postSummaries = postPage.getContent().stream()
@@ -491,25 +434,21 @@ public class PostServiceImpl implements PostService {
             // 创建分页请求
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
             
-            // 获取用户已连接的机器人ID列表（这里暂时传null，实际使用时需要传入当前用户ID）
-            String currentUserId = null;
-            List<String> connectedRobotIds = new ArrayList<>();
-            
             // 根据搜索类型执行不同的查询
             Page<Post> postPage;
             switch (searchType.toLowerCase()) {
                 case "content":
                     // 只搜索内容
-                    postPage = postRepository.findByContentKeywordAndIsDeletedFalse(keyword, pageable, currentUserId, connectedRobotIds);
+                    postPage = postRepository.findByContentKeywordAndIsDeletedFalse(keyword, pageable);
                     break;
                 case "author":
                     // 只搜索作者
-                    postPage = postRepository.findByAuthorKeywordAndIsDeletedFalse(keyword, pageable, currentUserId, connectedRobotIds);
+                    postPage = postRepository.findByAuthorKeywordAndIsDeletedFalse(keyword, pageable);
                     break;
                 case "all":
                 default:
                     // 搜索内容和作者
-                    postPage = postRepository.findByKeywordAndIsDeletedFalse(keyword, pageable, currentUserId, connectedRobotIds);
+                    postPage = postRepository.findByKeywordAndIsDeletedFalse(keyword, pageable);
                     break;
             }
             
@@ -613,16 +552,156 @@ public class PostServiceImpl implements PostService {
         try {
             logger.info("开始触发AI机器人评论，动态ID: {}", postId);
             
-            // 通过ApplicationContext获取RobotBehaviorService实例，避免循环依赖
-            RobotBehaviorService robotBehaviorService = applicationContext.getBean(RobotBehaviorService.class);
+            // 获取所有活跃的机器人
+            List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
+            if (activeRobots.isEmpty()) {
+                logger.info("没有活跃的机器人，跳过评论触发");
+                return;
+            }
             
-            // 调用RobotBehaviorService的批量触发方法
-            robotBehaviorService.triggerAllRobotsComment(postId, postContent);
+            // 随机选择1-3个机器人进行评论
+            int commentCount = new Random().nextInt(3) + 1;
+            commentCount = Math.min(commentCount, activeRobots.size());
             
-            logger.info("AI机器人评论触发完成，动态ID: {}", postId);
+            // 随机打乱机器人列表
+            Collections.shuffle(activeRobots);
+            
+            List<String> skippedRobots = new ArrayList<>();
+            
+            for (int i = 0; i < commentCount; i++) {
+                Robot robot = activeRobots.get(i);
+                
+                try {
+                    // 检查机器人是否在活跃时间段
+                    if (!robotBehaviorService.isRobotActive(robot)) {
+                        logger.debug("机器人 {} 不在活跃时间段，跳过", robot.getName());
+                        skippedRobots.add(robot.getName() + "(非活跃时间)");
+                        continue;
+                    }
+                    
+                    // 检查今日评论数量限制
+                    RobotDailyStats stats = getDailyStats(robot.getRobotId());
+                    /*if (stats.getCommentCount() >= 20) { // 每日最多20条评论
+                        logger.debug("机器人 {} 今日评论数量已达上限，跳过", robot.getName());
+                        skippedRobots.add(robot.getName() + "(评论上限)");
+                        continue;
+                    }*/
+                    
+                    // 触发机器人评论
+                    boolean success = robotBehaviorService.triggerRobotComment(robot.getRobotId(), postId);
+                    
+                    if (success) {
+                        logger.info("机器人 {} 评论成功", robot.getName());
+                    } else {
+                        logger.debug("机器人 {} 评论未触发", robot.getName());
+                        skippedRobots.add(robot.getName() + "(概率未触发)");
+                    }
+                    
+                } catch (Exception e) {
+                    logger.error("机器人 {} 评论失败", robot.getName(), e);
+                    skippedRobots.add(robot.getName() + "(评论失败)");
+                }
+            }
+            
+            if (!skippedRobots.isEmpty()) {
+                logger.info("跳过的机器人: {}", String.join(", ", skippedRobots));
+            }
             
         } catch (Exception e) {
-            logger.error("异步触发AI机器人评论失败: {}", e.getMessage(), e);
+            logger.error("触发AI机器人评论失败", e);
         }
+    }
+    
+    @Override
+    public LikeInfoResult getPostLikes(String postId) {
+        try {
+            logger.info("获取动态点赞信息，动态ID: {}", postId);
+            
+            // 验证动态是否存在
+            Optional<Post> postOpt = postRepository.findByPostId(postId);
+            if (postOpt.isEmpty()) {
+                throw new IllegalArgumentException("动态不存在");
+            }
+            
+            // 查询所有点赞记录
+            List<PostLike> postLikes = postLikeRepository.findByPostId(postId);
+            
+            // 转换为点赞详情
+            List<LikeDetail> likeDetails = new ArrayList<>();
+            
+            for (PostLike postLike : postLikes) {
+                String userId = postLike.getUserId();
+                String userName = "";
+                String userAvatar = "";
+                String userType = "user";
+                
+                // 查询用户信息
+                Optional<User> userOpt = userRepository.findByUserId(userId);
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    userName = user.getNickname();
+                    userAvatar = user.getAvatar();
+                    userType = "user";
+                } else {
+                    // 如果不是用户，可能是机器人
+                    Optional<Robot> robotOpt = robotRepository.findByRobotId(userId);
+                    if (robotOpt.isPresent()) {
+                        Robot robot = robotOpt.get();
+                        userName = robot.getName();
+                        userAvatar = robot.getAvatar();
+                        userType = "robot";
+                    } else {
+                        // 如果用户和机器人都找不到，使用默认信息
+                        userName = "未知用户";
+                        userAvatar = "";
+                        userType = "unknown";
+                    }
+                }
+                
+                LikeDetail likeDetail = new LikeDetail(
+                    userId,
+                    userName,
+                    userAvatar,
+                    userType,
+                    postLike.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                );
+                
+                likeDetails.add(likeDetail);
+            }
+            
+            // 按点赞时间倒序排列
+            likeDetails.sort((a, b) -> b.getLikedAt().compareTo(a.getLikedAt()));
+            
+            logger.info("获取动态点赞信息成功，动态ID: {}, 点赞数量: {}", postId, likeDetails.size());
+            
+            return new LikeInfoResult(postId, likeDetails.size(), likeDetails);
+            
+        } catch (Exception e) {
+            logger.error("获取动态点赞信息失败，动态ID: {}", postId, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * 机器人每日行为统计内部类
+     */
+    private static class RobotDailyStats {
+        private int commentCount = 0;
+        
+        public int getCommentCount() {
+            return commentCount;
+        }
+        
+        public void incrementComment() {
+            commentCount++;
+        }
+    }
+    
+    /**
+     * 获取机器人每日统计
+     */
+    private RobotDailyStats getDailyStats(String robotId) {
+        // 简化实现，实际项目中应该使用缓存或数据库
+        return new RobotDailyStats();
     }
 } 

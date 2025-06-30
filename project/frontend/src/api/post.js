@@ -150,4 +150,16 @@ export function searchPosts(params) {
     method: 'get',
     params
   })
+}
+
+/**
+ * 获取动态的所有点赞信息
+ * @param {string} postId - 动态ID
+ * @returns {Promise} 点赞信息列表
+ */
+export function getPostLikes(postId) {
+  return request({
+    url: `/posts/${postId}/likes`,
+    method: 'get'
+  })
 } 

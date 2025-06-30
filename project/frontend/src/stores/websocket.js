@@ -4,6 +4,8 @@ import { Client } from '@stomp/stompjs'
 import { message } from '@/utils/message'
 import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
+import { useConfigStore } from '@/stores/config'
+import { sendUserOnlineMessage } from '@/api/websocket'
 
 /**
  * WebSocket状态管理
@@ -32,6 +34,18 @@ export const useWebSocketStore = defineStore('websocket', () => {
   const messageHistory = ref([])
   const maxMessageHistory = ref(100)
   const subscriptions = ref(new Map())
+  
+  // 防重复发送机制
+  let lastOnlineNotificationTime = 0
+  const ONLINE_NOTIFICATION_COOLDOWN = 5000 // 5秒冷却时间
+  
+  // 消息去重机制
+  const processedMessages = ref(new Set())
+  const MESSAGE_DEDUPLICATION_WINDOW = 10000 // 10秒去重窗口
+  
+  // 全局连接实例管理
+  let globalConnectionId = null
+  const CONNECTION_ID = `ws_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
   // 计算属性
   const connectionStatus = computed(() => {
@@ -45,9 +59,24 @@ export const useWebSocketStore = defineStore('websocket', () => {
   })
 
   /**
+   * 获取WebSocket连接URL
+   */
+  const getWebSocketUrl = () => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = window.location.host
+    return `${protocol}//${host}/ws`
+  }
+
+  /**
    * 连接WebSocket
    */
   const connect = async () => {
+    // 检查是否已经有全局连接
+    if (globalConnectionId && globalConnectionId !== CONNECTION_ID) {
+      console.log('🔌 检测到其他连接实例，跳过连接')
+      return
+    }
+    
     if (isConnected.value || isConnecting.value) {
       console.log('WebSocket已连接或正在连接中')
       return
@@ -55,6 +84,8 @@ export const useWebSocketStore = defineStore('websocket', () => {
 
     try {
       isConnecting.value = true
+      globalConnectionId = CONNECTION_ID
+      
       const userStore = useUserStore()
       
       if (!userStore.token) {
@@ -63,7 +94,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
 
       // 根据当前访问的网址推算WebSocket URL
       const wsUrl = getWebSocketUrl()
-      console.log('🔌 正在连接WebSocket...', wsUrl)
+      console.log('🔌 正在连接WebSocket...', wsUrl, '连接ID:', CONNECTION_ID)
 
       // 创建STOMP客户端
       stompClient.value = new Client({
@@ -81,19 +112,25 @@ export const useWebSocketStore = defineStore('websocket', () => {
 
       // 连接成功回调
       stompClient.value.onConnect = (frame) => {
-        console.log('✅ STOMP连接成功:', frame)
+        console.log('✅ STOMP连接成功:', frame, '连接ID:', CONNECTION_ID)
+        console.log('🔍 连接详情:', {
+          sessionId: frame.headers['user-name'],
+          connected: true,
+          timestamp: new Date().toISOString(),
+          connectionId: CONNECTION_ID
+        })
         handleConnect()
       }
 
       // 连接错误回调
       stompClient.value.onStompError = (frame) => {
-        console.error('❌ STOMP连接错误:', frame)
+        console.error('❌ STOMP连接错误:', frame, '连接ID:', CONNECTION_ID)
         handleConnectError(new Error(frame.headers.message || 'STOMP连接错误'))
       }
 
       // 连接断开回调
       stompClient.value.onDisconnect = () => {
-        console.log('🔌 STOMP连接断开')
+        console.log('🔌 STOMP连接断开', '连接ID:', CONNECTION_ID)
         handleDisconnect('STOMP disconnected')
       }
 
@@ -101,35 +138,12 @@ export const useWebSocketStore = defineStore('websocket', () => {
       stompClient.value.activate()
 
     } catch (error) {
-      console.error('❌ WebSocket连接失败:', error)
+      console.error('❌ WebSocket连接失败:', error, '连接ID:', CONNECTION_ID)
       isConnecting.value = false
+      globalConnectionId = null
       message.error('WebSocket连接失败')
       throw error
     }
-  }
-
-  /**
-   * 根据当前访问的网址推算WebSocket URL
-   */
-  const getWebSocketUrl = () => {
-    // 优先使用环境变量配置
-    if (import.meta.env.VITE_WS_URL) {
-      return import.meta.env.VITE_WS_URL
-    }
-
-    // 根据当前页面URL推算WebSocket URL
-    const currentUrl = window.location
-    const protocol = currentUrl.protocol === 'https:' ? 'wss:' : 'ws:'
-    const host = currentUrl.hostname
-    const port = currentUrl.port || (currentUrl.protocol === 'https:' ? '443' : '80')
-    
-    // 如果是开发环境，使用默认的WebSocket端口
-    if (import.meta.env.DEV) {
-      return `${protocol}//${host}/ws`
-    }
-    
-    // 生产环境使用相同的主机和端口
-    return `${protocol}//${host}:${port}/ws`
   }
 
   // 开发环境下添加测试函数
@@ -148,18 +162,30 @@ export const useWebSocketStore = defineStore('websocket', () => {
    * 断开WebSocket连接
    */
   const disconnect = () => {
-    if (stompClient.value && isConnected.value) {
-      stompClient.value.deactivate()
-      stompClient.value = null
+    if (stompClient.value) {
+      try {
+        // 取消所有订阅
+        subscriptions.value.forEach((subscription, id) => {
+          subscription.unsubscribe()
+          console.log('📡 取消订阅:', id)
+        })
+        subscriptions.value.clear()
+        
+        // 断开连接
+        stompClient.value.deactivate()
+        console.log('🔌 WebSocket连接已断开', '连接ID:', CONNECTION_ID)
+      } catch (error) {
+        console.error('❌ 断开WebSocket连接失败:', error)
+      } finally {
+        isConnected.value = false
+        isConnecting.value = false
+        stompClient.value = null
+        // 清理全局连接实例
+        if (globalConnectionId === CONNECTION_ID) {
+          globalConnectionId = null
+        }
+      }
     }
-    isConnected.value = false
-    isConnecting.value = false
-    reconnectAttempts.value = 0
-    
-    // 清理订阅
-    subscriptions.value.clear()
-    
-    console.log('🔌 WebSocket连接已断开')
   }
 
   /**
@@ -201,12 +227,12 @@ export const useWebSocketStore = defineStore('websocket', () => {
     }
 
     try {
-      const subscription = stompClient.value.subscribe(destination, (message) => {
+      const subscription = stompClient.value.subscribe(destination, (stompMessage) => {
         try {
-          const data = JSON.parse(message.body)
+          const data = JSON.parse(stompMessage.body)
           console.log('📥 收到消息:', destination, data)
           addToMessageHistory('message', { destination, data })
-          callback(data, message)
+          callback(data, stompMessage)
         } catch (error) {
           console.error('❌ 解析消息失败:', error)
         }
@@ -243,16 +269,279 @@ export const useWebSocketStore = defineStore('websocket', () => {
     isConnected.value = true
     isConnecting.value = false
     reconnectAttempts.value = 0
-    console.log('✅ WebSocket连接成功')
+    console.log('✅ WebSocket连接已建立')
     
-    // 发送连接成功消息
-    //ElMessage.success('实时连接已建立')
+    // 订阅消息主题
+    subscribeToTopics()
     
-    // 处理消息队列
-    processMessageQueue()
+    // 发送用户上线消息
+    console.log('📢 准备发送用户上线消息...')
+    sendUserOnlineNotification()
+  }
+
+  /**
+   * 发送用户上线通知
+   */
+  const sendUserOnlineNotification = async () => {
+    try {
+      // 检查冷却时间，避免重复发送
+      const now = Date.now()
+      if (now - lastOnlineNotificationTime < ONLINE_NOTIFICATION_COOLDOWN) {
+        console.log('⏰ 用户上线消息发送过于频繁，跳过', {
+          timeSinceLast: now - lastOnlineNotificationTime,
+          cooldown: ONLINE_NOTIFICATION_COOLDOWN
+        })
+        return
+      }
+      
+      const userStore = useUserStore()
+      if (userStore.userInfo?.userId) {
+        const userInfo = {
+          nickname: userStore.userInfo.nickname,
+          avatar: userStore.userInfo.avatar
+        }
+        
+        console.log('📢 WebSocket Store准备发送用户上线消息:', {
+          userId: userStore.userInfo.userId,
+          userInfo,
+          timestamp: new Date().toISOString(),
+          stack: new Error().stack
+        })
+        
+        await sendUserOnlineMessage(userStore.userInfo.userId, userInfo)
+        lastOnlineNotificationTime = now
+        console.log('📢 WebSocket Store用户上线消息已发送，时间戳:', now)
+      }
+    } catch (error) {
+      console.error('❌ 发送用户上线消息失败:', error)
+    }
+  }
+
+  /**
+   * 订阅消息主题
+   */
+  const subscribeToTopics = () => {
+    // 先取消所有现有订阅
+    subscriptions.value.forEach((subscription, id) => {
+      subscription.unsubscribe()
+      console.log('📡 取消旧订阅:', id)
+    })
+    subscriptions.value.clear()
     
-    // 重新订阅之前的主题
-    resubscribeTopics()
+    // 订阅广播消息
+    subscribe('/topic/broadcast', handleBroadcastMessage, 'broadcast')
+    
+    // 订阅用户个人消息
+    const userStore = useUserStore()
+    if (userStore.userInfo?.userId) {
+      subscribe(`/user/${userStore.userInfo.userId}/queue/messages`, handleUserMessage, 'user-messages')
+    }
+    
+    console.log('📡 WebSocket消息订阅完成')
+  }
+
+  /**
+   * 检查消息是否已处理过（去重）
+   */
+  const isMessageProcessed = (messageId) => {
+    if (!messageId) return false
+    
+    const now = Date.now()
+    const processed = processedMessages.value.has(messageId)
+    
+    if (processed) {
+      console.log('🔄 消息已处理过，跳过:', messageId)
+      return true
+    }
+    
+    // 添加到已处理集合
+    processedMessages.value.add(messageId)
+    
+    // 10秒后自动清理
+    setTimeout(() => {
+      processedMessages.value.delete(messageId)
+    }, MESSAGE_DEDUPLICATION_WINDOW)
+    
+    return false
+  }
+
+  /**
+   * 处理广播消息
+   */
+  const handleBroadcastMessage = (wsMessage) => {
+    console.log('📢 收到广播消息:', wsMessage)
+    
+    // 检查消息去重
+    if (isMessageProcessed(wsMessage.messageId || `${wsMessage.type}_${Date.now()}`)) {
+      return
+    }
+    
+    try {
+      // 根据消息类型处理
+      switch (wsMessage.type) {
+        case 'POST_UPDATE':
+          handlePostUpdateMessage(wsMessage)
+          break
+        case 'COMMENT_UPDATE':
+          handleCommentUpdateMessage(wsMessage)
+          break
+        case 'ROBOT_ACTION':
+          handleRobotActionMessage(wsMessage)
+          break
+        case 'NOTIFICATION':
+          handleNotificationMessage(wsMessage)
+          break
+        case 'SYSTEM_MESSAGE':
+          handleSystemMessage(wsMessage)
+          break
+        case 'HEARTBEAT':
+          // 心跳消息，不需要特殊处理
+          console.log('💓 收到心跳消息')
+          break
+        default:
+          console.log('未知消息类型:', wsMessage.type)
+      }
+    } catch (error) {
+      console.error('处理广播消息失败:', error)
+    }
+  }
+
+  /**
+   * 处理用户个人消息
+   */
+  const handleUserMessage = (wsMessage) => {
+    console.log('👤 收到用户消息:', wsMessage)
+    
+    // 检查消息去重
+    if (isMessageProcessed(wsMessage.messageId || `user_${Date.now()}`)) {
+      return
+    }
+    
+    try {
+      // 只处理用户上线消息，其他消息不显示提示
+      if (wsMessage.title === '用户上线' && wsMessage.data) {
+        const userData = wsMessage.data
+        const userStore = useUserStore()
+        const configStore = useConfigStore()
+        
+        console.log('👤 收到用户上线消息:', {
+          userData,
+          currentUserId: userStore.userInfo?.userId,
+          isOwnMessage: userStore.userInfo?.userId === userData.userId,
+          notificationsEnabled: configStore.config.notifications.userOnline
+        })
+        
+        // 如果不是自己上线，且用户开启了上线通知，才显示提示
+        if (userStore.userInfo?.userId !== userData.userId && configStore.config.notifications.userOnline) {
+          console.log('📢 显示用户上线通知:', `${userData.userName} 来到了伊甸园`)
+          message.info(`${userData.userName} 来到了伊甸园`)
+        } else {
+          console.log('📢 跳过用户上线通知:', {
+            reason: userStore.userInfo?.userId === userData.userId ? '自己的消息' : '通知已关闭'
+          })
+        }
+      } else {
+        // 其他用户消息不显示提示，只记录日志
+        console.log('📢 收到其他用户消息，不显示提示:', wsMessage.title, wsMessage.content)
+      }
+    } catch (error) {
+      console.error('处理用户消息失败:', error)
+    }
+  }
+
+  /**
+   * 处理动态更新消息
+   */
+  const handlePostUpdateMessage = (wsMessage) => {
+    console.log('📝 处理动态更新消息:', wsMessage)
+    
+    // 触发动态列表刷新
+    // 这里可以通过事件总线或直接调用store方法来刷新数据
+    window.dispatchEvent(new CustomEvent('post-update', { 
+      detail: wsMessage.data 
+    }))
+    
+    // 不显示通知，只记录日志
+    console.log('📝 动态更新消息已处理，不显示提示')
+  }
+
+  /**
+   * 处理评论更新消息
+   */
+  const handleCommentUpdateMessage = (wsMessage) => {
+    console.log('💬 处理评论更新消息:', wsMessage)
+    
+    // 触发评论列表刷新
+    window.dispatchEvent(new CustomEvent('comment-update', { 
+      detail: wsMessage.data 
+    }))
+    
+    // 不显示通知，只记录日志
+    console.log('💬 评论更新消息已处理，不显示提示')
+  }
+
+  /**
+   * 处理通知消息
+   */
+  const handleNotificationMessage = (wsMessage) => {
+    console.log('📢 处理通知消息:', wsMessage)
+    
+    // 获取配置Store
+    const configStore = useConfigStore()
+    
+    // 检查是否是用户上线消息
+    if (wsMessage.title === '用户上线' && wsMessage.data) {
+      const userData = wsMessage.data
+      const userStore = useUserStore()
+      
+      console.log('👤 收到用户上线消息:', {
+        userData,
+        currentUserId: userStore.userInfo?.userId,
+        isOwnMessage: userStore.userInfo?.userId === userData.userId,
+        notificationsEnabled: configStore.config.notifications.userOnline
+      })
+      
+      // 如果不是自己上线，且用户开启了上线通知，才显示提示
+      if (userStore.userInfo?.userId !== userData.userId && configStore.config.notifications.userOnline) {
+        console.log('📢 显示用户上线通知:', `${userData.userName} 来到了伊甸园`)
+        message.info(`${userData.userName} 来到了伊甸园`)
+      } else {
+        console.log('📢 跳过用户上线通知:', {
+          reason: userStore.userInfo?.userId === userData.userId ? '自己的消息' : '通知已关闭'
+        })
+      }
+    } else {
+      // 其他通知消息不显示提示，只记录日志
+      console.log('📢 收到其他通知消息，不显示提示:', wsMessage.title, wsMessage.content)
+    }
+  }
+
+  /**
+   * 处理系统消息
+   */
+  const handleSystemMessage = (wsMessage) => {
+    console.log('🔧 处理系统消息:', wsMessage)
+    
+    // 不显示系统通知，只记录日志
+    console.log('🔧 系统消息已处理，不显示提示')
+  }
+
+  /**
+   * 获取行为文本描述
+   */
+  const getActionText = (actionType) => {
+    switch (actionType) {
+      case 'post':
+        return '发布了新动态'
+      case 'comment':
+        return '发表了评论'
+      case 'like':
+        return '点赞了动态'
+      case 'reply':
+        return '回复了评论'
+      default:
+        return '执行了操作'
+    }
   }
 
   /**
@@ -287,68 +576,47 @@ export const useWebSocketStore = defineStore('websocket', () => {
    * 重新订阅主题
    */
   const resubscribeTopics = () => {
-    // 这里可以保存和恢复之前的订阅
-    console.log('🔄 重新订阅主题')
+    // 重新订阅之前的主题
+    subscribeToTopics()
   }
 
   /**
    * 处理接收到的消息
    */
-  const handleMessage = (message) => {
-    console.log('📥 收到消息:', message)
-    addToMessageHistory('message', message)
+  const handleMessage = (wsMessage) => {
+    console.log('📥 收到消息:', wsMessage)
+    addToMessageHistory('message', wsMessage)
     
     // 根据消息类型处理
-    switch (message.type) {
+    switch (wsMessage.type) {
       case 'post':
-        handlePostMessage(message)
+        handlePostMessage(wsMessage)
         break
       case 'comment':
-        handleCommentMessage(message)
+        handleCommentMessage(wsMessage)
         break
       case 'notification':
-        handleNotificationMessage(message)
+        handleNotificationMessage(wsMessage)
         break
       default:
-        console.log('未知消息类型:', message.type)
+        console.log('未知消息类型:', wsMessage.type)
     }
   }
 
   /**
-   * 处理通知消息
+   * 处理动态消息
    */
-  const handleNotification = (notification) => {
-    console.log('📢 收到通知:', notification)
-    addToMessageHistory('notification', notification)
-    
-    // 显示通知
-    message({
-      message: notification.message,
-      type: notification.type || 'info',
-      duration: notification.duration || 3000
-    })
+  const handlePostMessage = (wsMessage) => {
+    console.log('📝 处理动态消息:', wsMessage)
+    // 处理动态相关的消息
   }
 
   /**
-   * 处理动态更新
+   * 处理评论消息
    */
-  const handlePostUpdate = (post) => {
-    console.log('📝 动态更新:', post)
-    addToMessageHistory('post_update', post)
-    
-    // 这里可以触发动态列表更新
-    // 例如：刷新动态列表、更新特定动态等
-  }
-
-  /**
-   * 处理评论更新
-   */
-  const handleCommentUpdate = (comment) => {
-    console.log('💬 评论更新:', comment)
-    addToMessageHistory('comment_update', comment)
-    
-    // 这里可以触发评论列表更新
-    // 例如：刷新评论列表、更新评论数量等
+  const handleCommentMessage = (wsMessage) => {
+    console.log('💬 处理评论消息:', wsMessage)
+    // 处理评论相关的消息
   }
 
   /**
@@ -363,27 +631,46 @@ export const useWebSocketStore = defineStore('websocket', () => {
   }
 
   /**
-   * 处理动态消息
+   * 处理机器人行为消息
    */
-  const handlePostMessage = (message) => {
-    console.log('📝 处理动态消息:', message)
-    // 处理动态相关的消息
-  }
-
-  /**
-   * 处理评论消息
-   */
-  const handleCommentMessage = (message) => {
-    console.log('💬 处理评论消息:', message)
-    // 处理评论相关的消息
-  }
-
-  /**
-   * 处理通知消息
-   */
-  const handleNotificationMessage = (message) => {
-    console.log('📢 处理通知消息:', message)
-    // 处理通知相关的消息
+  const handleRobotActionMessage = (wsMessage) => {
+    console.log('🤖 处理机器人行为消息:', wsMessage)
+    
+    const actionData = wsMessage.data
+    if (!actionData) return
+    
+    // 根据机器人行为类型处理
+    switch (actionData.actionType) {
+      case 'post':
+        // 机器人发布动态
+        window.dispatchEvent(new CustomEvent('robot-post', { 
+          detail: actionData 
+        }))
+        break
+      case 'comment':
+        // 机器人发表评论
+        window.dispatchEvent(new CustomEvent('robot-comment', { 
+          detail: actionData 
+        }))
+        break
+      case 'like':
+        // 机器人点赞
+        window.dispatchEvent(new CustomEvent('robot-like', { 
+          detail: actionData 
+        }))
+        break
+      case 'reply':
+        // 机器人回复
+        window.dispatchEvent(new CustomEvent('robot-reply', { 
+          detail: actionData 
+        }))
+        break
+      default:
+        console.log('未知机器人行为类型:', actionData.actionType)
+    }
+    
+    // 不显示机器人行为通知，只记录日志
+    console.log('🤖 机器人行为消息已处理，不显示提示')
   }
 
   /**
@@ -485,7 +772,9 @@ export const useWebSocketStore = defineStore('websocket', () => {
       maxReconnectAttempts: maxReconnectAttempts.value,
       messageQueueLength: messageQueue.value.length,
       messageHistoryLength: messageHistory.value.length,
-      subscriptionsCount: subscriptions.value.size
+      subscriptionsCount: subscriptions.value.size,
+      connectionId: CONNECTION_ID,
+      globalConnectionId: globalConnectionId
     }
   }
 
@@ -502,9 +791,10 @@ export const useWebSocketStore = defineStore('websocket', () => {
     sendMessage,
     subscribe,
     unsubscribe,
+    sendUserOnlineNotification,
     setReconnectConfig,
     checkConnection,
     clearMessageHistory,
     getMessageHistory
   }
-}) 
+})
