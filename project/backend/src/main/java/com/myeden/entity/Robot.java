@@ -444,7 +444,7 @@ public class Robot {
     }
     
     public void setTraits(List<String> traits) {
-        this.traits = traits;
+        this.traits = traits != null ? traits : new ArrayList<>();
     }
     
     public List<String> getInterests() {
@@ -452,7 +452,7 @@ public class Robot {
     }
     
     public void setInterests(List<String> interests) {
-        this.interests = interests;
+        this.interests = interests != null ? interests : new ArrayList<>();
     }
     
     public SpeakingStyle getSpeakingStyle() {
@@ -500,7 +500,7 @@ public class Robot {
     }
     
     public void setActiveTimeRanges(List<ActiveTimeRange> activeTimeRanges) {
-        this.activeTimeRanges = activeTimeRanges;
+        this.activeTimeRanges = activeTimeRanges != null ? activeTimeRanges : new ArrayList<>();
     }
     
     public List<Topic> getTopics() {
@@ -508,7 +508,7 @@ public class Robot {
     }
     
     public void setTopics(List<Topic> topics) {
-        this.topics = topics;
+        this.topics = topics != null ? topics : new ArrayList<>();
     }
     
     public Boolean getIsActive() {

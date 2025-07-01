@@ -4,6 +4,7 @@ import com.myeden.entity.Robot;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * 机器人编辑请求 DTO
@@ -189,15 +190,15 @@ public class RobotEditRequest {
         robot.setEducation(education);
         robot.setRelationship(relationship);
         robot.setFamily(family);
-        robot.setTraits(traits);
-        robot.setInterests(interests);
+        robot.setTraits(traits != null ? traits : new ArrayList<>());
+        robot.setInterests(interests != null ? interests : new ArrayList<>());
         robot.setSpeakingStyle(speakingStyle);
         robot.setBehaviorPatterns(behaviorPatterns);
         robot.setReplySpeed(replySpeed);
         robot.setReplyFrequency(replyFrequency);
         robot.setShareFrequency(shareFrequency);
-        robot.setActiveTimeRanges(activeTimeRanges);
-        robot.setTopics(topics);
+        robot.setActiveTimeRanges(activeTimeRanges != null ? activeTimeRanges : new ArrayList<>());
+        robot.setTopics(topics != null ? topics : new ArrayList<>());
         robot.setIsActive(isActive);
         return robot;
     }
@@ -221,15 +222,15 @@ public class RobotEditRequest {
         robot.setEducation(education);
         robot.setRelationship(relationship);
         robot.setFamily(family);
-        robot.setTraits(traits);
-        robot.setInterests(interests);
+        robot.setTraits(traits != null ? traits : new ArrayList<>());
+        robot.setInterests(interests != null ? interests : new ArrayList<>());
         robot.setSpeakingStyle(speakingStyle);
         robot.setBehaviorPatterns(behaviorPatterns);
         robot.setReplySpeed(replySpeed);
         robot.setReplyFrequency(replyFrequency);
         robot.setShareFrequency(shareFrequency);
-        robot.setActiveTimeRanges(activeTimeRanges);
-        robot.setTopics(topics);
+        robot.setActiveTimeRanges(activeTimeRanges != null ? activeTimeRanges : new ArrayList<>());
+        robot.setTopics(topics != null ? topics : new ArrayList<>());
         robot.setIsActive(isActive);
         robot.setUpdatedAt(java.time.LocalDateTime.now());
     }

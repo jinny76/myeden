@@ -126,7 +126,7 @@ robot:
 # 日志配置
 logging:
   level:
-    com.myeden: DEBUG
+    com.myeden: INFO
     org.springframework.security: DEBUG
     org.springframework.web: DEBUG
     org.springframework.data.mongodb: DEBUG

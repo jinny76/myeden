@@ -154,26 +154,41 @@
                     </span>
                   </div>
                   
-                  <!-- 链接控制区域 -->
-                  <div class="robot-link-control">
-                    <div class="link-status" :class="getLinkStatusClass(robot.id)">
-                      <span class="status-text">{{ getLinkStatusText(robot.id) }}</span>
+                  <!-- 机器人控制区域 -->
+                  <div class="robot-controls">
+                    <!-- 链接控制 -->
+                    <div class="robot-link-control">
+                      <div class="link-status" :class="getLinkStatusClass(robot.id)">
+                        <span class="status-text">{{ getLinkStatusText(robot.id) }}</span>
+                      </div>
+                      <button 
+                        class="link-toggle-btn"
+                        :class="{ 
+                          'linked': isRobotLinked(robot.id),
+                          'loading': linkLoadingStates.get(robot.id)
+                        }"
+                        @click="toggleRobotLink(robot)"
+                        :disabled="linkLoadingStates.get(robot.id)"
+                      >
+                        <div v-if="linkLoadingStates.get(robot.id)" class="loading-spinner-small"></div>
+                        <el-icon v-else>
+                          <SwitchButton />
+                        </el-icon>
+                        <span>{{ isRobotLinked(robot.id) ? '断开' : '链接' }}</span>
+                      </button>
                     </div>
-                    <button 
-                      class="link-toggle-btn"
-                      :class="{ 
-                        'linked': isRobotLinked(robot.id),
-                        'loading': linkLoadingStates.get(robot.id)
-                      }"
-                      @click="toggleRobotLink(robot)"
-                      :disabled="linkLoadingStates.get(robot.id)"
-                    >
-                      <div v-if="linkLoadingStates.get(robot.id)" class="loading-spinner-small"></div>
-                      <el-icon v-else>
-                        <SwitchButton />
-                      </el-icon>
-                      <span>{{ isRobotLinked(robot.id) ? '断开' : '链接' }}</span>
-                    </button>
+                    
+                    <!-- 编辑按钮（仅对用户拥有的机器人显示） -->
+                    <div v-if="isMyRobot(robot.id)" class="robot-edit-control">
+                      <button 
+                        class="edit-btn"
+                        @click="editRobot(robot.id)"
+                        title="编辑机器人"
+                      >
+                        <el-icon><Edit /></el-icon>
+                        <span>编辑</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -193,7 +208,7 @@ import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
-import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus, Edit } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { 
   createUserRobotLink, 
@@ -202,6 +217,7 @@ import {
   deactivateUserRobotLink,
   getUserRobotLinks 
 } from '@/api/userRobotLink'
+import { getMyRobots } from '@/api/robotEditor'
 
 // 响应式数据
 const router = useRouter()
@@ -213,6 +229,9 @@ const isMobileMenuOpen = ref(false)
 // 用户机器人链接状态
 const userRobotLinks = ref(new Map()) // 存储用户与机器人的链接状态
 const linkLoadingStates = ref(new Map()) // 存储链接操作的加载状态
+
+// 用户拥有的机器人
+const myRobots = ref(new Set()) // 存储用户拥有的机器人ID集合
 
 // 过滤相关状态
 const searchKeyword = ref('')
@@ -291,6 +310,23 @@ const loadUserRobotLinks = async () => {
   }
 }
 
+// 加载用户拥有的机器人
+const loadMyRobots = async () => {
+  try {
+    const response = await getMyRobots()
+    if (response.code === 200 && response.data) {
+      const robotIds = new Set()
+      response.data.forEach(robot => {
+        robotIds.add(robot.robotId)
+      })
+      myRobots.value = robotIds
+      console.log('用户拥有的机器人加载成功:', robotIds)
+    }
+  } catch (error) {
+    console.error('加载用户拥有的机器人失败:', error)
+  }
+}
+
 // 切换机器人链接状态
 const toggleRobotLink = async (robot) => {
   const robotId = robot.id
@@ -363,6 +399,8 @@ onMounted(async () => {
     await worldStore.initWorld()
     // 加载用户机器人链接
     await loadUserRobotLinks()
+    // 加载用户拥有的机器人
+    await loadMyRobots()
   } catch (error) {
     console.error('初始化世界数据失败:', error)
     message.error('加载世界数据失败')
@@ -398,6 +436,16 @@ const navigateTo = (path) => {
 // 创建机器人
 const createRobot = () => {
   router.push('/robot-editor')
+}
+
+// 编辑机器人
+const editRobot = (robotId) => {
+  router.push(`/robot-editor/${robotId}`)
+}
+
+// 检查机器人是否为用户拥有
+const isMyRobot = (robotId) => {
+  return myRobots.value.has(robotId)
 }
 </script>
 
@@ -963,14 +1011,53 @@ const createRobot = () => {
   opacity: 1;
 }
 
+/* 机器人控制区域样式 */
+.robot-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* 机器人链接控制样式 */
 .robot-link-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 机器人编辑控制样式 */
+.robot-edit-control {
+  display: flex;
+  justify-content: center;
+}
+
+.edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid rgba(64, 158, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(64, 158, 255, 0.1);
+  color: #409eff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.edit-btn:hover {
+  background: rgba(64, 158, 255, 0.2);
+  border-color: #409eff;
+  transform: translateY(-1px);
+}
+
+.edit-btn:active {
+  transform: translateY(0);
 }
 
 .link-status {
@@ -1193,10 +1280,23 @@ const createRobot = () => {
     justify-content: center;
   }
   
+  .robot-controls {
+    gap: 16px;
+  }
+  
   .robot-link-control {
     flex-direction: column;
     gap: 12px;
     align-items: center;
+  }
+  
+  .robot-edit-control {
+    justify-content: center;
+  }
+  
+  .edit-btn {
+    width: 100%;
+    justify-content: center;
   }
   
   .link-toggle-btn {
@@ -1316,9 +1416,15 @@ const createRobot = () => {
     padding: 3px 10px;
   }
   
-  .robot-link-control {
+  .robot-controls {
     margin-top: 12px;
     padding-top: 12px;
+    gap: 12px;
+  }
+  
+  .robot-link-control {
+    margin-top: 0;
+    padding-top: 0;
   }
   
   .link-status {

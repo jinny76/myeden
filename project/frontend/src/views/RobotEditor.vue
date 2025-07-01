@@ -652,12 +652,11 @@ const loadRobotData = async () => {
   
   try {
     const response = await getRobotForEdit(route.params.robotId)
-    if (response.success) {
+    if (response.code === 200 && response.data) {
       const robot = response.data
       Object.assign(robotData, {
         name: robot.name || '',
         avatar: robot.avatar || '',
-        avatarPreviewUrl: robot.avatar ? buildAvatarUrl(robot.avatar) : '',
         gender: robot.gender || '',
         age: robot.age || 25,
         introduction: robot.introduction || '',
@@ -673,11 +672,16 @@ const loadRobotData = async () => {
         family: robot.family || '',
         traits: robot.traits || [],
         interests: robot.interests || [],
-        replySpeed: robot.replySpeed || 5,
-        replyFrequency: robot.replyFrequency || 5,
-        shareFrequency: robot.shareFrequency || 5,
+        replySpeed: robot.replySpeed || 0.5,
+        replyFrequency: robot.replyFrequency || 0.5,
+        shareFrequency: robot.shareFrequency || 0.5,
         isActive: robot.isActive !== undefined ? robot.isActive : true
       })
+      
+      // 设置头像预览
+      if (robot.avatar) {
+        avatarPreviewUrl.value = buildAvatarUrl(robot.avatar)
+      }
     }
   } catch (error) {
     ElMessage.error('加载机器人数据失败')
