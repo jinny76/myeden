@@ -1,5 +1,11 @@
 package com.myeden.entity;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
+
 import java.time.LocalDateTime;
 
 /**
@@ -15,7 +21,17 @@ import java.time.LocalDateTime;
  * @version 1.0.1
  * @since 2025-01-27
  */
+@Document(collection = "user_robot_links")
+@CompoundIndexes({
+    @CompoundIndex(name = "userId_robotId_unique", def = "{'userId': 1, 'robotId': 1}", unique = true)
+})
 public class UserRobotLink {
+    
+    /**
+     * MongoDB文档ID
+     */
+    @Id
+    private String id;
     
     /**
      * 链接ID
@@ -25,11 +41,13 @@ public class UserRobotLink {
     /**
      * 用户ID
      */
+    @Indexed
     private String userId;
     
     /**
      * 机器人ID
      */
+    @Indexed
     private String robotId;
     
     /**
@@ -76,6 +94,14 @@ public class UserRobotLink {
     }
     
     // Getter和Setter方法
+    public String getId() {
+        return id;
+    }
+    
+    public void setId(String id) {
+        this.id = id;
+    }
+    
     public String getLinkId() {
         return linkId;
     }

@@ -239,7 +239,7 @@ public class WorldServiceImpl implements WorldService {
             
             List<RobotSummary> robotSummaries = robots.stream()
                 .map(robot -> new RobotSummary(
-                    robot.getId(),
+                    robot.getRobotId(), // 使用业务逻辑的robotId而不是MongoDB的id
                     robot.getName(),
                     robot.getName(), // 使用name作为nickname
                     robot.getAvatar(),
@@ -261,7 +261,7 @@ public class WorldServiceImpl implements WorldService {
     @Override
     public RobotDetail getRobotDetail(String robotId) {
         try {
-            Robot robot = robotRepository.findById(robotId).orElse(null);
+            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
             if (robot == null) {
                 logger.warn("未找到机器人: {}", robotId);
                 return null;
@@ -280,7 +280,7 @@ public class WorldServiceImpl implements WorldService {
             }
             
             return new RobotDetail(
-                robot.getId(),
+                robot.getRobotId(), // 使用业务逻辑的robotId而不是MongoDB的id
                 robot.getName(),
                 robot.getName(), // 使用name作为nickname
                 robot.getAvatar(),

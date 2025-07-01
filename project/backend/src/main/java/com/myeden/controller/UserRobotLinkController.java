@@ -41,23 +41,17 @@ public class UserRobotLinkController {
     @PostMapping
     public ResponseEntity<EventResponse> createLink(@RequestBody CreateLinkRequest request) {
         try {
-            logger.info("收到创建用户机器人链接请求，用户ID: {}, 机器人ID: {}", request.getUserId(), request.getRobotId());
+            logger.info("收到创建用户机器人链接请求，机器人ID: {}", request.getRobotId());
             
             // 获取当前用户信息
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String currentUserId = authentication.getName();
             
-            // 验证权限（只能为自己创建链接）
-            if (!currentUserId.equals(request.getUserId())) {
-                return ResponseEntity.badRequest().body(new EventResponse(
-                    400,
-                    "无权限为其他用户创建链接",
-                    null
-                ));
-            }
+            logger.info("当前认证用户ID: {}", currentUserId);
+            logger.info("认证信息: {}", authentication);
             
-            // 创建链接
-            UserRobotLinkService.LinkResult result = userRobotLinkService.createLink(request.getUserId(), request.getRobotId());
+            // 创建链接（使用当前用户ID，忽略请求中的用户ID）
+            UserRobotLinkService.LinkResult result = userRobotLinkService.createLink(currentUserId, request.getRobotId());
             
             logger.info("用户机器人链接创建成功，链接ID: {}", result.getLinkId());
             
@@ -469,18 +463,13 @@ public class UserRobotLinkController {
      * 创建链接请求类
      */
     public static class CreateLinkRequest {
-        private String userId;
         private String robotId;
         
         public CreateLinkRequest() {}
         
-        public CreateLinkRequest(String userId, String robotId) {
-            this.userId = userId;
+        public CreateLinkRequest(String robotId) {
             this.robotId = robotId;
         }
-        
-        public String getUserId() { return userId; }
-        public void setUserId(String userId) { this.userId = userId; }
         
         public String getRobotId() { return robotId; }
         public void setRobotId(String robotId) { this.robotId = robotId; }

@@ -9,6 +9,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 import java.util.Collections;
 
 /**
@@ -32,7 +34,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String userId) throws UsernameNotFoundException {
         // 根据用户ID查找用户
-        var userOpt = userRepository.findByUserId(userId);
+        Optional<User> userOpt = userRepository.findByUserId(userId);
         
         if (userOpt.isEmpty()) {
             throw new UsernameNotFoundException("用户不存在: " + userId);

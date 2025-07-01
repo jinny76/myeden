@@ -60,9 +60,43 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
                 throw new IllegalArgumentException("用户ID和机器人ID不能为空");
             }
             
-            // 验证用户是否存在
-            Optional<User> userOpt = userRepository.findByUserId(userId);
+            logger.info("开始验证用户是否存在，用户ID: {}", userId);
+            
+            // 验证用户是否存在 - 添加异常处理
+            Optional<User> userOpt;
+            try {
+                userOpt = userRepository.findByUserId(userId);
+                logger.info("用户查询结果: {}", userOpt.isPresent() ? "找到用户" : "未找到用户");
+            } catch (Exception e) {
+                logger.error("查询用户时发生MongoDB异常，用户ID: {}", userId, e);
+                
+                // 尝试使用更简单的查询方法
+                try {
+                    logger.info("尝试使用findAll()方法查询所有用户");
+                    List<User> allUsers = userRepository.findAll();
+                    logger.info("数据库中共有 {} 个用户", allUsers.size());
+                    
+                    // 手动查找用户
+                    userOpt = allUsers.stream()
+                        .filter(user -> userId.equals(user.getUserId()))
+                        .findFirst();
+                    
+                    logger.info("手动查找结果: {}", userOpt.isPresent() ? "找到用户" : "未找到用户");
+                } catch (Exception ex) {
+                    logger.error("findAll()查询也失败", ex);
+                    throw new RuntimeException("数据库连接异常，请稍后重试", ex);
+                }
+            }
+            
             if (userOpt.isEmpty()) {
+                logger.error("用户不存在，用户ID: {}", userId);
+                // 尝试查找所有用户，看看数据库中有什么
+                try {
+                    List<User> allUsers = userRepository.findAll();
+                    logger.info("数据库中的所有用户ID: {}", allUsers.stream().map(User::getUserId).collect(Collectors.toList()));
+                } catch (Exception e) {
+                    logger.error("获取所有用户失败", e);
+                }
                 throw new IllegalArgumentException("用户不存在");
             }
             
@@ -185,14 +219,19 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
                 throw new IllegalArgumentException("链接强度必须在1-10之间");
             }
             
-            // 查找链接
-            Optional<UserRobotLink> linkOpt = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
-            if (linkOpt.isEmpty()) {
+            // 查找链接 - 使用findFirst()处理可能的重复记录
+            List<UserRobotLink> links = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
+            if (links.isEmpty()) {
                 logger.warn("用户机器人链接不存在，用户ID: {}, 机器人ID: {}", userId, robotId);
                 return false;
             }
             
-            UserRobotLink link = linkOpt.get();
+            // 如果有多个记录，记录警告并只处理第一个
+            if (links.size() > 1) {
+                logger.warn("发现重复的用户机器人链接记录，用户ID: {}, 机器人ID: {}, 记录数: {}", userId, robotId, links.size());
+            }
+            
+            UserRobotLink link = links.get(0);
             link.updateStrength(strength);
             userRobotLinkRepository.save(link);
             
@@ -210,14 +249,19 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
         try {
             logger.info("增加用户机器人互动次数，用户ID: {}, 机器人ID: {}", userId, robotId);
             
-            // 查找链接
-            Optional<UserRobotLink> linkOpt = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
-            if (linkOpt.isEmpty()) {
+            // 查找链接 - 使用findFirst()处理可能的重复记录
+            List<UserRobotLink> links = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
+            if (links.isEmpty()) {
                 logger.warn("用户机器人链接不存在，用户ID: {}, 机器人ID: {}", userId, robotId);
                 return false;
             }
             
-            UserRobotLink link = linkOpt.get();
+            // 如果有多个记录，记录警告并只处理第一个
+            if (links.size() > 1) {
+                logger.warn("发现重复的用户机器人链接记录，用户ID: {}, 机器人ID: {}, 记录数: {}", userId, robotId, links.size());
+            }
+            
+            UserRobotLink link = links.get(0);
             link.incrementInteraction();
             userRobotLinkRepository.save(link);
             

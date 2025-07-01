@@ -83,14 +83,14 @@
                 <div class="robot-avatar-section">
                   <div class="robot-avatar">
                     <el-avatar :src="getRobotAvatarUrl(robot)" :size="80" />
-                    <div class="robot-status" :class="{ active: robot.active }">
-                      <el-icon v-if="robot.active" class="status-icon">
+                    <div class="robot-status" :class="{ active: robot.isActive }">
+                      <el-icon v-if="robot.isActive" class="status-icon">
                         <CircleCheck />
                       </el-icon>
                       <el-icon v-else class="status-icon">
                         <CircleClose />
                       </el-icon>
-                      {{ robot.active ? '在线' : '离线' }}
+                      {{ robot.isActive ? '在线' : '离线' }}
                     </div>
                   </div>
                   <div class="robot-quick-info">
@@ -104,9 +104,31 @@
                   <p class="robot-intro">{{ robot.description }}</p>
                   <div class="robot-tags">
                     <span class="tag-item">👼 {{ robot.nickname }}</span>
-                    <span class="tag-item" :class="{ 'online': robot.active, 'offline': !robot.active }">
-                      {{ robot.active ? '🟢 在线' : '🔴 离线' }}
+                    <span class="tag-item" :class="{ 'online': robot.isActive, 'offline': !robot.isActive }">
+                      {{ robot.isActive ? '🟢 在线' : '🔴 离线' }}
                     </span>
+                  </div>
+                  
+                  <!-- 链接控制区域 -->
+                  <div class="robot-link-control">
+                    <div class="link-status" :class="getLinkStatusClass(robot.id)">
+                      <span class="status-text">{{ getLinkStatusText(robot.id) }}</span>
+                    </div>
+                    <button 
+                      class="link-toggle-btn"
+                      :class="{ 
+                        'linked': isRobotLinked(robot.id),
+                        'loading': linkLoadingStates.get(robot.id)
+                      }"
+                      @click="toggleRobotLink(robot)"
+                      :disabled="linkLoadingStates.get(robot.id)"
+                    >
+                      <div v-if="linkLoadingStates.get(robot.id)" class="loading-spinner-small"></div>
+                      <el-icon v-else>
+                        <SwitchButton />
+                      </el-icon>
+                      <span>{{ isRobotLinked(robot.id) ? '断开' : '链接' }}</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -128,6 +150,13 @@ import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
 import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
+import { 
+  createUserRobotLink, 
+  deleteUserRobotLink, 
+  activateUserRobotLink, 
+  deactivateUserRobotLink,
+  getUserRobotLinks 
+} from '@/api/userRobotLink'
 
 // 响应式数据
 const router = useRouter()
@@ -136,8 +165,22 @@ const worldStore = useWorldStore()
 const activeMenu = ref('/world')
 const isMobileMenuOpen = ref(false)
 
+// 用户机器人链接状态
+const userRobotLinks = ref(new Map()) // 存储用户与机器人的链接状态
+const linkLoadingStates = ref(new Map()) // 存储链接操作的加载状态
+
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
+
+// 检查机器人是否已链接
+const isRobotLinked = (robotId) => {
+  return userRobotLinks.value.has(robotId) && userRobotLinks.value.get(robotId).active
+}
+
+// 检查机器人是否已创建链接（包括非激活状态）
+const isRobotLinkCreated = (robotId) => {
+  return userRobotLinks.value.has(robotId)
+}
 
 // 方法
 const retryLoad = async () => {
@@ -148,6 +191,87 @@ const retryLoad = async () => {
     console.error('重新加载失败:', error)
     message.error('重新加载失败')
   }
+}
+
+// 加载用户机器人链接
+const loadUserRobotLinks = async () => {
+  try {
+    const response = await getUserRobotLinks()
+    if (response.code === 200 && response.data) {
+      const linksMap = new Map()
+      response.data.forEach(link => {
+        // 将后端的status字段转换为前端期望的active字段
+        const convertedLink = {
+          ...link,
+          active: link.status === 'active'
+        }
+        linksMap.set(link.robotId, convertedLink)
+        console.log(`转换链接数据 - robotId: ${link.robotId}, status: ${link.status}, active: ${convertedLink.active}`)
+      })
+      userRobotLinks.value = linksMap
+      console.log('用户机器人链接加载成功:', linksMap)
+    }
+  } catch (error) {
+    console.error('加载用户机器人链接失败:', error)
+  }
+}
+
+// 切换机器人链接状态
+const toggleRobotLink = async (robot) => {
+  const robotId = robot.id
+  const isLinked = isRobotLinked(robotId)
+  const isCreated = isRobotLinkCreated(robotId)
+  
+  // 设置加载状态
+  linkLoadingStates.value.set(robotId, true)
+  
+  try {
+    if (isLinked) {
+      // 如果已链接，则停用链接
+      await deactivateUserRobotLink(robotId)
+      userRobotLinks.value.get(robotId).active = false
+      message.success(`已停用与 ${robot.name} 的链接`)
+    } else if (isCreated) {
+      // 如果已创建但未激活，则激活链接
+      await activateUserRobotLink(robotId)
+      userRobotLinks.value.get(robotId).active = true
+      message.success(`已激活与 ${robot.name} 的链接`)
+    } else {
+      // 如果未创建链接，则创建并激活
+      const response = await createUserRobotLink(robotId)
+      if (response.code === 200 && response.data) {
+        userRobotLinks.value.set(robotId, {
+          robotId: robotId,
+          active: true,
+          status: 'active',
+          strength: response.data.strength || 1,
+          createdAt: response.data.createdAt
+        })
+        message.success(`已创建与 ${robot.name} 的链接`)
+      }
+    }
+  } catch (error) {
+    console.error('切换机器人链接失败:', error)
+    message.error('操作失败，请重试')
+  } finally {
+    linkLoadingStates.value.set(robotId, false)
+  }
+}
+
+// 获取链接状态文本
+const getLinkStatusText = (robotId) => {
+  if (!isRobotLinkCreated(robotId)) {
+    return '未链接'
+  }
+  return isRobotLinked(robotId) ? '已链接' : '已停用'
+}
+
+// 获取链接状态样式类
+const getLinkStatusClass = (robotId) => {
+  if (!isRobotLinkCreated(robotId)) {
+    return 'link-status-unlinked'
+  }
+  return isRobotLinked(robotId) ? 'link-status-linked' : 'link-status-inactive'
 }
 
 // 计算属性：是否为开发环境
@@ -162,6 +286,8 @@ onMounted(async () => {
   
   try {
     await worldStore.initWorld()
+    // 加载用户机器人链接
+    await loadUserRobotLinks()
   } catch (error) {
     console.error('初始化世界数据失败:', error)
     message.error('加载世界数据失败')
@@ -627,6 +753,99 @@ const navigateTo = (path) => {
   opacity: 1;
 }
 
+/* 机器人链接控制样式 */
+.robot-link-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.link-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.link-status-unlinked {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.link-status-linked {
+  background: rgba(34, 211, 107, 0.15);
+  color: #22d36b;
+}
+
+.link-status-inactive {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+}
+
+.status-text {
+  font-size: 0.8rem;
+}
+
+.link-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid rgba(34, 211, 107, 0.3);
+  border-radius: 12px;
+  background: rgba(34, 211, 107, 0.1);
+  color: #22d36b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.link-toggle-btn:hover:not(:disabled) {
+  background: rgba(34, 211, 107, 0.2);
+  border-color: #22d36b;
+  transform: translateY(-1px);
+}
+
+.link-toggle-btn.linked {
+  background: rgba(255, 77, 79, 0.1);
+  border-color: rgba(255, 77, 79, 0.3);
+  color: #ff4d4f;
+}
+
+.link-toggle-btn.linked:hover:not(:disabled) {
+  background: rgba(255, 77, 79, 0.2);
+  border-color: #ff4d4f;
+}
+
+.link-toggle-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.loading-spinner-small {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(34, 211, 107, 0.2);
+  border-top: 2px solid #22d36b;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.link-toggle-btn.linked .loading-spinner-small {
+  border-color: rgba(255, 77, 79, 0.2);
+  border-top-color: #ff4d4f;
+}
+
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .robots-grid {
@@ -720,6 +939,17 @@ const navigateTo = (path) => {
   .robot-tags {
     justify-content: center;
   }
+  
+  .robot-link-control {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .link-toggle-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 480px) {
@@ -792,6 +1022,21 @@ const navigateTo = (path) => {
   .tag-item {
     font-size: 0.75rem;
     padding: 3px 10px;
+  }
+  
+  .robot-link-control {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  
+  .link-status {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .link-toggle-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
   }
 }
 </style> 

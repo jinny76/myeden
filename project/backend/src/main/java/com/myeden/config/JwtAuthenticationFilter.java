@@ -5,6 +5,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,6 +32,8 @@ import java.io.IOException;
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     
     @Autowired
     private JwtService jwtService;
@@ -61,6 +65,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             // 从token中提取用户ID
             userId = jwtService.extractUserId(jwt);
+            
+            logger.info("从JWT token中提取的用户ID: {}", userId);
             
             // 如果成功提取用户ID且当前没有认证信息
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
