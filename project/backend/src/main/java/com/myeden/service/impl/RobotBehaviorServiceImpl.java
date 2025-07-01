@@ -231,7 +231,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     public boolean triggerRobotComment(String robotId, String postId) {
         try {
             // 获取动态内容（先查post，后判断）
-            PostService.PostDetail postDetail = postService.getPostDetail(postId);
+            PostService.PostDetail postDetail = postService.getPostDetail(postId, robotId);
             boolean isRobot = "robot".equals(postDetail.getAuthorType());
             // 统一前置条件判断
             Robot robot = checkRobotPostCondition(robotId, "comment", "对动态发表评论", isRobot);
@@ -392,7 +392,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         try {
             // 获取评论内容（先查comment，后判断）
             CommentService.CommentDetail commentDetail = commentService.getCommentDetail(commentId);
-            PostService.PostDetail postDetail = postService.getPostDetail(commentDetail.getPostId());
+            PostService.PostDetail postDetail = postService.getPostDetail(commentDetail.getPostId(), robotId);
             boolean isRobot = "robot".equals(commentDetail.getAuthorType());
             // 统一前置条件判断
             Robot robot = checkRobotPostCondition(robotId, "reply", "回复评论", isRobot);
@@ -482,7 +482,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 根据行为类型调整基础概率
             switch (behaviorType) {
                 case "post":
-                    baseProbability = 0.02;
+                    baseProbability = 0.1;
                     break;
                 case "comment":
                     baseProbability = 0.2;

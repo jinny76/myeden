@@ -2,6 +2,7 @@ package com.myeden.service;
 
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+import com.myeden.service.CommentService.CommentSummary;
 
 /**
  * 动态管理服务接口
@@ -40,9 +41,10 @@ public interface PostService {
     /**
      * 获取动态详情
      * @param postId 动态ID
+     * @param currentUserId 当前用户ID（可选，用于判断点赞状态）
      * @return 动态详细信息
      */
-    PostDetail getPostDetail(String postId);
+    PostDetail getPostDetail(String postId, String currentUserId);
     
     /**
      * 删除动态
@@ -206,14 +208,15 @@ public interface PostService {
         private int likeCount;
         private int commentCount;
         private boolean isLiked;
-        private List<String> likedUsers;
+        private List<LikeDetail> likes; // 点赞详情列表
+        private List<CommentSummary> comments; // 新增：评论列表
         private String createdAt;
         private String updatedAt;
         
         public PostDetail(String postId, String authorId, String authorType, String authorName, 
                          String authorAvatar, String content, List<String> images, int likeCount, 
-                         int commentCount, boolean isLiked, List<String> likedUsers, 
-                         String createdAt, String updatedAt) {
+                         int commentCount, boolean isLiked, List<LikeDetail> likes, 
+                         List<CommentSummary> comments, String createdAt, String updatedAt) {
             this.postId = postId;
             this.authorId = authorId;
             this.authorType = authorType;
@@ -224,7 +227,8 @@ public interface PostService {
             this.likeCount = likeCount;
             this.commentCount = commentCount;
             this.isLiked = isLiked;
-            this.likedUsers = likedUsers;
+            this.likes = likes;
+            this.comments = comments;
             this.createdAt = createdAt;
             this.updatedAt = updatedAt;
         }
@@ -240,7 +244,8 @@ public interface PostService {
         public int getLikeCount() { return likeCount; }
         public int getCommentCount() { return commentCount; }
         public boolean isLiked() { return isLiked; }
-        public List<String> getLikedUsers() { return likedUsers; }
+        public List<LikeDetail> getLikes() { return likes; }
+        public List<CommentSummary> getComments() { return comments; }
         public String getCreatedAt() { return createdAt; }
         public String getUpdatedAt() { return updatedAt; }
     }

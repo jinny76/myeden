@@ -304,7 +304,7 @@
                 <!-- 评论列表 -->
                 <div class="comments-list">
                   <div 
-                    v-for="comment in momentsStore.comments[post.postId] || []" 
+                    v-for="comment in getTopLevelComments(post)" 
                     :key="comment.commentId"
                     class="comment-item"
                     @click.stop
@@ -332,10 +332,10 @@
                         </el-icon>
                         {{ comment.likeCount || 0 }}
                       </span>
-                      <!-- 显示实际回复数量 -->
-                      <span v-if="getActualReplyCount(comment) > 0" class="action-link">
+                      <!-- 显示回复数量 -->
+                      <span v-if="comment.replyCount > 0" class="action-link">
                         <el-icon><ChatDotRound /></el-icon>
-                        {{ getActualReplyCount(comment) }}
+                        {{ comment.replyCount }}
                       </span>
                       <!-- 添加查看内心活动按钮 -->
                       <span v-if="comment.innerThoughts" class="action-link" @click.stop="showInnerThoughts(comment)">
@@ -359,10 +359,10 @@
                     </div>
                     
                     <!-- 回复列表 -->
-                    <div v-if="getActualReplyCount(comment) > 0" class="replies-section">
+                    <div v-if="getCommentReplies(comment, post).length > 0" class="replies-section">
                       <div class="replies-list">
                         <div 
-                          v-for="reply in replyStates[comment.commentId]?.replies || []" 
+                          v-for="reply in getCommentReplies(comment, post)" 
                           :key="reply.commentId"
                           class="reply-item"
                           @click.stop
@@ -398,11 +398,7 @@
                       </div>
                     </div>
                     
-                    <!-- 加载中状态 -->
-                    <div v-if="replyStates[comment.commentId]?.loading && replyStates[comment.commentId]?.replies.length === 0" class="loading-replies">
-                      <el-icon class="is-loading"><Loading /></el-icon>
-                      <span>加载回复中...</span>
-                    </div>
+
                   </div>
                 </div>
                 
@@ -528,8 +524,8 @@ import { ElMessageBox, ElPopover } from 'element-plus'
 import { message } from '@/utils/message'
 import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
-import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment, getReplyList } from '@/api/comment'
-import { createPost, searchPosts, getPostLikes } from '@/api/post'
+import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment } from '@/api/comment'
+import { createPost, searchPosts, getPostDetail } from '@/api/post'
 
 // 响应式数据
 const router = useRouter()
@@ -565,8 +561,7 @@ const newPost = ref({
   images: []
 })
 
-// 回复相关状态
-const replyStates = ref({}) // 存储每个评论的回复状态
+
 
 // 搜索相关状态
 const searchKeyword = ref('')
@@ -816,10 +811,9 @@ const loadMorePosts = async () => {
     for (const post of newPosts) {
       post.showComments = true
       try {
-        await momentsStore.loadComments(post.postId, {}, true)
-        await loadAllReplies(post.postId)
-        // 加载点赞信息
-        await refreshPostLikes(post)
+        // 使用新的加载方式，获取动态详情（包含评论）
+        await loadPostWithComments(post)
+
       } catch (error) {
         console.error(`加载动态 ${post.postId} 的评论失败:`, error)
       }
@@ -902,8 +896,7 @@ const publishPost = async () => {
       momentsStore.posts.unshift(postData)
       
       // 为新发布的动态加载评论和回复
-      await momentsStore.loadComments(postData.postId, {}, true)
-      await loadAllReplies(postData.postId)
+      await loadPostWithComments(postData)
       
       // 清空表单
       newPost.value.content = ''
@@ -1001,10 +994,7 @@ const publishPostMobile = async () => {
       momentsStore.posts.unshift(postData)
       
       // 为新发布的动态加载评论和回复
-      await momentsStore.loadComments(postData.postId, {}, true)
-      await loadAllReplies(postData.postId)
-      // 加载点赞信息
-      await refreshPostLikes(postData)
+      await loadPostWithComments(postData)
     
       // 清空表单
       newPost.value.content = ''
@@ -1061,54 +1051,32 @@ const toggleLike = async (post) => {
   const originalIsLiked = post.isLiked
   
   try {
+    console.log(`开始点赞操作，动态ID: ${post.postId}，当前状态: ${post.isLiked}`)
+    
     if (post.isLiked) {
       await momentsStore.unlikePostAction(post.postId)
       // 立即更新本地状态
       post.isLiked = false
+      console.log('取消点赞成功，本地状态已更新为: false')
     } else {
       await momentsStore.likePostAction(post.postId)
       // 立即更新本地状态
       post.isLiked = true
+      console.log('点赞成功，本地状态已更新为: true')
     }
     
     // 点赞操作成功后，立即刷新点赞信息
-    await refreshPostLikes(post)
+    await loadPostWithComments(post)
+    console.log(`点赞操作完成，最终状态: ${post.isLiked}`)
   } catch (error) {
     // 如果操作失败，恢复原始状态
     post.isLiked = originalIsLiked
+    console.error('点赞操作失败，已恢复原始状态:', error)
     message.error('操作失败')
   }
 }
 
-/**
- * 刷新动态的点赞信息
- * @param {Object} post - 动态对象
- */
-const refreshPostLikes = async (post) => {
-  try {
-    const response = await getPostLikes(post.postId)
-    if (response.code === 200) {
-      // 更新动态的点赞信息
-      post.likes = response.data.likes || []
-      
-      // 检查当前用户是否在点赞列表中
-      const currentUserId = userStore.userInfo?.userId
-      if (currentUserId) {
-        const currentUserLike = post.likes.find(like => like.userId === currentUserId)
-        const shouldBeLiked = !!currentUserLike
-        
-        // 只有当状态不一致时才更新，避免覆盖刚刚的操作
-        if (post.isLiked !== shouldBeLiked) {
-          post.isLiked = shouldBeLiked
-        }
-      }
-      
-      console.log(`刷新点赞信息成功，动态ID: ${post.postId}，点赞数量: ${post.likes.length}`)
-    }
-  } catch (error) {
-    console.error('刷新点赞信息失败:', error)
-  }
-}
+
 
 /**
  * 获取点赞用户的头像URL
@@ -1142,79 +1110,15 @@ const showComments = async (post) => {
   // 如果评论还没有加载过，则加载评论和回复
   if (post.showComments && (!momentsStore.comments[post.postId] || momentsStore.comments[post.postId].length === 0)) {
     try {
-      await momentsStore.loadComments(post.postId, {}, true)
-      // 自动加载所有评论的回复
-      await loadAllReplies(post.postId)
-      
-      // 更新动态的评论数为实际加载的评论数量
-      const actualCommentCount = getActualCommentCount(post)
-      post.commentCount = actualCommentCount
+      // 使用新的加载方式，获取动态详情（包含评论）
+      await loadPostWithComments(post)
     } catch (error) {
       message.error('加载评论失败')
     }
   }
 }
 
-/**
- * 加载所有评论的回复
- * @param {string} postId - 动态ID
- */
-const loadAllReplies = async (postId) => {
-  const commentList = momentsStore.comments[postId]
-  if (!commentList) return
-  
-  for (const comment of commentList) {
-    // 无论replyCount是否为0，都尝试加载回复，确保数据一致性
-    await loadReplies(comment.commentId, true)
-  }
-}
 
-/**
- * 加载回复列表
- * @param {string} commentId - 评论ID
- * @param {boolean} refresh - 是否刷新
- */
-const loadReplies = async (commentId, refresh = false) => {
-  // 初始化回复状态
-  if (!replyStates.value[commentId]) {
-    replyStates.value[commentId] = {
-      showReplies: true, // 默认显示回复
-      replies: [],
-      loading: false
-    }
-  }
-  
-  const replyState = replyStates.value[commentId]
-  
-  try {
-    replyState.loading = true
-    
-    // 一次性加载所有回复，使用较大的size
-    const params = {
-      page: 1,
-      size: 100 // 设置较大的size以一次性加载所有回复
-    }
-    
-    const response = await getReplyList(commentId, params)
-    
-    if (response.code === 200) {
-      const { comments: newReplies } = response.data
-      
-      // 直接设置所有回复
-      replyState.replies = newReplies
-      
-      // 更新对应评论的回复数量为实际加载的数量
-      updateCommentReplyCount(commentId, newReplies.length)
-      
-      console.log(`加载回复完成，评论ID: ${commentId}，回复数量: ${newReplies.length}`)
-    }
-  } catch (error) {
-    console.error('加载回复列表失败:', error)
-    message.error('加载回复失败')
-  } finally {
-    replyState.loading = false
-  }
-}
 
 const submitComment = async (post) => {
   if (!post.newComment.trim()) {
@@ -1232,9 +1136,8 @@ const submitComment = async (post) => {
     await momentsStore.publishComment(post.postId, { content: post.newComment })
     post.newComment = ''
     
-    // 更新动态的评论数为实际加载的评论数量
-    const actualCommentCount = getActualCommentCount(post)
-    post.commentCount = actualCommentCount
+    // 重新加载动态详情以获取最新的评论列表
+    await loadPostWithComments(post)
     
     message.success('评论发表成功')
   } catch (error) {
@@ -1267,19 +1170,11 @@ const submitReply = async (comment) => {
     await momentsStore.replyCommentAction(comment.commentId, { content: comment.replyContent })
     comment.showReplyInput = false
     
-    // 刷新回复列表
-    await loadReplies(comment.commentId, true)
-    
-    // 更新评论的回复数量为实际加载的回复数量
-    const actualReplyCount = getActualReplyCount(comment)
-    comment.replyCount = actualReplyCount
-    
-    // 找到对应的动态并更新评论数
+    // 找到对应的动态并重新加载详情以获取最新的评论和回复列表
     for (const post of momentsStore.posts) {
-      const commentList = momentsStore.comments[post.postId]
+      const commentList = post.comments || momentsStore.comments[post.postId]
       if (commentList && commentList.find(c => c.commentId === comment.commentId)) {
-        const actualCommentCount = getActualCommentCount(post)
-        post.commentCount = actualCommentCount
+        await loadPostWithComments(post)
         break
       }
     }
@@ -1644,6 +1539,7 @@ const handleClickOutside = (event) => {
 
 /**
  * 加载所有动态的评论和回复
+ * 现在使用后端返回的评论列表，避免多次API调用
  */
 const loadAllCommentsAndReplies = async () => {
   for (const post of momentsStore.posts) {
@@ -1651,15 +1547,93 @@ const loadAllCommentsAndReplies = async () => {
     post.showComments = true
     
     try {
-      // 加载评论
-      await momentsStore.loadComments(post.postId, {}, true)
-      // 加载回复
-      await loadAllReplies(post.postId)
-      // 加载点赞信息
-      await refreshPostLikes(post)
+      // 如果动态没有评论数据，则从后端获取动态详情（包含评论）
+      if (!post.comments || post.comments.length === 0) {
+        await loadPostWithComments(post)
+      } else {
+        // 如果已有评论数据，直接使用
+        momentsStore.comments[post.postId] = post.comments
+      }
+      
+
     } catch (error) {
       console.error(`加载动态 ${post.postId} 的评论失败:`, error)
     }
+  }
+}
+
+/**
+ * 加载动态详情（包含评论、回复和点赞信息）
+ * @param {Object} post - 动态对象
+ */
+const loadPostWithComments = async (post) => {
+  try {
+    // 调用获取动态详情API，该API现在会返回评论列表和点赞信息
+    const response = await getPostDetail(post.postId)
+    
+    if (response.code === 200) {
+      const postDetail = response.data
+      
+      // 更新动态的评论数据
+      post.comments = postDetail.comments || []
+      momentsStore.comments[post.postId] = postDetail.comments || []
+      
+      // 更新动态的点赞数据
+      post.likes = postDetail.likes || []
+      
+      // 确保正确获取点赞状态，支持多种字段名
+      const rawIsLiked = postDetail.isLiked !== undefined ? postDetail.isLiked : 
+                        (postDetail.liked !== undefined ? postDetail.liked : false)
+      
+      // 检查当前用户是否在点赞列表中
+      const currentUserId = userStore.userInfo?.userId
+      let computedIsLiked = rawIsLiked
+      
+      if (currentUserId && post.likes && post.likes.length > 0) {
+        const userLike = post.likes.find(like => like.userId === currentUserId)
+        computedIsLiked = !!userLike
+        console.log(`用户 ${currentUserId} 在点赞列表中的状态: ${computedIsLiked}`)
+      }
+      
+      post.isLiked = computedIsLiked
+      post.likeCount = postDetail.likeCount || 0
+      
+      // 更新评论数为一级评论的数量（不包括回复）
+      const topLevelComments = postDetail.comments ? postDetail.comments.filter(comment => !comment.parentId) : []
+      post.commentCount = topLevelComments.length
+      
+      console.log(`动态 ${post.postId} 加载完成，评论数量: ${post.commentCount}，点赞数量: ${post.likeCount}，当前用户是否点赞: ${post.isLiked}`)
+      console.log('点赞详情:', postDetail.likes)
+      console.log('原始isLiked字段:', rawIsLiked)
+      console.log('计算后的isLiked字段:', computedIsLiked)
+      
+      // 调试评论和回复信息
+      if (postDetail.comments && postDetail.comments.length > 0) {
+        console.log('完整评论列表:', postDetail.comments)
+        
+        // 检查回复
+        const replies = postDetail.comments.filter(comment => comment.parentId)
+        const topLevelComments = postDetail.comments.filter(comment => !comment.parentId)
+        
+        console.log('一级评论数量:', topLevelComments.length)
+        console.log('回复数量:', replies.length)
+        console.log('一级评论列表:', topLevelComments)
+        
+        // 检查每个一级评论的回复
+        topLevelComments.forEach(comment => {
+          const commentReplies = replies.filter(reply => reply.parentId === comment.commentId)
+          console.log(`评论 ${comment.commentId} 的回复数量: ${commentReplies.length}`)
+          if (commentReplies.length > 0) {
+            console.log(`评论 ${comment.commentId} 的回复:`, commentReplies)
+          }
+        })
+      }
+    }
+  } catch (error) {
+    console.error(`加载动态详情失败，动态ID: ${post.postId}`, error)
+    // 如果获取详情失败，回退到原来的评论加载方式
+    await momentsStore.loadComments(post.postId, {}, true)
+    await loadAllReplies(post.postId)
   }
 }
 
@@ -1736,7 +1710,14 @@ const performSearch = async () => {
         }))
         
         // 为搜索结果的动态加载评论和回复
-        await loadAllCommentsAndReplies()
+        for (const post of momentsStore.posts) {
+          post.showComments = true
+          try {
+            await loadPostWithComments(post)
+          } catch (error) {
+            console.error(`加载动态 ${post.postId} 的评论失败:`, error)
+          }
+        }
         
         message.success(`找到 ${total} 条相关动态`)
       } else {
@@ -1777,34 +1758,9 @@ const clearSearch = async () => {
 }
 
 // 内心活动相关方法
-/**
- * 获取评论的实际回复数量（基于已加载的回复）
- * @param {Object} comment - 评论对象
- * @returns {number} 实际回复数量
- */
-const getActualReplyCount = (comment) => {
-  const replyState = replyStates.value[comment.commentId]
-  return replyState?.replies?.length || 0
-}
 
-/**
- * 更新评论的回复数量
- * @param {string} commentId - 评论ID
- * @param {number} replyCount - 回复数量
- */
-const updateCommentReplyCount = (commentId, replyCount) => {
-  // 在所有动态的评论中查找并更新对应评论的回复数
-  for (const post of momentsStore.posts) {
-    const commentList = momentsStore.comments[post.postId]
-    if (commentList) {
-      const comment = commentList.find(c => c.commentId === commentId)
-      if (comment) {
-        comment.replyCount = replyCount
-        break
-      }
-    }
-  }
-}
+
+
 
 /**
  * 显示内心活动弹窗
@@ -1821,8 +1777,41 @@ const showInnerThoughts = (item) => {
  * @returns {number} 实际评论数量
  */
 const getActualCommentCount = (post) => {
-  const commentList = momentsStore.comments[post.postId]
-  return commentList ? commentList.length : 0
+  // 只计算一级评论的数量，不包括回复
+  const topLevelComments = getTopLevelComments(post)
+  return topLevelComments.length
+}
+
+/**
+ * 获取指定评论的回复列表
+ * @param {Object} comment - 评论对象
+ * @param {Object} post - 动态对象
+ * @returns {Array} 回复列表
+ */
+const getCommentReplies = (comment, post) => {
+  const commentList = post.comments || momentsStore.comments[post.postId] || []
+  const replies = commentList.filter(reply => reply.parentId === comment.commentId)
+  
+  // 调试信息
+  if (replies.length > 0) {
+    console.log(`评论 ${comment.commentId} 的回复:`, replies)
+  }
+  
+  return replies
+}
+
+/**
+ * 获取动态的一级评论列表（排除回复）
+ * @param {Object} post - 动态对象
+ * @returns {Array} 一级评论列表
+ */
+const getTopLevelComments = (post) => {
+  const commentList = post.comments || momentsStore.comments[post.postId] || []
+  const topLevelComments = commentList.filter(comment => !comment.parentId)
+  
+  console.log(`动态 ${post.postId} 的一级评论数量: ${topLevelComments.length}`)
+  
+  return topLevelComments
 }
 </script>
 
