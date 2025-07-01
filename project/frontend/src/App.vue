@@ -6,7 +6,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useWebSocketStore } from '@/stores/websocket'
@@ -39,7 +39,7 @@ const configStore = useConfigStore()
 
 // 防重复发送机制
 let lastNotificationTime = 0
-const NOTIFICATION_COOLDOWN = 3000 // 3秒冷却时间
+const NOTIFICATION_COOLDOWN = 5000 // 5秒冷却时间，与WebSocket Store保持一致
 let notificationTimeout = null
 
 // WebSocket帖子相关事件监听状态
@@ -54,6 +54,10 @@ let postEventListeners = {
 
 // 增量刷新能力检测
 const canIncrementalRefresh = ref(true) // 默认假设支持增量刷新
+
+// PWA 相关状态
+const pwaUpdateAvailable = ref(false)
+const pwaRegistration = ref(null)
 
 /**
  * 停止监听WebSocket帖子相关事件
@@ -132,6 +136,74 @@ const detectIncrementalRefreshCapability = () => {
 }
 
 /**
+ * 注册 Service Worker
+ */
+const registerServiceWorker = async () => {
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js')
+      pwaRegistration.value = registration
+      
+      console.log('✅ Service Worker 注册成功:', registration)
+      
+      // 监听更新
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            pwaUpdateAvailable.value = true
+            console.log('🔄 PWA 更新可用')
+            message.info('应用有新版本可用，请刷新页面')
+          }
+        })
+      })
+      
+      // 监听控制器变化
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('🔄 Service Worker 控制器已更新')
+        window.location.reload()
+      })
+      
+    } catch (error) {
+      console.error('❌ Service Worker 注册失败:', error)
+    }
+  } else {
+    console.log('⚠️ 浏览器不支持 Service Worker')
+  }
+}
+
+/**
+ * 请求通知权限
+ */
+const requestNotificationPermission = async () => {
+  if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission()
+      console.log('📱 通知权限状态:', permission)
+    }
+  }
+}
+
+/**
+ * 发送推送通知
+ */
+const sendPushNotification = (title, body, data = {}) => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const notification = new Notification(title, {
+      body,
+      icon: 'icons/icon-192x192.png',
+      badge: 'icons/badge-72x72.png',
+      data
+    })
+    
+    notification.onclick = () => {
+      window.focus()
+      notification.close()
+    }
+  }
+}
+
+/**
  * 动态控制帖子相关事件监听
  * @param {boolean} enable - 是否启用监听
  */
@@ -170,6 +242,7 @@ const sendUserOnlineNotification = async () => {
       console.log('📢 App.vue调用WebSocket Store发送用户上线消息')
       await websocketStore.sendUserOnlineNotification()
       lastNotificationTime = now
+      console.log('✅ 用户上线消息发送成功，时间戳:', now)
     } else {
       console.log('❌ 无法发送用户上线消息:', {
         hasUserId: !!userStore.userInfo?.userId,
@@ -179,6 +252,7 @@ const sendUserOnlineNotification = async () => {
     }
   } catch (error) {
     console.error('❌ 发送用户上线消息失败:', error)
+    // 不更新lastNotificationTime，允许重试
   }
 }
 
@@ -230,6 +304,12 @@ onMounted(async () => {
     
     // 检测增量刷新能力
     detectIncrementalRefreshCapability()
+    
+    // 注册 Service Worker
+    await registerServiceWorker()
+    
+    // 请求通知权限
+    await requestNotificationPermission()
     
     // 如果用户已登录，连接WebSocket
     if (userStore.isLoggedIn && initSuccess) {
