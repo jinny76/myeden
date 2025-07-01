@@ -335,9 +335,8 @@ public class PostController {
     }
     
     /**
-     * 根据关键字搜索动态
+     * 根据关键字搜索动态（已废弃，建议使用/query接口）
      * @param keyword 搜索关键字
-     * @param searchType 搜索类型：content(内容)、author(发帖人)、all(全部)
      * @param page 页码（从1开始）
      * @param size 每页大小
      * @return 搜索结果和分页信息
@@ -345,12 +344,11 @@ public class PostController {
     @GetMapping("/search")
     public ResponseEntity<EventResponse> searchPosts(
             @RequestParam("keyword") String keyword,
-            @RequestParam(value = "searchType", defaultValue = "all") String searchType,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
         
         try {
-            logger.info("搜索动态，关键字: {}, 搜索类型: {}, 页码: {}, 大小: {}", keyword, searchType, page, size);
+            logger.info("搜索动态，关键字: {}, 页码: {}, 大小: {}", keyword, page, size);
             
             // 参数验证
             if (keyword == null || keyword.trim().isEmpty()) {
@@ -368,13 +366,17 @@ public class PostController {
                 size = 10;
             }
             
-            // 验证搜索类型
-            if (!searchType.equals("content") && !searchType.equals("author") && !searchType.equals("all")) {
-                searchType = "all";
-            }
+            // 使用统一查询接口进行搜索
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
             
-            // 搜索动态
-            PostService.PostListResult result = postService.searchPosts(keyword.trim(), searchType, page, size);
+            PostQueryParams params = new PostQueryParams();
+            params.setPage(page);
+            params.setSize(size);
+            params.setKeyword(keyword.trim());
+            params.setCurrentUserId(currentUserId);
+            
+            PostService.PostListResult result = postService.queryPosts(params);
             
             logger.info("搜索动态成功，关键字: {}, 结果数量: {}", keyword, result.getTotal());
             

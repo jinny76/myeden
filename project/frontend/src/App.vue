@@ -271,6 +271,11 @@ onMounted(async () => {
     // 初始化用户状态
     const initSuccess = await userStore.initUser()
     
+    // 加载用户设置（如果用户已登录）
+    if (userStore.isLoggedIn) {
+      await configStore.loadUserSetting()
+    }
+    
     // 应用主题配置
     configStore.applyTheme()
     

@@ -104,9 +104,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
+import { useUserStore } from '@/stores/user'
 import { Setting, Brush, Bell, Refresh, Monitor } from '@element-plus/icons-vue'
+import { message } from '@/utils/message'
 
 /**
  * 设置页面组件
@@ -123,33 +125,68 @@ import { Setting, Brush, Bell, Refresh, Monitor } from '@element-plus/icons-vue'
  */
 
 const configStore = useConfigStore()
+const userStore = useUserStore()
 
 // 计算属性
 const config = computed(() => configStore.config)
+const loading = computed(() => configStore.loading)
+const isLoggedIn = computed(() => userStore.isLoggedIn)
+
+// 生命周期
+onMounted(async () => {
+  if (isLoggedIn.value) {
+    await configStore.loadUserSetting()
+  }
+})
 
 // 方法
-const updateTheme = (key, value) => {
-  console.log('主题切换:', { key, value })
-  configStore.updateTheme(key, value)
-  // 添加延迟检查，确保主题已应用
-  setTimeout(() => {
-    const root = document.documentElement
-    console.log('当前主题状态:', {
-      mode: config.value.theme.mode,
-      hasDarkModeClass: root.classList.contains('dark-mode'),
-      dataTheme: root.getAttribute('data-theme'),
-      computedStyle: getComputedStyle(root).getPropertyValue('--color-bg')
-    })
-  }, 100)
+const updateTheme = async (key, value) => {
+  try {
+    console.log('主题切换:', { key, value })
+    await configStore.updateTheme(key, value)
+    
+    if (isLoggedIn.value) {
+      message.success('主题设置已保存')
+    }
+    
+    // 添加延迟检查，确保主题已应用
+    setTimeout(() => {
+      const root = document.documentElement
+      console.log('当前主题状态:', {
+        mode: config.value.theme.mode,
+        hasDarkModeClass: root.classList.contains('dark-mode'),
+        dataTheme: root.getAttribute('data-theme'),
+        computedStyle: getComputedStyle(root).getPropertyValue('--color-bg')
+      })
+    }, 100)
+  } catch (error) {
+    console.error('主题切换失败:', error)
+    message.error('主题设置保存失败')
+  }
 }
 
-const updateNotification = (key, value) => {
-  configStore.updateNotification(key, value)
+const updateNotification = async (key, value) => {
+  try {
+    await configStore.updateNotification(key, value)
+    
+    if (isLoggedIn.value) {
+      message.success('通知设置已保存')
+    }
+  } catch (error) {
+    console.error('通知设置更新失败:', error)
+    message.error('通知设置保存失败')
+  }
 }
 
-const resetSettings = () => {
+const resetSettings = async () => {
   if (confirm('确定要重置所有设置吗？')) {
-    configStore.resetConfig()
+    try {
+      await configStore.resetConfig()
+      message.success('设置已重置')
+    } catch (error) {
+      console.error('重置设置失败:', error)
+      message.error('重置设置失败')
+    }
   }
 }
 
