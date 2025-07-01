@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 /**
  * 用户管理服务实现类
@@ -332,7 +333,11 @@ public class UserServiceImpl implements UserService {
             LocalDateTime lastCommentTime = null;
             
             // 获取用户最新的发帖时间
-            List<com.myeden.entity.Post> recentPosts = postRepository.findRecentPostsByAuthor(userId, 1);
+            // 获取用户已连接的机器人ID列表
+            List<String> connectedRobotIds = userRobotLinkService.getUserActiveLinks(userId).stream()
+                .map(UserRobotLinkService.LinkSummary::getRobotId)
+                .collect(Collectors.toList());
+            List<com.myeden.entity.Post> recentPosts = postRepository.findRecentPostsByAuthor(userId, 1, userId, connectedRobotIds);
             if (!recentPosts.isEmpty()) {
                 lastPostTime = recentPosts.get(0).getCreatedAt();
             }

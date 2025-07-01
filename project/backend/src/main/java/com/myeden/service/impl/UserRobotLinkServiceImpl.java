@@ -275,8 +275,13 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
     public List<LinkSummary> getUserActiveLinks(String userId) {
         try {
             logger.info("获取用户激活链接列表，用户ID: {}", userId);
-            
-            List<UserRobotLink> links = userRobotLinkRepository.findByUserIdAndStatus(userId, "active");
+
+            List<UserRobotLink> links;
+            if (userId.startsWith("user_")) {
+                links = userRobotLinkRepository.findByUserIdAndStatus(userId, "active");
+            } else {
+                links = userRobotLinkRepository.findByRobotIdAndStatus(userId, "active");
+            }
             
             List<LinkSummary> summaries = links.stream()
                 .map(this::convertToLinkSummary)

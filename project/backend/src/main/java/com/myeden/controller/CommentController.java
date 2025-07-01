@@ -250,8 +250,12 @@ public class CommentController {
         try {
             logger.info("获取评论详情，评论ID: {}", commentId);
             
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
             // 获取评论详情
-            CommentService.CommentDetail result = commentService.getCommentDetail(commentId);
+            CommentService.CommentDetail result = commentService.getCommentDetail(commentId, currentUserId);
             
             logger.info("获取评论详情成功");
             

@@ -294,7 +294,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     private boolean performRobotLike(Robot robot, String postId) {
         try {
             // 检查是否已经点赞过 - 通过查询点赞记录来判断
-            List<PostService.LikeDetail> likes = postService.getPostLikes(postId).getLikes();
+            // 机器人查看点赞信息时，传入机器人ID作为当前用户，获取所有可见的点赞记录
+            List<PostService.LikeDetail> likes = postService.getPostLikes(postId, robot.getRobotId()).getLikes();
             boolean alreadyLiked = likes.stream()
                     .anyMatch(like -> like.getUserId().equals(robot.getRobotId()));
             
@@ -395,7 +396,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     public boolean triggerRobotReply(String robotId, String commentId) {
         try {
             // 获取评论内容（先查comment，后判断）
-            CommentService.CommentDetail commentDetail = commentService.getCommentDetail(commentId);
+            // 机器人查看评论详情时，传入机器人ID作为当前用户，获取有权限查看的评论信息
+            CommentService.CommentDetail commentDetail = commentService.getCommentDetail(commentId, robotId);
             PostService.PostDetail postDetail = postService.getPostDetail(commentDetail.getPostId(), robotId);
             boolean isRobot = "robot".equals(commentDetail.getAuthorType());
             // 统一前置条件判断
@@ -684,8 +686,12 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             
             // 获取近三天的帖子，按时间倒序排列（最新的在前）
             LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(1);
+            // 获取所有机器人ID，作为 connectedRobotIds 传入，currentUserId 传 null
+            List<String> allRobotIds = robotRepository.findAll().stream()
+                .map(Robot::getRobotId)
+                .collect(Collectors.toList());
             List<Post> recentPosts = postRepository
-                    .findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(threeDaysAgo);
+                    .findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(threeDaysAgo, null, allRobotIds);
             
             if (recentPosts.isEmpty()) {
                 logger.debug("机器人 {} 没有找到近三天的帖子", robot.getName());

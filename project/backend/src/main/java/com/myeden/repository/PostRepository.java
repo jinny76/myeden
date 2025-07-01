@@ -47,55 +47,57 @@ public interface PostRepository extends MongoRepository<Post, String> {
      * 查找指定作者的最近动态
      * @param authorId 作者ID
      * @param limit 限制数量
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 动态列表
      */
-    @Query(value = "{'authorId': ?0}", sort = "{'createdAt': -1}")
-    List<Post> findRecentPostsByAuthor(String authorId, int limit);
+    @Query(value = "{'authorId': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}", sort = "{'createdAt': -1}")
+    List<Post> findRecentPostsByAuthor(String authorId, int limit, String currentUserId, List<String> connectedRobotIds);
 
     /**
      * 根据关键字搜索动态（内容和作者ID）
      * @param keyword 搜索关键字
-     * @param pageable 分页参数
      * @param currentUserId 当前用户ID（可选，用于隐私控制）
      * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
+     * @param pageable 分页参数
      * @return 动态分页结果
      */
     @Query("{$and: [{$or: [{'content': {$regex: ?0, $options: 'i'}}, {'authorId': {$regex: ?0, $options: 'i'}}]}, {'isDeleted': false}, {$or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}]}")
-    Page<Post> findByKeywordAndIsDeletedFalse(String keyword, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
+    Page<Post> findByKeywordAndIsDeletedFalse(String keyword, String currentUserId, List<String> connectedRobotIds, Pageable pageable);
 
     /**
      * 根据关键字和作者类型搜索动态（内容和作者ID）
      * @param keyword 搜索关键字
      * @param authorType 作者类型
-     * @param pageable 分页参数
      * @param currentUserId 当前用户ID（可选，用于隐私控制）
      * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
+     * @param pageable 分页参数
      * @return 动态分页结果
      */
     @Query("{$and: [{$or: [{'content': {$regex: ?0, $options: 'i'}}, {'authorId': {$regex: ?0, $options: 'i'}}]}, {'authorType': ?1}, {'isDeleted': false}, {$or: [{'visibility': 'public'}, {'authorId': ?2}, {'authorId': {$in: ?3}}]}]}")
-    Page<Post> findByKeywordAndAuthorTypeAndIsDeletedFalse(String keyword, String authorType, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
+    Page<Post> findByKeywordAndAuthorTypeAndIsDeletedFalse(String keyword, String authorType, String currentUserId, List<String> connectedRobotIds, Pageable pageable);
     
     /**
      * 根据内容关键字搜索动态（分页）
      * @param keyword 内容关键字
-     * @param pageable 分页参数
      * @param currentUserId 当前用户ID（可选，用于隐私控制）
      * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
+     * @param pageable 分页参数
      * @return 动态分页结果
      */
     @Query("{$and: [{'content': {$regex: ?0, $options: 'i'}}, {'isDeleted': false}, {$or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}]}")
-    Page<Post> findByContentKeywordAndIsDeletedFalse(String keyword, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
+    Page<Post> findByContentKeywordAndIsDeletedFalse(String keyword, String currentUserId, List<String> connectedRobotIds, Pageable pageable);
     
     /**
      * 根据作者关键字搜索动态（分页）
      * @param keyword 作者关键字
-     * @param pageable 分页参数
      * @param currentUserId 当前用户ID（可选，用于隐私控制）
      * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
+     * @param pageable 分页参数
      * @return 动态分页结果
      */
     @Query("{$and: [{'authorId': {$regex: ?0, $options: 'i'}}, {'isDeleted': false}, {$or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}]}")
-    Page<Post> findByAuthorKeywordAndIsDeletedFalse(String keyword, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
+    Page<Post> findByAuthorKeywordAndIsDeletedFalse(String keyword, String currentUserId, List<String> connectedRobotIds, Pageable pageable);
 
     /**
      * 根据作者ID和是否删除统计动态数量
@@ -149,41 +151,44 @@ public interface PostRepository extends MongoRepository<Post, String> {
     /**
      * 根据作者ID和未删除分页查找动态
      * @param authorId 作者ID
-     * @param pageable 分页参数
      * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
+     * @param pageable 分页参数
      * @return 动态分页结果
      */
-    @Query(value = "{'authorId': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}]}")
-    Page<Post> findByAuthorIdAndIsDeletedFalse(String authorId, Pageable pageable, String currentUserId);
+    @Query(value = "{'authorId': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    Page<Post> findByAuthorIdAndIsDeletedFalse(String authorId, String currentUserId, List<String> connectedRobotIds, Pageable pageable);
     
     /**
      * 根据作者类型和未删除分页查找动态
      * @param authorType 作者类型
-     * @param pageable 分页参数
      * @param currentUserId 当前用户ID（可选，用于隐私控制）
      * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
+     * @param pageable 分页参数
      * @return 动态分页结果
      */
     @Query(value = "{'authorType': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
-    Page<Post> findByAuthorTypeAndIsDeletedFalse(String authorType, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
+    Page<Post> findByAuthorTypeAndIsDeletedFalse(String authorType, String currentUserId, List<String> connectedRobotIds, Pageable pageable);
     
     /**
      * 根据未删除分页查找动态
-     * @param pageable 分页参数
      * @param currentUserId 当前用户ID（可选，用于隐私控制）
      * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
+     * @param pageable 分页参数
      * @return 动态分页结果
      */
     @Query(value = "{'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?0}, {'authorId': {$in: ?1}}]}")
-    Page<Post> findByIsDeletedFalse(Pageable pageable, String currentUserId, List<String> connectedRobotIds);
+    Page<Post> findByIsDeletedFalse(String currentUserId, List<String> connectedRobotIds, Pageable pageable);
     
     /**
      * 根据创建时间查找指定时间之后的未删除动态，按创建时间倒序排列
      * @param createdAt 创建时间
+     * @param currentUserId 当前用户ID（可选，用于隐私控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 动态列表
      */
-    @Query("{'createdAt': {$gte: ?0}, 'isDeleted': false}")
-    List<Post> findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(LocalDateTime createdAt);
+    @Query("{'createdAt': {$gte: ?0}, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    List<Post> findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(LocalDateTime createdAt, String currentUserId, List<String> connectedRobotIds);
     
 
 } 

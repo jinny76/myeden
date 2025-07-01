@@ -352,13 +352,19 @@ public class CommentServiceImpl implements CommentService {
             List<String> connectedRobotIds = new ArrayList<>();
             if (currentUserId != null) {
                 List<UserRobotLinkService.LinkSummary> activeLinks = userRobotLinkService.getUserActiveLinks(currentUserId);
-                connectedRobotIds = activeLinks.stream()
-                    .map(UserRobotLinkService.LinkSummary::getRobotId)
-                    .collect(Collectors.toList());
+                if(currentUserId.startsWith("user_")) {
+                    connectedRobotIds = activeLinks.stream()
+                            .map(UserRobotLinkService.LinkSummary::getRobotId)
+                            .collect(Collectors.toList());
+                } else {
+                    connectedRobotIds = activeLinks.stream()
+                            .map(UserRobotLinkService.LinkSummary::getUserId)
+                            .collect(Collectors.toList());
+                }
             }
             
             // 查询一级评论（parentId为null，在分页前完成过滤）
-            Page<Comment> commentPage = commentRepository.findByPostIdAndParentIdIsNullAndIsDeletedFalse(postId, pageable, currentUserId, connectedRobotIds);
+            Page<Comment> commentPage = commentRepository.findByPostIdAndParentIdIsNullAndIsDeletedFalse(postId, currentUserId, connectedRobotIds, pageable);
             
             // 转换为摘要信息
             List<CommentSummary> commentSummaries = commentPage.getContent().stream()
@@ -420,7 +426,7 @@ public class CommentServiceImpl implements CommentService {
             }
             
             // 查询回复（parentId为commentId，在分页前完成过滤）
-            Page<Comment> replyPage = commentRepository.findByParentIdAndIsDeletedFalse(commentId, pageable, currentUserId, connectedRobotIds);
+            Page<Comment> replyPage = commentRepository.findByParentIdAndIsDeletedFalse(commentId, currentUserId, connectedRobotIds, pageable);
             
             // 转换为摘要信息
             List<CommentSummary> replySummaries = replyPage.getContent().stream()
@@ -444,8 +450,13 @@ public class CommentServiceImpl implements CommentService {
     
     @Override
     public CommentDetail getCommentDetail(String commentId) {
+        return getCommentDetail(commentId, null);
+    }
+    
+    @Override
+    public CommentDetail getCommentDetail(String commentId, String currentUserId) {
         try {
-            logger.info("获取评论详情，评论ID: {}", commentId);
+            logger.info("获取评论详情，评论ID: {}, 当前用户: {}", commentId, currentUserId);
             
             // 查询评论
             Optional<Comment> commentOpt = commentRepository.findByCommentIdAndIsDeletedFalse(commentId);
@@ -491,12 +502,27 @@ public class CommentServiceImpl implements CommentService {
                 }
             }
             
-            // 获取点赞用户列表和当前用户是否点赞状态
-            List<CommentLike> commentLikes = commentLikeRepository.findByCommentId(commentId);
+            // 获取用户已连接的机器人ID列表
+            List<String> connectedRobotIds = new ArrayList<>();
+            if (currentUserId != null) {
+                List<UserRobotLinkService.LinkSummary> activeLinks = userRobotLinkService.getUserActiveLinks(currentUserId);
+                connectedRobotIds = activeLinks.stream()
+                    .map(UserRobotLinkService.LinkSummary::getRobotId)
+                    .collect(Collectors.toList());
+            }
+            
+            // 获取点赞用户列表和当前用户是否点赞状态（带权限过滤）
+            List<CommentLike> commentLikes = commentLikeRepository.findByCommentIdWithPermissionFilter(commentId, currentUserId, connectedRobotIds);
             List<String> likedUsers = commentLikes.stream()
                 .map(CommentLike::getUserId)
                 .collect(Collectors.toList());
-            boolean isLiked = false; // 这里需要传入当前用户ID来判断，暂时设为false
+            
+            // 判断当前用户是否已点赞
+            boolean isLiked = false;
+            if (currentUserId != null) {
+                Optional<CommentLike> userLike = commentLikeRepository.findByCommentIdAndUserId(commentId, currentUserId);
+                isLiked = userLike.isPresent();
+            }
             
             logger.info("获取评论详情成功");
             

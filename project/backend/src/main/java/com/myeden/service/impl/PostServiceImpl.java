@@ -226,9 +226,9 @@ public class PostServiceImpl implements PostService {
             // 查询动态
             Page<Post> postPage;
             if (StringUtils.hasText(authorType)) {
-                postPage = postRepository.findByAuthorTypeAndIsDeletedFalse(authorType, pageable, currentUserId, connectedRobotIds);
+                postPage = postRepository.findByAuthorTypeAndIsDeletedFalse(authorType, currentUserId, connectedRobotIds, pageable);
             } else {
-                postPage = postRepository.findByIsDeletedFalse(pageable, currentUserId, connectedRobotIds);
+                postPage = postRepository.findByIsDeletedFalse(currentUserId, connectedRobotIds, pageable);
             }
             
             // 转换为摘要信息
@@ -284,8 +284,11 @@ public class PostServiceImpl implements PostService {
                 }
             }
             
-            // 获取点赞详情列表和当前用户是否点赞状态
-            List<PostLike> postLikes = postLikeRepository.findByPostId(postId);
+            // 获取用户已连接的机器人ID列表
+            List<String> connectedRobotIds = getConnectedRobotIds(currentUserId);
+            
+            // 获取点赞详情列表和当前用户是否点赞状态（带权限过滤）
+            List<PostLike> postLikes = postLikeRepository.findByPostIdWithPermissionFilter(postId, currentUserId, connectedRobotIds);
             List<LikeDetail> likes = new ArrayList<>();
             boolean isLiked = false;
             
@@ -339,7 +342,7 @@ public class PostServiceImpl implements PostService {
             likes.sort((a, b) -> b.getLikedAt().compareTo(a.getLikedAt()));
             
             // 加载评论和回复列表
-            List<CommentSummary> comments = loadCommentsWithReplies(postId);
+            List<CommentSummary> comments = loadCommentsWithReplies(postId, currentUserId);
             
             logger.info("获取动态详情成功，评论数量: {}", comments.size());
             
@@ -489,8 +492,11 @@ public class PostServiceImpl implements PostService {
             // 创建分页请求
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
             
+            // 获取用户已连接的机器人ID列表
+            List<String> connectedRobotIds = getConnectedRobotIds(authorId);
+            
             // 查询用户的动态
-            Page<Post> postPage = postRepository.findByAuthorIdAndIsDeletedFalse(authorId, pageable, authorId);
+            Page<Post> postPage = postRepository.findByAuthorIdAndIsDeletedFalse(authorId, authorId, connectedRobotIds, pageable);
             
             // 转换为摘要信息
             List<PostSummary> postSummaries = postPage.getContent().stream()
@@ -550,33 +556,33 @@ public class PostServiceImpl implements PostService {
                     postPage = postRepository.findByKeywordAndAuthorTypeAndIsDeletedFalse(
                         params.getKeyword(),
                         params.getAuthorType(),
-                        pageable, 
                         params.getCurrentUserId(), 
-                        connectedRobotIds
+                        connectedRobotIds,
+                        pageable
                     );
                 } else {
                     // 只有关键词搜索
                     postPage = postRepository.findByKeywordAndIsDeletedFalse(
                         params.getKeyword(), 
-                        pageable, 
                         params.getCurrentUserId(), 
-                        connectedRobotIds
+                        connectedRobotIds,
+                        pageable
                     );
                 }
             } else if (StringUtils.hasText(params.getAuthorType())) {
                 // 只有作者类型过滤
                 postPage = postRepository.findByAuthorTypeAndIsDeletedFalse(
                     params.getAuthorType(), 
-                    pageable, 
                     params.getCurrentUserId(), 
-                    connectedRobotIds
+                    connectedRobotIds,
+                    pageable
                 );
             } else {
                 // 基础查询（无过滤条件）
                 postPage = postRepository.findByIsDeletedFalse(
-                    pageable, 
                     params.getCurrentUserId(), 
-                    connectedRobotIds
+                    connectedRobotIds,
+                    pageable
                 );
             }
             
@@ -785,9 +791,9 @@ public class PostServiceImpl implements PostService {
     }
     
     @Override
-    public LikeInfoResult getPostLikes(String postId) {
+    public LikeInfoResult getPostLikes(String postId, String currentUserId) {
         try {
-            logger.info("获取动态点赞信息，动态ID: {}", postId);
+            logger.info("获取动态点赞信息，动态ID: {}, 当前用户: {}", postId, currentUserId);
             
             // 验证动态是否存在
             Optional<Post> postOpt = postRepository.findByPostId(postId);
@@ -795,8 +801,11 @@ public class PostServiceImpl implements PostService {
                 throw new IllegalArgumentException("动态不存在");
             }
             
-            // 查询所有点赞记录
-            List<PostLike> postLikes = postLikeRepository.findByPostId(postId);
+            // 获取用户已连接的机器人ID列表
+            List<String> connectedRobotIds = getConnectedRobotIds(currentUserId);
+            
+            // 查询点赞记录（带权限过滤）
+            List<PostLike> postLikes = postLikeRepository.findByPostIdWithPermissionFilter(postId, currentUserId, connectedRobotIds);
             
             // 转换为点赞详情
             List<LikeDetail> likeDetails = new ArrayList<>();
@@ -910,16 +919,18 @@ public class PostServiceImpl implements PostService {
     /**
      * 加载动态的评论和回复列表
      * 一次性加载所有评论和回复，避免前端多次调用
+     * 支持机器人链接过滤，只显示用户连接的机器人的评论
      * 
      * @param postId 动态ID
+     * @param currentUserId 当前用户ID，用于机器人链接过滤
      * @return 评论和回复列表
      */
-    private List<CommentSummary> loadCommentsWithReplies(String postId) {
+    private List<CommentSummary> loadCommentsWithReplies(String postId, String currentUserId) {
         try {
-            logger.debug("开始加载动态评论和回复，动态ID: {}", postId);
+            logger.debug("开始加载动态评论和回复，动态ID: {}, 当前用户: {}", postId, currentUserId);
             
-            // 获取动态的所有评论（一级评论）
-            CommentService.CommentListResult commentResult = commentService.getCommentList(postId, 1, 1000, null); // 获取所有评论
+            // 获取动态的所有评论（一级评论），支持机器人链接过滤
+            CommentService.CommentListResult commentResult = commentService.getCommentList(postId, 1, 1000, currentUserId);
             List<CommentSummary> allComments = new ArrayList<>();
             
             logger.debug("获取到一级评论数量: {}", commentResult.getComments().size());
@@ -932,7 +943,7 @@ public class PostServiceImpl implements PostService {
                 // 如果评论有回复，加载回复列表
                 if (comment.getReplyCount() > 0) {
                     try {
-                        CommentService.CommentListResult replyResult = commentService.getReplyList(comment.getCommentId(), 1, 1000, null); // 获取所有回复
+                        CommentService.CommentListResult replyResult = commentService.getReplyList(comment.getCommentId(), 1, 1000, currentUserId);
                         logger.debug("评论 {} 的回复数量: {}", comment.getCommentId(), replyResult.getComments().size());
                         allComments.addAll(replyResult.getComments());
                         

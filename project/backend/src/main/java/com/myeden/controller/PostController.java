@@ -474,8 +474,12 @@ public class PostController {
                 ));
             }
             
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
             // 获取点赞信息
-            PostService.LikeInfoResult result = postService.getPostLikes(postId.trim());
+            PostService.LikeInfoResult result = postService.getPostLikes(postId.trim(), currentUserId);
             
             logger.info("获取动态点赞信息成功，动态ID: {}, 点赞数量: {}", postId, result.getTotalLikes());
             

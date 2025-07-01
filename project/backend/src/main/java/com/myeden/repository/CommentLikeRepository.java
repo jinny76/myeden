@@ -41,6 +41,18 @@ public interface CommentLikeRepository extends MongoRepository<CommentLike, Stri
     List<CommentLike> findByCommentId(String commentId);
     
     /**
+     * 根据评论ID查询点赞记录（带权限过滤）
+     * 只返回当前用户有权限查看的点赞记录
+     * 
+     * @param commentId 评论ID
+     * @param currentUserId 当前用户ID（可选，用于权限控制）
+     * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
+     * @return 点赞记录列表
+     */
+    @Query(value = "{'commentId': ?0, $or: [{'userId': ?1}, {'userId': {$in: ?2}}]}")
+    List<CommentLike> findByCommentIdWithPermissionFilter(String commentId, String currentUserId, List<String> connectedRobotIds);
+    
+    /**
      * 根据评论ID统计点赞数量
      * 
      * @param commentId 评论ID

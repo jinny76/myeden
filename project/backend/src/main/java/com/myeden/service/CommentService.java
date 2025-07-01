@@ -122,6 +122,14 @@ public interface CommentService {
     CommentDetail getCommentDetail(String commentId);
     
     /**
+     * 获取评论详情（带权限过滤）
+     * @param commentId 评论ID
+     * @param currentUserId 当前用户ID（可选，用于权限控制）
+     * @return 评论详细信息
+     */
+    CommentDetail getCommentDetail(String commentId, String currentUserId);
+    
+    /**
      * 删除评论
      * @param commentId 评论ID
      * @param authorId 作者ID（用于权限验证）

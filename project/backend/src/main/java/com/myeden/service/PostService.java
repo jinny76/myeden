@@ -104,9 +104,10 @@ public interface PostService {
     /**
      * 获取动态的所有点赞信息
      * @param postId 动态ID
+     * @param currentUserId 当前用户ID（可选，用于权限控制）
      * @return 点赞信息列表
      */
-    LikeInfoResult getPostLikes(String postId);
+    LikeInfoResult getPostLikes(String postId, String currentUserId);
     
     /**
      * 动态发布结果
