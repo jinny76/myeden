@@ -376,6 +376,7 @@ public class ConfigServiceImpl implements ConfigService {
         robot.setLocation(robotConfig.getLocation());
         robot.setEducation(robotConfig.getEducation());
         robot.setRelationship(robotConfig.getRelationship());
+        robot.setFamily(robotConfig.getFamily());
         
         // 性格特征列表
         if (robotConfig.getTraits() != null && !robotConfig.getTraits().isEmpty()) {
@@ -512,6 +513,7 @@ public class ConfigServiceImpl implements ConfigService {
         existing.setLocation(newConfig.getLocation());
         existing.setEducation(newConfig.getEducation());
         existing.setRelationship(newConfig.getRelationship());
+        existing.setFamily(newConfig.getFamily());
         
         // 更新性格特征列表
         if (newConfig.getTraits() != null) {

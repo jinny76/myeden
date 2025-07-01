@@ -97,6 +97,7 @@ public class RobotConfig {
         private String location;         // 所在地
         private String education;        // 学历
         private String relationship;     // 感情状态：single/married/in_relationship
+        private String family;           // 家庭背景
         
         private List<String> traits;
         private List<String> interests;
@@ -154,6 +155,9 @@ public class RobotConfig {
         
         public String getRelationship() { return relationship; }
         public void setRelationship(String relationship) { this.relationship = relationship; }
+        
+        public String getFamily() { return family; }
+        public void setFamily(String family) { this.family = family; }
         
         public List<String> getTraits() { return traits; }
         public void setTraits(List<String> traits) { this.traits = traits; }

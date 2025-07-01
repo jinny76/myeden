@@ -106,6 +106,11 @@ public class Robot {
     private String relationship;
     
     /**
+     * 家庭背景
+     */
+    private String family;
+    
+    /**
      * 性格特征列表
      */
     private List<String> traits = new ArrayList<>();
@@ -408,6 +413,14 @@ public class Robot {
         this.relationship = relationship;
     }
     
+    public String getFamily() {
+        return family;
+    }
+    
+    public void setFamily(String family) {
+        this.family = family;
+    }
+    
     public List<String> getTraits() {
         return traits;
     }
@@ -603,6 +616,7 @@ public class Robot {
         this.location = robot.getLocation();
         this.education = robot.getEducation();
         this.relationship = robot.getRelationship();
+        this.family = robot.getFamily();
         this.traits = robot.getTraits();
         this.interests = robot.getInterests();
         this.speakingStyle = robot.getSpeakingStyle();
