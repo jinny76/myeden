@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.Optional;
+import java.util.Objects;
 
 /**
  * 机器人行为管理服务实现类
@@ -685,16 +687,19 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 .collect(Collectors.toList());
             
             // 获取近三天的帖子，按时间倒序排列（最新的在前）
-            LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(1);
+            LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
             // 获取所有机器人ID，作为 connectedRobotIds 传入，currentUserId 传 null
             List<String> allRobotIds = robotRepository.findAll().stream()
                 .map(Robot::getRobotId)
                 .collect(Collectors.toList());
+
+            allRobotIds.addAll(linkedUserIds);
+
             List<Post> recentPosts = postRepository
-                    .findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(threeDaysAgo, null, allRobotIds);
+                    .findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(oneDayAgo, null, allRobotIds);
             
             if (recentPosts.isEmpty()) {
-                logger.debug("机器人 {} 没有找到近三天的帖子", robot.getName());
+                logger.debug("机器人 {} 没有找到近1天的帖子", robot.getName());
                 return;
             }
             
@@ -1040,10 +1045,28 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             logger.info("开始触发所有在线机器人评论，动态ID: {}, 内容: {}", postId, 
                        postContent != null ? postContent.substring(0, Math.min(postContent.length(), 50)) + "..." : "无内容");
             
-            // 获取所有机器人，然后逐个检查活跃状态
-            List<Robot> allRobots = robotRepository.findAll();
+            // 先查动态作者ID
+            Optional<Post> postOpt = postRepository.findByPostId(postId);
+            if (postOpt.isEmpty()) {
+                logger.info("动态不存在，无法获取关联机器人");
+                return;
+            }
+            String authorId = postOpt.get().getAuthorId();
+            // 获取与作者有关联的机器人
+            List<UserRobotLinkService.LinkSummary> userLinks = userRobotLinkService.getUserActiveLinks(authorId);
+            if (userLinks.isEmpty()) {
+                logger.info("用户 {} 没有关联的机器人", authorId);
+                return;
+            }
+            List<String> linkedRobotIds = userLinks.stream()
+                .map(UserRobotLinkService.LinkSummary::getRobotId)
+                .collect(Collectors.toList());
+            List<Robot> allRobots = linkedRobotIds.stream()
+                .map(robotId -> robotRepository.findByRobotId(robotId).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
             if (allRobots.isEmpty()) {
-                logger.info("没有找到机器人");
+                logger.info("没有找到关联的机器人");
                 return;
             }
             
