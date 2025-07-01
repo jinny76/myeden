@@ -39,8 +39,7 @@
     "sass": "^1.69.5",
     "unplugin-auto-import": "^0.16.7",
     "unplugin-vue-components": "^0.25.2",
-    "vite": "^5.0.0",
-    "vite-plugin-pwa": "^1.0.1"
+    "vite": "^5.0.0"
   },
   "engines": {
     "node": ">=18.0.0",

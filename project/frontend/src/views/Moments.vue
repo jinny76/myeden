@@ -176,17 +176,6 @@
             </template>
           </el-input>
           
-          <el-select 
-            v-model="searchType" 
-            placeholder="搜索类型" 
-            @change="handleSearchTypeChange"
-            class="search-type-select"
-          >
-            <el-option label="全部" value="all" />
-            <el-option label="内容" value="content" />
-            <el-option label="发帖人" value="author" />
-          </el-select>
-          
           <el-select v-model="filterType" placeholder="筛选类型" @change="handleFilterChange" class="filter-select">
             <el-option label="全部" value="" />
             <el-option label="用户动态" value="user" />
@@ -525,7 +514,7 @@ import { message } from '@/utils/message'
 import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment } from '@/api/comment'
-import { createPost, searchPosts, getPostDetail } from '@/api/post'
+import { createPost, searchPosts, getPostDetail, queryPosts } from '@/api/post'
 
 // 响应式数据
 const router = useRouter()
@@ -565,7 +554,6 @@ const newPost = ref({
 
 // 搜索相关状态
 const searchKeyword = ref('')
-const searchType = ref('all')
 const searchTimeout = ref(null)
 const isSearching = ref(false)
 
@@ -593,6 +581,7 @@ const handleFilterChange = async () => {
   if (searchKeyword.value.trim()) {
     await performSearch()
   } else {
+    // 使用新的统一查询接口，支持作者类型过滤
     await momentsStore.loadPosts({ authorType: filterType.value }, true)
     // 为筛选后的动态加载评论和回复
     await loadAllCommentsAndReplies()
@@ -698,7 +687,7 @@ const handleTouchEnd = async (event) => {
 }
 
 /**
- * 执行刷新操作
+ * 执行刷新操作（使用新的统一查询接口）
  */
 const performRefresh = async () => {
   if (isRefreshing.value) return
@@ -707,13 +696,12 @@ const performRefresh = async () => {
     refreshProgress.value = 1
     refreshRotation.value = 180
     
-    // 刷新数据
+    // 使用新的统一查询接口刷新数据
     await momentsStore.loadPosts({}, true)
     await loadAllCommentsAndReplies()
     // 清除搜索和筛选状态
     if (searchKeyword.value.trim()) {
       searchKeyword.value = ''
-      searchType.value = 'all'
     }
     filterType.value = ''
     
@@ -800,10 +788,10 @@ const loadMorePosts = async () => {
     const currentLength = momentsStore.posts.length
     console.log(`开始加载更多动态，当前动态数量: ${currentLength}`)
     
-    // 调用store的loadPosts方法，它会自动处理排重
+    // 使用新的统一查询接口加载更多动态
     await momentsStore.loadPosts({ authorType: filterType.value })
     
-    // 获取新加载的动态（排重后的）
+    // 获取新加载的动态（store内部已处理排重）
     const newPosts = momentsStore.posts.slice(currentLength)
     console.log(`加载完成，新增动态数量: ${newPosts.length}`)
     
@@ -1414,6 +1402,7 @@ const goToPostDetail = (post) => {
 // 生命周期
 onMounted(async () => {
   try {
+    // 使用新的统一查询接口加载初始动态列表
     await momentsStore.loadPosts({}, true)
     // 自动加载所有动态的评论和回复
     await loadAllCommentsAndReplies()
@@ -1666,17 +1655,10 @@ const handleSearchClear = () => {
   clearSearch()
 }
 
-/**
- * 处理搜索类型变化
- */
-const handleSearchTypeChange = async () => {
-  if (searchKeyword.value.trim()) {
-    await performSearch()
-  }
-}
+
 
 /**
- * 执行搜索
+ * 执行搜索（使用新的统一查询接口）
  */
 const performSearch = async () => {
   if (!searchKeyword.value.trim()) {
@@ -1686,15 +1668,20 @@ const performSearch = async () => {
   try {
     isSearching.value = true
     
+    // 构建查询参数，使用新的统一查询接口
     const params = {
       keyword: searchKeyword.value.trim(),
-      searchType: searchType.value,
       page: 1,
       size: 10
     }
     
-    // 调用搜索API
-    const response = await searchPosts(params)
+    // 如果有作者类型筛选，添加到查询参数
+    if (filterType.value) {
+      params.authorType = filterType.value
+    }
+    
+    // 使用新的统一查询接口进行搜索
+    const response = await queryPosts(params)
     
     if (response.code === 200) {
       const { posts, total } = response.data
@@ -1736,11 +1723,10 @@ const performSearch = async () => {
 }
 
 /**
- * 清除搜索
+ * 清除搜索（使用新的统一查询接口）
  */
 const clearSearch = async () => {
   searchKeyword.value = ''
-  searchType.value = 'all'
   
   // 清除定时器
   if (searchTimeout.value) {
@@ -1748,7 +1734,7 @@ const clearSearch = async () => {
     searchTimeout.value = null
   }
   
-  // 恢复显示所有动态
+  // 恢复显示所有动态，使用新的统一查询接口
   try {
     await momentsStore.loadPosts({ authorType: filterType.value }, true)
     await loadAllCommentsAndReplies()

@@ -56,7 +56,25 @@ export function createPost(data) {
 }
 
 /**
- * 获取动态列表
+ * 统一查询动态列表（新方法）
+ * 使用新的统一查询接口，支持分页、作者类型过滤、关键词搜索等功能
+ * @param {Object} params - 查询参数
+ * @param {number} params.page - 页码（从1开始）
+ * @param {number} params.size - 每页大小
+ * @param {string} params.authorType - 作者类型过滤：user(用户)、robot(机器人)
+ * @param {string} params.keyword - 关键词搜索（内容或作者名称）
+ * @returns {Promise} 动态列表和分页信息
+ */
+export function queryPosts(params) {
+  return request({
+    url: '/posts/query',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 获取动态列表（兼容性方法，现在使用统一查询接口）
  * @param {Object} params - 查询参数
  * @param {number} params.page - 页码（从1开始）
  * @param {number} params.size - 每页大小
@@ -64,11 +82,18 @@ export function createPost(data) {
  * @returns {Promise} 动态列表和分页信息
  */
 export function getPostList(params) {
-  return request({
-    url: '/posts',
-    method: 'get',
-    params
-  })
+  // 将参数转换为统一查询接口的格式
+  const queryParams = {
+    page: params.page,
+    size: params.size
+  }
+  
+  // 如果有作者类型过滤，添加到查询参数
+  if (params.authorType) {
+    queryParams.authorType = params.authorType
+  }
+  
+  return queryPosts(queryParams)
 }
 
 /**
@@ -120,7 +145,7 @@ export function unlikePost(postId) {
 }
 
 /**
- * 获取用户的动态列表
+ * 获取用户的动态列表（兼容性方法，现在使用统一查询接口）
  * @param {string} authorId - 作者ID
  * @param {Object} params - 查询参数
  * @param {number} params.page - 页码
@@ -128,15 +153,19 @@ export function unlikePost(postId) {
  * @returns {Promise} 用户动态列表
  */
 export function getUserPosts(authorId, params) {
-  return request({
-    url: `/posts/user/${authorId}`,
-    method: 'get',
-    params
-  })
+  // 使用统一查询接口，通过关键词搜索特定用户
+  const queryParams = {
+    page: params.page,
+    size: params.size,
+    keyword: authorId, // 使用作者ID作为关键词
+    searchType: 'author' // 指定搜索类型为作者
+  }
+  
+  return queryPosts(queryParams)
 }
 
 /**
- * 搜索动态
+ * 搜索动态（兼容性方法，现在使用统一查询接口）
  * @param {Object} params - 搜索参数
  * @param {string} params.keyword - 搜索关键字
  * @param {string} params.searchType - 搜索类型：content(内容)、author(发帖人)、all(全部)
@@ -145,11 +174,17 @@ export function getUserPosts(authorId, params) {
  * @returns {Promise} 搜索结果和分页信息
  */
 export function searchPosts(params) {
-  return request({
-    url: '/posts/search',
-    method: 'get',
-    params
-  })
+  // 将搜索参数转换为统一查询接口的格式
+  const queryParams = {
+    page: params.page,
+    size: params.size,
+    keyword: params.keyword
+  }
+  
+  // 如果有搜索类型，可以在这里处理
+  // 注意：新的统一查询接口会自动处理关键词搜索，不需要显式指定搜索类型
+  
+  return queryPosts(queryParams)
 }
 
 /**

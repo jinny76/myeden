@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getPostList, createPost, deletePost, likePost, unlikePost } from '@/api/post'
+import { queryPosts, getPostList, createPost, deletePost, likePost, unlikePost } from '@/api/post'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment } from '@/api/comment'
 
 /**
@@ -11,6 +11,7 @@ import { getCommentList, createComment, replyComment, deleteComment, likeComment
  * - 提供动态发布、删除、点赞功能
  * - 提供评论发布、回复、删除功能
  * - 支持分页加载和缓存管理
+ * - 使用统一的查询接口，支持多种过滤和搜索功能
  * 
  * @author MyEden Team
  * @version 1.0.0
@@ -30,8 +31,10 @@ export const useMomentsStore = defineStore('moments', () => {
   const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
   
   /**
-   * 加载动态列表
+   * 加载动态列表（使用新的统一查询接口）
    * @param {Object} params - 查询参数
+   * @param {string} params.authorType - 作者类型过滤：user(用户)、robot(机器人)
+   * @param {string} params.keyword - 关键词搜索
    * @param {boolean} refresh - 是否刷新（重置列表）
    */
   const loadPosts = async (params = {}, refresh = false) => {
@@ -44,7 +47,8 @@ export const useMomentsStore = defineStore('moments', () => {
         ...params
       }
       
-      const response = await getPostList(queryParams)
+      // 使用新的统一查询接口
+      const response = await queryPosts(queryParams)
       
       if (response.code === 200) {
         const { posts: newPosts, total: totalCount, page, size } = response.data
@@ -53,13 +57,18 @@ export const useMomentsStore = defineStore('moments', () => {
           posts.value = newPosts
           currentPage.value = 1
         } else {
-          posts.value.push(...newPosts)
+          // 防止重复添加相同的动态
+          const existingIds = new Set(posts.value.map(post => post.postId))
+          const uniqueNewPosts = newPosts.filter(post => !existingIds.has(post.postId))
+          posts.value.push(...uniqueNewPosts)
         }
         
         total.value = totalCount
         currentPage.value = page
         pageSize.value = size
         hasMore.value = page < Math.ceil(totalCount / size)
+        
+        console.log(`动态列表加载完成，当前页: ${page}，总数: ${totalCount}，是否有更多: ${hasMore.value}`)
       }
     } catch (error) {
       console.error('加载动态列表失败:', error)
@@ -255,9 +264,6 @@ export const useMomentsStore = defineStore('moments', () => {
           const index = commentList.findIndex(c => c.commentId === commentId)
           if (index > -1) {
             commentList.splice(index, 1)
-            
-            // 不再自动更新评论数，由前端根据实际加载的评论数量更新
-            // 这样可以确保评论数与实际显示的评论数量一致
             break
           }
         }
@@ -342,8 +348,6 @@ export const useMomentsStore = defineStore('moments', () => {
     pageSize,
     total,
     hasMore,
-    
-    // 计算属性
     totalPages,
     
     // 方法

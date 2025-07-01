@@ -139,7 +139,7 @@ public interface PostRepository extends MongoRepository<Post, String> {
      * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 动态分页结果
      */
-    @Query("{$or: [{'content': {$regex: ?0, $options: 'i'}}, {'authorId': {$regex: ?0, $options: 'i'}}], 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    @Query("{$and: [{$or: [{'content': {$regex: ?0, $options: 'i'}}, {'authorId': {$regex: ?0, $options: 'i'}}]}, {'isDeleted': false}, {$or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}]}")
     Page<Post> findByKeywordAndIsDeletedFalse(String keyword, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
@@ -150,7 +150,7 @@ public interface PostRepository extends MongoRepository<Post, String> {
      * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 动态分页结果
      */
-    @Query("{'content': {$regex: ?0, $options: 'i'}, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    @Query("{$and: [{'content': {$regex: ?0, $options: 'i'}}, {'isDeleted': false}, {$or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}]}")
     Page<Post> findByContentKeywordAndIsDeletedFalse(String keyword, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
@@ -161,7 +161,7 @@ public interface PostRepository extends MongoRepository<Post, String> {
      * @param connectedRobotIds 已连接机器人ID列表（可选，用于机器人链接过滤）
      * @return 动态分页结果
      */
-    @Query("{'authorId': {$regex: ?0, $options: 'i'}, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
+    @Query("{$and: [{'authorId': {$regex: ?0, $options: 'i'}}, {'isDeleted': false}, {$or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}]}")
     Page<Post> findByAuthorKeywordAndIsDeletedFalse(String keyword, Pageable pageable, String currentUserId, List<String> connectedRobotIds);
     
     /**
@@ -378,4 +378,6 @@ public interface PostRepository extends MongoRepository<Post, String> {
      */
     @Query("{'createdAt': {$gte: ?0}, 'isDeleted': false}")
     List<Post> findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(LocalDateTime createdAt);
+    
+
 } 

@@ -5,7 +5,6 @@ import com.myeden.entity.Post;
 import com.myeden.entity.User;
 import com.myeden.entity.Robot;
 import com.myeden.entity.CommentLike;
-import com.myeden.entity.UserPrivacySettings;
 import com.myeden.repository.CommentRepository;
 import com.myeden.repository.PostRepository;
 import com.myeden.repository.UserRepository;
@@ -139,22 +138,9 @@ public class CommentServiceImpl implements CommentService {
             
             // 根据作者类型设置可见性
             if ("user".equals(authorType)) {
-                // 获取用户的隐私设置
-                Optional<User> userOpt = userRepository.findByUserId(authorId);
-                if (userOpt.isPresent()) {
-                    User user = userOpt.get();
-                    UserPrivacySettings privacySettings = user.getPrivacySettings();
-                    if (privacySettings != null) {
-                        comment.setVisibility(privacySettings.getReplyVisibility());
-                        logger.info("用户评论可见性设置为: {}", privacySettings.getReplyVisibility());
-                    } else {
-                        comment.setVisibility("private"); // 默认私有
-                        logger.info("用户隐私设置为空，评论可见性默认为: private");
-                    }
-                } else {
-                    comment.setVisibility("private"); // 默认私有
-                    logger.info("用户不存在，评论可见性默认为: private");
-                }
+                // 用户评论默认为私有
+                comment.setVisibility("private");
+                logger.info("用户评论可见性设置为: private");
             } else if ("robot".equals(authorType)) {
                 // 机器人评论默认为公开
                 comment.setVisibility("public");
@@ -279,22 +265,9 @@ public class CommentServiceImpl implements CommentService {
             
             // 根据作者类型设置可见性
             if ("user".equals(authorType)) {
-                // 获取用户的隐私设置
-                Optional<User> userOpt = userRepository.findByUserId(authorId);
-                if (userOpt.isPresent()) {
-                    User user = userOpt.get();
-                    UserPrivacySettings privacySettings = user.getPrivacySettings();
-                    if (privacySettings != null) {
-                        reply.setVisibility(privacySettings.getReplyVisibility());
-                        logger.info("用户回复可见性设置为: {}", privacySettings.getReplyVisibility());
-                    } else {
-                        reply.setVisibility("private"); // 默认私有
-                        logger.info("用户隐私设置为空，回复可见性默认为: private");
-                    }
-                } else {
-                    reply.setVisibility("private"); // 默认私有
-                    logger.info("用户不存在，回复可见性默认为: private");
-                }
+                // 用户回复默认为私有
+                reply.setVisibility("private");
+                logger.info("用户回复可见性设置为: private");
             } else if ("robot".equals(authorType)) {
                 // 机器人回复默认为公开
                 reply.setVisibility("public");

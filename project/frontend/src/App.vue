@@ -55,9 +55,9 @@ let postEventListeners = {
 // 增量刷新能力检测
 const canIncrementalRefresh = ref(true) // 默认假设支持增量刷新
 
-// PWA 相关状态
-const pwaUpdateAvailable = ref(false)
-const pwaRegistration = ref(null)
+// PWA 相关状态 - 已关闭
+// const pwaUpdateAvailable = ref(false)
+// const pwaRegistration = ref(null)
 
 /**
  * 停止监听WebSocket帖子相关事件
@@ -136,40 +136,12 @@ const detectIncrementalRefreshCapability = () => {
 }
 
 /**
- * 注册 Service Worker
+ * 注册 Service Worker - 已关闭
  */
 const registerServiceWorker = async () => {
-  if ('serviceWorker' in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.register('/sw.js')
-      pwaRegistration.value = registration
-      
-      console.log('✅ Service Worker 注册成功:', registration)
-      
-      // 监听更新
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            pwaUpdateAvailable.value = true
-            console.log('🔄 PWA 更新可用')
-            message.info('应用有新版本可用，请刷新页面')
-          }
-        })
-      })
-      
-      // 监听控制器变化
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('🔄 Service Worker 控制器已更新')
-        window.location.reload()
-      })
-      
-    } catch (error) {
-      console.error('❌ Service Worker 注册失败:', error)
-    }
-  } else {
-    console.log('⚠️ 浏览器不支持 Service Worker')
-  }
+  // PWA 功能已关闭
+  console.log('🚫 PWA 功能已关闭，跳过 Service Worker 注册')
+  return
 }
 
 /**
@@ -305,8 +277,8 @@ onMounted(async () => {
     // 检测增量刷新能力
     detectIncrementalRefreshCapability()
     
-    // 注册 Service Worker
-    await registerServiceWorker()
+    // 注册 Service Worker - 已关闭
+    // await registerServiceWorker()
     
     // 请求通知权限
     await requestNotificationPermission()

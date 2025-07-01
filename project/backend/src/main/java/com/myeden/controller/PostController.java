@@ -1,6 +1,7 @@
 package com.myeden.controller;
 
 import com.myeden.service.PostService;
+import com.myeden.model.PostQueryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Arrays;
 
 /**
  * 动态管理控制器
@@ -428,6 +430,60 @@ public class PostController {
             return ResponseEntity.badRequest().body(new EventResponse(
                 400,
                 "获取点赞信息失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 统一动态查询接口
+     * 支持分页、作者类型过滤、关键词搜索、安全性过滤等功能
+     * 
+     * @param page 页码（从1开始）
+     * @param size 每页大小
+     * @param authorType 作者类型过滤（可选）
+     * @param keyword 搜索关键词（可选）
+     * @return 动态列表结果
+     */
+    @GetMapping("/query")
+    public ResponseEntity<EventResponse> queryPosts(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "authorType", required = false) String authorType,
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        
+        try {
+            logger.info("统一查询动态，页码: {}, 大小: {}, 作者类型: {}, 关键词: {}", 
+                       page, size, authorType, keyword);
+            
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            // 构建查询参数
+            PostQueryParams params = new PostQueryParams();
+            params.setPage(page);
+            params.setSize(size);
+            params.setAuthorType(authorType);
+            params.setKeyword(keyword);
+            params.setCurrentUserId(currentUserId);
+            
+            // 执行统一查询
+            PostService.PostListResult result = postService.queryPosts(params);
+            
+            logger.info("统一查询动态成功，总数: {}", result.getTotal());
+            
+            return ResponseEntity.ok(new EventResponse(
+                200,
+                "查询动态成功",
+                result
+            ));
+            
+        } catch (Exception e) {
+            logger.error("统一查询动态失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "查询动态失败: " + e.getMessage(),
                 null
             ));
         }

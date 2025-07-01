@@ -3,6 +3,7 @@ package com.myeden.service;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import com.myeden.service.CommentService.CommentSummary;
+import com.myeden.model.PostQueryParams;
 
 /**
  * 动态管理服务接口
@@ -82,14 +83,22 @@ public interface PostService {
     PostListResult getUserPosts(String authorId, int page, int size);
     
     /**
-     * 根据关键字搜索动态
+     * 搜索动态（已废弃，建议使用queryPosts）
      * @param keyword 搜索关键字
-     * @param searchType 搜索类型：content(内容)、author(发帖人)、all(全部)
-     * @param page 页码（从1开始）
+     * @param page 页码
      * @param size 每页大小
-     * @return 搜索结果和分页信息
+     * @return 搜索结果
      */
-    PostListResult searchPosts(String keyword, String searchType, int page, int size);
+    PostListResult searchPosts(String keyword, int page, int size);
+    
+    /**
+     * 统一动态查询方法
+     * 整合分页、作者类型过滤、关键词搜索、安全性过滤、机器人ID过滤等功能
+     * 
+     * @param params 查询参数对象
+     * @return 动态列表结果
+     */
+    PostListResult queryPosts(PostQueryParams params);
     
     /**
      * 获取动态的所有点赞信息

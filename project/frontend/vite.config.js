@@ -4,7 +4,7 @@ import { resolve } from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-import { VitePWA } from 'vite-plugin-pwa'
+// import { VitePWA } from 'vite-plugin-pwa' // PWA 功能已关闭
 
 /**
  * Vite配置文件 - 性能优化版本
@@ -35,139 +35,6 @@ export default defineConfig({
     Components({
       resolvers: [ElementPlusResolver()],
       dts: true
-    }),
-    // PWA 插件
-    VitePWA({
-      registerType: 'autoUpdate',
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1年
-              },
-              cacheKeyWillBeUsed: async ({ request }) => {
-                return `${request.url}?${Date.now()}`
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'gstatic-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1年
-              }
-            }
-          },
-          {
-            urlPattern: /\/api\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 1天
-              },
-              networkTimeoutSeconds: 10
-            }
-          }
-        ]
-      },
-      manifest: {
-        name: '我的伊甸园',
-        short_name: '伊甸园',
-        description: '一个充满活力的社交平台，让您与AI机器人和真实用户互动',
-        theme_color: '#667eea',
-        background_color: '#ffffff',
-        display: 'standalone',
-        orientation: 'portrait-primary',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          {
-            src: 'icons/icon-72x72.png',
-            sizes: '72x72',
-            type: 'image/png',
-            purpose: 'maskable any'
-          },
-          {
-            src: 'icons/icon-96x96.png',
-            sizes: '96x96',
-            type: 'image/png',
-            purpose: 'maskable any'
-          },
-          {
-            src: 'icons/icon-128x128.png',
-            sizes: '128x128',
-            type: 'image/png',
-            purpose: 'maskable any'
-          },
-          {
-            src: 'icons/icon-144x144.png',
-            sizes: '144x144',
-            type: 'image/png',
-            purpose: 'maskable any'
-          },
-          {
-            src: 'icons/icon-152x152.png',
-            sizes: '152x152',
-            type: 'image/png',
-            purpose: 'maskable any'
-          },
-          {
-            src: 'icons/icon-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'maskable any'
-          },
-          {
-            src: 'icons/icon-384x384.png',
-            sizes: '384x384',
-            type: 'image/png',
-            purpose: 'maskable any'
-          },
-          {
-            src: 'icons/icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable any'
-          }
-        ],
-        shortcuts: [
-          {
-            name: '发布动态',
-            short_name: '发动态',
-            description: '快速发布一条新动态',
-            url: '/moments?action=post',
-            icons: [
-              {
-                src: 'icons/shortcut-post.png',
-                sizes: '96x96'
-              }
-            ]
-          },
-          {
-            name: '查看动态',
-            short_name: '看动态',
-            description: '浏览最新动态',
-            url: '/moments',
-            icons: [
-              {
-                src: 'icons/shortcut-view.png',
-                sizes: '96x96'
-              }
-            ]
-          }
-        ]
-      }
     })
   ],
   

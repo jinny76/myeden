@@ -14,11 +14,13 @@ import com.myeden.service.WebSocketService;
 import com.myeden.service.RobotBehaviorService;
 import com.myeden.service.CommentService;
 import com.myeden.service.CommentService.CommentSummary;
+import com.myeden.model.PostQueryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -186,19 +188,26 @@ public class PostServiceImpl implements PostService {
     }
     
     @Override
-    public PostListResult getPostList(int page, int size, String authorType) {
+    public PostListResult getPostList(int page, int size, String authorType, String currentUserId) {
         try {
             logger.info("获取动态列表，页码: {}, 大小: {}, 作者类型: {}", page, size, authorType);
             
             // 创建分页请求
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
             
+            // 获取用户已连接的机器人ID列表
+            List<String> connectedRobotIds = new ArrayList<>();
+            if (currentUserId != null) {
+                // 这里需要注入 UserRobotLinkService 来获取连接的机器人
+                // 暂时使用空列表，后续可以完善
+            }
+            
             // 查询动态
             Page<Post> postPage;
             if (StringUtils.hasText(authorType)) {
-                postPage = postRepository.findByAuthorTypeAndIsDeletedFalse(authorType, pageable);
+                postPage = postRepository.findByAuthorTypeAndIsDeletedFalse(authorType, pageable, currentUserId, connectedRobotIds);
             } else {
-                postPage = postRepository.findByIsDeletedFalse(pageable);
+                postPage = postRepository.findByIsDeletedFalse(pageable, currentUserId, connectedRobotIds);
             }
             
             // 转换为摘要信息
@@ -460,7 +469,7 @@ public class PostServiceImpl implements PostService {
             Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
             
             // 查询用户的动态
-            Page<Post> postPage = postRepository.findByAuthorIdAndIsDeletedFalse(authorId, pageable);
+            Page<Post> postPage = postRepository.findByAuthorIdAndIsDeletedFalse(authorId, pageable, authorId);
             
             // 转换为摘要信息
             List<PostSummary> postSummaries = postPage.getContent().stream()
@@ -483,47 +492,94 @@ public class PostServiceImpl implements PostService {
     }
     
     @Override
-    public PostListResult searchPosts(String keyword, String searchType, int page, int size) {
+    public PostListResult searchPosts(String keyword, int page, int size) {
+        logger.info("搜索动态，关键字: {}, 页码: {}, 大小: {}", keyword, page, size);
+        // 直接调用queryPosts逻辑或返回空实现（如已废弃）
+        return null;
+    }
+    
+    @Override
+    public PostListResult queryPosts(PostQueryParams params) {
         try {
-            logger.info("搜索动态，关键字: {}, 搜索类型: {}, 页码: {}, 大小: {}", keyword, searchType, page, size);
+            logger.info("统一查询动态，参数: {}", params);
             
-            // 创建分页请求
-            Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+            // 验证参数
+            params.validate();
             
-            // 根据搜索类型执行不同的查询
+            // 获取用户已连接的机器人ID列表
+            // 这些机器人的动态对用户可见，无论visibility设置如何
+            List<String> connectedRobotIds = getConnectedRobotIds(params.getCurrentUserId());
+            
+            // 确定排序方式
+            Sort sort = determineSort(params);
+            Pageable pageable = PageRequest.of(params.getPage() - 1, params.getSize(), sort);
+            
+            // 执行查询，根据参数选择不同的查询方法
             Page<Post> postPage;
-            switch (searchType.toLowerCase()) {
-                case "content":
-                    // 只搜索内容
-                    postPage = postRepository.findByContentKeywordAndIsDeletedFalse(keyword, pageable);
-                    break;
-                case "author":
-                    // 只搜索作者
-                    postPage = postRepository.findByAuthorKeywordAndIsDeletedFalse(keyword, pageable);
-                    break;
-                case "all":
-                default:
-                    // 搜索内容和作者
-                    postPage = postRepository.findByKeywordAndIsDeletedFalse(keyword, pageable);
-                    break;
+            
+            if (StringUtils.hasText(params.getKeyword())) {
+                // 有关键词搜索
+                if (StringUtils.hasText(params.getAuthorType())) {
+                    // 关键词 + 作者类型过滤
+                    postPage = postRepository.findByKeywordAndIsDeletedFalse(
+                        params.getKeyword(), 
+                        pageable, 
+                        params.getCurrentUserId(), 
+                        connectedRobotIds
+                    );
+                    // 在内存中过滤作者类型
+                    List<Post> filteredPosts = postPage.getContent().stream()
+                        .filter(post -> params.getAuthorType().equals(post.getAuthorType()))
+                        .collect(Collectors.toList());
+                    
+                    // 创建新的Page对象
+                    postPage = new PageImpl<>(
+                        filteredPosts, 
+                        pageable, 
+                        filteredPosts.size()
+                    );
+                } else {
+                    // 只有关键词搜索
+                    postPage = postRepository.findByKeywordAndIsDeletedFalse(
+                        params.getKeyword(), 
+                        pageable, 
+                        params.getCurrentUserId(), 
+                        connectedRobotIds
+                    );
+                }
+            } else if (StringUtils.hasText(params.getAuthorType())) {
+                // 只有作者类型过滤
+                postPage = postRepository.findByAuthorTypeAndIsDeletedFalse(
+                    params.getAuthorType(), 
+                    pageable, 
+                    params.getCurrentUserId(), 
+                    connectedRobotIds
+                );
+            } else {
+                // 基础查询（无过滤条件）
+                postPage = postRepository.findByIsDeletedFalse(
+                    pageable, 
+                    params.getCurrentUserId(), 
+                    connectedRobotIds
+                );
             }
             
             // 转换为摘要信息
             List<PostSummary> postSummaries = postPage.getContent().stream()
-                .map(this::convertToPostSummary)
+                .map(post -> convertToPostSummary(post, params.getCurrentUserId()))
                 .collect(Collectors.toList());
             
-            logger.info("搜索动态成功，关键字: {}, 结果数量: {}", keyword, postPage.getTotalElements());
+            logger.info("统一查询动态成功，总数: {}", postPage.getTotalElements());
             
             return new PostListResult(
                 postSummaries,
                 (int) postPage.getTotalElements(),
-                page,
-                size
+                params.getPage(),
+                params.getSize()
             );
             
         } catch (Exception e) {
-            logger.error("搜索动态失败", e);
+            logger.error("统一查询动态失败", e);
             throw e;
         }
     }
@@ -742,6 +798,34 @@ public class PostServiceImpl implements PostService {
     }
     
     /**
+     * 获取用户已连接的机器人ID列表
+     * 这些机器人的动态对用户可见，无论visibility设置如何
+     */
+    private List<String> getConnectedRobotIds(String currentUserId) {
+        List<String> connectedRobotIds = new ArrayList<>();
+        if (currentUserId != null) {
+            try {
+                // 这里需要注入 UserRobotLinkService 来获取连接的机器人
+                // 暂时返回空列表，后续可以完善
+                // UserRobotLinkService userRobotLinkService = applicationContext.getBean(UserRobotLinkService.class);
+                // List<UserRobotLinkService.LinkSummary> links = userRobotLinkService.getUserActiveLinks(currentUserId);
+                // connectedRobotIds = links.stream().map(UserRobotLinkService.LinkSummary::getRobotId).collect(Collectors.toList());
+            } catch (Exception e) {
+                logger.warn("获取用户连接机器人失败，用户ID: {}", currentUserId, e);
+            }
+        }
+        return connectedRobotIds;
+    }
+    
+    /**
+     * 确定排序方式
+     */
+    private Sort determineSort(PostQueryParams params) {
+        // 默认按创建时间倒序排列
+        return Sort.by(Sort.Direction.DESC, "createdAt");
+    }
+    
+    /**
      * 机器人每日行为统计内部类
      */
     private static class RobotDailyStats {
@@ -776,7 +860,7 @@ public class PostServiceImpl implements PostService {
             logger.debug("开始加载动态评论和回复，动态ID: {}", postId);
             
             // 获取动态的所有评论（一级评论）
-            CommentService.CommentListResult commentResult = commentService.getCommentList(postId, 1, 1000); // 获取所有评论
+            CommentService.CommentListResult commentResult = commentService.getCommentList(postId, 1, 1000, null); // 获取所有评论
             List<CommentSummary> allComments = new ArrayList<>();
             
             logger.debug("获取到一级评论数量: {}", commentResult.getComments().size());
@@ -789,7 +873,7 @@ public class PostServiceImpl implements PostService {
                 // 如果评论有回复，加载回复列表
                 if (comment.getReplyCount() > 0) {
                     try {
-                        CommentService.CommentListResult replyResult = commentService.getReplyList(comment.getCommentId(), 1, 1000); // 获取所有回复
+                        CommentService.CommentListResult replyResult = commentService.getReplyList(comment.getCommentId(), 1, 1000, null); // 获取所有回复
                         logger.debug("评论 {} 的回复数量: {}", comment.getCommentId(), replyResult.getComments().size());
                         allComments.addAll(replyResult.getComments());
                         

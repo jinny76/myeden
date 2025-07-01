@@ -287,7 +287,7 @@ public class WorldServiceImpl implements WorldService {
                 robot.getPersonality(),
                 robot.getIntroduction(), // 使用introduction作为description
                 robot.getIntroduction(), // 使用introduction作为background
-                robot.getExample(), // 新增：传递example字段
+                null, // example - Robot实体中没有对应字段
                 null, // traits - Robot实体中没有对应字段
                 null, // interests - Robot实体中没有对应字段
                 null, // speakingStyle - Robot实体中没有对应字段
