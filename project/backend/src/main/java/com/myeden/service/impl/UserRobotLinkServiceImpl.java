@@ -487,6 +487,16 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
         }
     }
     
+    @Override
+    public List<String> getAllUserIds() {
+        return userRepository.findAll().stream().map(u -> u.getUserId()).toList();
+    }
+
+    @Override
+    public List<String> getAllRobotIds() {
+        return robotRepository.findAll().stream().map(r -> r.getRobotId()).toList();
+    }
+    
     /**
      * 转换为链接摘要
      */

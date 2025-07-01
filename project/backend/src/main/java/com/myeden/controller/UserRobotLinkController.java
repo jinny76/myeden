@@ -460,6 +460,48 @@ public class UserRobotLinkController {
     }
     
     /**
+     * 批量为所有用户与所有机器人创建链接（数据迁移/初始化用）
+     * @return 迁移结果
+     */
+    @PostMapping("/migrate-all")
+    public ResponseEntity<EventResponse> migrateAllUserRobotLinks() {
+        try {
+            logger.info("开始批量为所有用户与所有机器人创建链接（数据迁移）");
+
+            // 1. 获取所有用户ID
+            List<String> userIds = userRobotLinkService.getAllUserIds();
+            // 2. 获取所有机器人ID
+            List<String> robotIds = userRobotLinkService.getAllRobotIds();
+
+            int created = 0;
+            int skipped = 0;
+
+            for (String userId : userIds) {
+                for (String robotId : robotIds) {
+                    // 已存在则跳过
+                    if (userRobotLinkService.hasLink(userId, robotId)) {
+                        skipped++;
+                        continue;
+                    }
+                    try {
+                        userRobotLinkService.createLink(userId, robotId);
+                        created++;
+                    } catch (Exception e) {
+                        logger.warn("创建链接失败，userId={}, robotId={}, err={}", userId, robotId, e.getMessage());
+                    }
+                }
+            }
+
+            String msg = String.format("批量创建完成，新增链接%d条，已存在跳过%d条", created, skipped);
+            logger.info(msg);
+            return ResponseEntity.ok(new EventResponse(200, msg, null));
+        } catch (Exception e) {
+            logger.error("批量创建用户机器人链接失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(400, "批量创建失败: " + e.getMessage(), null));
+        }
+    }
+    
+    /**
      * 创建链接请求类
      */
     public static class CreateLinkRequest {

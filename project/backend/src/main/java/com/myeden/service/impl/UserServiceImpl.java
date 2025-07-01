@@ -7,6 +7,8 @@ import com.myeden.repository.CommentRepository;
 import com.myeden.service.FileService;
 import com.myeden.service.JwtService;
 import com.myeden.service.UserService;
+import com.myeden.service.UserRobotLinkService;
+import com.myeden.service.WorldService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +60,12 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private CommentRepository commentRepository;
     
+    @Autowired
+    private UserRobotLinkService userRobotLinkService;
+    
+    @Autowired
+    private WorldService worldService;
+    
     // 默认头像文件列表缓存
     private volatile List<String> defaultAvatarFiles = null;
     private volatile long lastCacheUpdate = 0;
@@ -92,6 +100,14 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
         
         logger.info("新用户注册成功 - 用户ID: {}, 昵称: {}, 默认头像: {}", userId, nickname, defaultAvatar);
+        
+        // 自动关联前5个机器人
+        try {
+            autoLinkTopRobots(userId);
+        } catch (Exception e) {
+            logger.warn("自动关联机器人失败，用户ID: {}, 错误: {}", userId, e.getMessage());
+            // 不影响用户注册流程，只记录警告日志
+        }
         
         // 生成JWT token
         String token = jwtService.generateToken(userId);
@@ -489,6 +505,48 @@ public class UserServiceImpl implements UserService {
             lastCacheUpdate = currentTime;
             
             return newAvatarFiles;
+        }
+    }
+    
+    /**
+     * 自动关联前5个机器人
+     * @param userId 用户ID
+     */
+    private void autoLinkTopRobots(String userId) {
+        try {
+            logger.info("开始为新用户自动关联前5个机器人，用户ID: {}", userId);
+            
+            // 获取机器人列表
+            List<WorldService.RobotSummary> robots = worldService.getRobotList();
+            if (robots == null || robots.isEmpty()) {
+                logger.warn("没有可用的机器人进行关联");
+                return;
+            }
+            
+            // 取前5个机器人
+            int maxRobots = Math.min(5, robots.size());
+            int linkedCount = 0;
+            
+            for (int i = 0; i < maxRobots; i++) {
+                WorldService.RobotSummary robot = robots.get(i);
+                try {
+                    // 创建用户机器人链接
+                    UserRobotLinkService.LinkResult result = userRobotLinkService.createLink(userId, robot.getId());
+                    if (result != null) {
+                        linkedCount++;
+                        logger.info("成功关联机器人: {} (ID: {})", robot.getName(), robot.getId());
+                    }
+                } catch (Exception e) {
+                    logger.warn("关联机器人失败: {} (ID: {}), 错误: {}", robot.getName(), robot.getId(), e.getMessage());
+                    // 继续处理下一个机器人，不中断整个流程
+                }
+            }
+            
+            logger.info("新用户自动关联机器人完成，用户ID: {}, 成功关联: {}/{}", userId, linkedCount, maxRobots);
+            
+        } catch (Exception e) {
+            logger.error("自动关联机器人过程中发生异常，用户ID: {}", userId, e);
+            throw e;
         }
     }
 } 

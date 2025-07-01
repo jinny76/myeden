@@ -156,6 +156,18 @@ public interface UserRobotLinkService {
     LinkStatistics getLinkStatistics(String userId);
     
     /**
+     * 获取所有用户ID
+     * @return 用户ID列表
+     */
+    List<String> getAllUserIds();
+
+    /**
+     * 获取所有机器人ID
+     * @return 机器人ID列表
+     */
+    List<String> getAllRobotIds();
+    
+    /**
      * 链接结果类
      */
     class LinkResult {
