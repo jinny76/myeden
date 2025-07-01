@@ -203,11 +203,8 @@ export const useMomentsStore = defineStore('moments', () => {
         // 刷新评论列表
         await loadComments(postId, {}, true)
         
-        // 更新动态的评论数
-        const post = posts.value.find(p => p.postId === postId)
-        if (post) {
-          post.commentCount++
-        }
+        // 不再自动更新评论数，由前端根据实际加载的评论数量更新
+        // 这样可以确保评论数与实际显示的评论数量一致
         
         return response.data
       }
@@ -259,11 +256,8 @@ export const useMomentsStore = defineStore('moments', () => {
           if (index > -1) {
             commentList.splice(index, 1)
             
-            // 更新动态的评论数
-            const post = posts.value.find(p => p.postId === postId)
-            if (post && post.commentCount > 0) {
-              post.commentCount--
-            }
+            // 不再自动更新评论数，由前端根据实际加载的评论数量更新
+            // 这样可以确保评论数与实际显示的评论数量一致
             break
           }
         }

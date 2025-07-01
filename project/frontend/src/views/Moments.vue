@@ -273,7 +273,7 @@
                 </span>
                 <span class="stat-item">
                   <el-icon><ChatDotRound /></el-icon>
-                  <span>{{ post.commentCount }}</span>
+                  <span>{{ getActualCommentCount(post) }}</span>
                 </span>
                 <!-- 添加查看内心活动按钮 -->
                 <span v-if="post.innerThoughts" class="stat-item inner-thoughts-stat" @click="showInnerThoughts(post)">
@@ -332,6 +332,11 @@
                         </el-icon>
                         {{ comment.likeCount || 0 }}
                       </span>
+                      <!-- 显示实际回复数量 -->
+                      <span v-if="getActualReplyCount(comment) > 0" class="action-link">
+                        <el-icon><ChatDotRound /></el-icon>
+                        {{ getActualReplyCount(comment) }}
+                      </span>
                       <!-- 添加查看内心活动按钮 -->
                       <span v-if="comment.innerThoughts" class="action-link" @click.stop="showInnerThoughts(comment)">
                         <el-icon><View /></el-icon>
@@ -354,7 +359,7 @@
                     </div>
                     
                     <!-- 回复列表 -->
-                    <div v-if="comment.replyCount > 0" class="replies-section">
+                    <div v-if="getActualReplyCount(comment) > 0" class="replies-section">
                       <div class="replies-list">
                         <div 
                           v-for="reply in replyStates[comment.commentId]?.replies || []" 
@@ -1140,6 +1145,10 @@ const showComments = async (post) => {
       await momentsStore.loadComments(post.postId, {}, true)
       // 自动加载所有评论的回复
       await loadAllReplies(post.postId)
+      
+      // 更新动态的评论数为实际加载的评论数量
+      const actualCommentCount = getActualCommentCount(post)
+      post.commentCount = actualCommentCount
     } catch (error) {
       message.error('加载评论失败')
     }
@@ -1155,9 +1164,8 @@ const loadAllReplies = async (postId) => {
   if (!commentList) return
   
   for (const comment of commentList) {
-    if (comment.replyCount > 0) {
-      await loadReplies(comment.commentId, true)
-    }
+    // 无论replyCount是否为0，都尝试加载回复，确保数据一致性
+    await loadReplies(comment.commentId, true)
   }
 }
 
@@ -1193,7 +1201,10 @@ const loadReplies = async (commentId, refresh = false) => {
       const { comments: newReplies } = response.data
       
       // 直接设置所有回复
-        replyState.replies = newReplies
+      replyState.replies = newReplies
+      
+      // 更新对应评论的回复数量为实际加载的数量
+      updateCommentReplyCount(commentId, newReplies.length)
       
       console.log(`加载回复完成，评论ID: ${commentId}，回复数量: ${newReplies.length}`)
     }
@@ -1220,6 +1231,11 @@ const submitComment = async (post) => {
     post.submittingComment = true
     await momentsStore.publishComment(post.postId, { content: post.newComment })
     post.newComment = ''
+    
+    // 更新动态的评论数为实际加载的评论数量
+    const actualCommentCount = getActualCommentCount(post)
+    post.commentCount = actualCommentCount
+    
     message.success('评论发表成功')
   } catch (error) {
     message.error('评论发表失败')
@@ -1254,8 +1270,19 @@ const submitReply = async (comment) => {
     // 刷新回复列表
     await loadReplies(comment.commentId, true)
     
-    // 更新评论的回复数量
-    comment.replyCount++
+    // 更新评论的回复数量为实际加载的回复数量
+    const actualReplyCount = getActualReplyCount(comment)
+    comment.replyCount = actualReplyCount
+    
+    // 找到对应的动态并更新评论数
+    for (const post of momentsStore.posts) {
+      const commentList = momentsStore.comments[post.postId]
+      if (commentList && commentList.find(c => c.commentId === comment.commentId)) {
+        const actualCommentCount = getActualCommentCount(post)
+        post.commentCount = actualCommentCount
+        break
+      }
+    }
     
     message.success('回复发表成功')
   } catch (error) {
@@ -1716,9 +1743,52 @@ const clearSearch = async () => {
 }
 
 // 内心活动相关方法
+/**
+ * 获取评论的实际回复数量（基于已加载的回复）
+ * @param {Object} comment - 评论对象
+ * @returns {number} 实际回复数量
+ */
+const getActualReplyCount = (comment) => {
+  const replyState = replyStates.value[comment.commentId]
+  return replyState?.replies?.length || 0
+}
+
+/**
+ * 更新评论的回复数量
+ * @param {string} commentId - 评论ID
+ * @param {number} replyCount - 回复数量
+ */
+const updateCommentReplyCount = (commentId, replyCount) => {
+  // 在所有动态的评论中查找并更新对应评论的回复数
+  for (const post of momentsStore.posts) {
+    const commentList = momentsStore.comments[post.postId]
+    if (commentList) {
+      const comment = commentList.find(c => c.commentId === commentId)
+      if (comment) {
+        comment.replyCount = replyCount
+        break
+      }
+    }
+  }
+}
+
+/**
+ * 显示内心活动弹窗
+ * @param {Object} item - 包含内心活动的项目（动态或评论）
+ */
 const showInnerThoughts = (item) => {
   currentThoughtsItem.value = item
   showInnerThoughtsDialog.value = true
+}
+
+/**
+ * 获取动态的实际评论数量（基于已加载的评论）
+ * @param {Object} post - 动态对象
+ * @returns {number} 实际评论数量
+ */
+const getActualCommentCount = (post) => {
+  const commentList = momentsStore.comments[post.postId]
+  return commentList ? commentList.length : 0
 }
 </script>
 

@@ -482,16 +482,16 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 根据行为类型调整基础概率
             switch (behaviorType) {
                 case "post":
-                    baseProbability = 0.015;
+                    baseProbability = 0.02;
                     break;
                 case "comment":
-                    baseProbability = 0.1;
+                    baseProbability = 0.2;
                     if (!isRobot) {
                         baseProbability = 0.75;
                     }
                     break;
                 case "reply":
-                    baseProbability = 0.1;
+                    baseProbability = 0.2;
                     if (!isRobot) {
                         baseProbability = 0.75;
                     }
