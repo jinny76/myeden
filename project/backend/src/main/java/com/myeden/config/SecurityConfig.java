@@ -75,6 +75,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/files/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
+                // 测试接口
+                .requestMatchers("/api/v1/test/public").permitAll()
                 // 允许Swagger UI相关路径
                 .requestMatchers("/swagger-ui.html").permitAll()
                 .requestMatchers("/swagger-ui/**").permitAll()

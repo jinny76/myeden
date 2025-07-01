@@ -33,7 +33,7 @@ public interface PostRepository extends MongoRepository<Post, String> {
      * @return 动态信息
      */
     Optional<Post> findByPostId(String postId);
-
+    
     /**
      * 根据作者ID和是否删除查找动态
      * @param authorId 作者ID
@@ -41,8 +41,8 @@ public interface PostRepository extends MongoRepository<Post, String> {
      * @return 动态列表
      */
     List<Post> findByAuthorIdAndIsDeleted(String authorId, Boolean isDeleted);
-
-
+    
+    
     /**
      * 查找指定作者的最近动态
      * @param authorId 作者ID
@@ -53,7 +53,7 @@ public interface PostRepository extends MongoRepository<Post, String> {
      */
     @Query(value = "{'authorId': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}", sort = "{'createdAt': -1}")
     List<Post> findRecentPostsByAuthor(String authorId, int limit, String currentUserId, List<String> connectedRobotIds);
-
+    
     /**
      * 根据关键字搜索动态（内容和作者ID）
      * @param keyword 搜索关键字
@@ -64,7 +64,7 @@ public interface PostRepository extends MongoRepository<Post, String> {
      */
     @Query("{$and: [{$or: [{'content': {$regex: ?0, $options: 'i'}}, {'authorId': {$regex: ?0, $options: 'i'}}]}, {'isDeleted': false}, {$or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}]}")
     Page<Post> findByKeywordAndIsDeletedFalse(String keyword, String currentUserId, List<String> connectedRobotIds, Pageable pageable);
-
+    
     /**
      * 根据关键字和作者类型搜索动态（内容和作者ID）
      * @param keyword 搜索关键字
@@ -98,7 +98,7 @@ public interface PostRepository extends MongoRepository<Post, String> {
      */
     @Query("{$and: [{'authorId': {$regex: ?0, $options: 'i'}}, {'isDeleted': false}, {$or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}]}")
     Page<Post> findByAuthorKeywordAndIsDeletedFalse(String keyword, String currentUserId, List<String> connectedRobotIds, Pageable pageable);
-
+    
     /**
      * 根据作者ID和是否删除统计动态数量
      * @param authorId 作者ID

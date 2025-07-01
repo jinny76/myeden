@@ -73,9 +73,42 @@
             <p>与天使们进行互动交流，体验温暖的社交氛围</p>
           </div>
           
+          <!-- 过滤控制区域 -->
+          <div class="filter-controls">
+            <div class="filter-group">
+              <div class="search-input-wrapper">
+                <el-input
+                  v-model="searchKeyword"
+                  placeholder="搜索天使名称或描述..."
+                  clearable
+                  class="search-input"
+                >
+                  <template #prefix>
+                    <el-icon><Search /></el-icon>
+                  </template>
+                </el-input>
+              </div>
+              <div class="status-filter-wrapper">
+                <el-select
+                  v-model="statusFilter"
+                  placeholder="选择状态"
+                  class="status-filter"
+                  clearable
+                >
+                  <el-option label="全部" value="all" />
+                  <el-option label="已连接" value="linked" />
+                  <el-option label="未连接" value="unlinked" />
+                </el-select>
+              </div>
+            </div>
+            <div class="filter-stats">
+              <span class="filter-count">显示 {{ filteredRobots.length }} / {{ worldStore.robotList.length }} 个天使</span>
+            </div>
+          </div>
+          
           <div class="robots-grid">
             <div 
-              v-for="robot in worldStore.robotList" 
+              v-for="robot in filteredRobots" 
               :key="robot.id" 
               class="robot-card"
             >
@@ -83,14 +116,14 @@
                 <div class="robot-avatar-section">
                   <div class="robot-avatar">
                     <el-avatar :src="getRobotAvatarUrl(robot)" :size="80" />
-                    <div class="robot-status" :class="{ active: robot.isActive }">
-                      <el-icon v-if="robot.isActive" class="status-icon">
+                    <div class="robot-status" :class="{ active: robot.active }">
+                      <el-icon v-if="robot.active" class="status-icon">
                         <CircleCheck />
                       </el-icon>
                       <el-icon v-else class="status-icon">
                         <CircleClose />
                       </el-icon>
-                      {{ robot.isActive ? '在线' : '离线' }}
+                      {{ robot.active ? '在线' : '离线' }}
                     </div>
                   </div>
                   <div class="robot-quick-info">
@@ -104,8 +137,8 @@
                   <p class="robot-intro">{{ robot.description }}</p>
                   <div class="robot-tags">
                     <span class="tag-item">👼 {{ robot.nickname }}</span>
-                    <span class="tag-item" :class="{ 'online': robot.isActive, 'offline': !robot.isActive }">
-                      {{ robot.isActive ? '🟢 在线' : '🔴 离线' }}
+                    <span class="tag-item" :class="{ 'online': robot.active, 'offline': !robot.active }">
+                      {{ robot.active ? '🟢 在线' : '🔴 离线' }}
                     </span>
                   </div>
                   
@@ -148,7 +181,7 @@ import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
-import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { 
   createUserRobotLink, 
@@ -169,8 +202,38 @@ const isMobileMenuOpen = ref(false)
 const userRobotLinks = ref(new Map()) // 存储用户与机器人的链接状态
 const linkLoadingStates = ref(new Map()) // 存储链接操作的加载状态
 
+// 过滤相关状态
+const searchKeyword = ref('')
+const statusFilter = ref('all')
+
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
+
+// 过滤后的机器人列表
+const filteredRobots = computed(() => {
+  let robots = worldStore.robotList
+
+  // 关键词过滤
+  if (searchKeyword.value.trim()) {
+    const keyword = searchKeyword.value.toLowerCase().trim()
+    robots = robots.filter(robot => 
+      robot.name.toLowerCase().includes(keyword) ||
+      robot.description.toLowerCase().includes(keyword) ||
+      robot.personality.toLowerCase().includes(keyword) ||
+      robot.nickname.toLowerCase().includes(keyword)
+    )
+  }
+
+  // 状态过滤
+  if (statusFilter.value && statusFilter.value !== 'all') {
+    robots = robots.filter(robot => {
+      const isLinked = isRobotLinked(robot.id)
+      return statusFilter.value === 'linked' ? isLinked : !isLinked
+    })
+  }
+
+  return robots
+})
 
 // 检查机器人是否已链接
 const isRobotLinked = (robotId) => {
@@ -597,6 +660,110 @@ const navigateTo = (path) => {
   margin-bottom: 50px;
 }
 
+/* 过滤控制区域 */
+.filter-controls {
+  margin-bottom: 40px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+
+.filter-group {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-input {
+  width: 100%;
+}
+
+.search-input :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: none;
+  transition: all 0.3s ease;
+}
+
+.search-input :deep(.el-input__wrapper:hover) {
+  border-color: rgba(34, 211, 107, 0.3);
+}
+
+.search-input :deep(.el-input__wrapper.is-focus) {
+  border-color: #22d36b;
+  box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.1);
+}
+
+.search-input :deep(.el-input__inner) {
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.search-input :deep(.el-input__inner::placeholder) {
+  color: var(--color-text);
+  opacity: 0.5;
+}
+
+.search-input :deep(.el-input__prefix) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.status-filter-wrapper {
+  flex-shrink: 0;
+  min-width: 140px;
+}
+
+.status-filter {
+  width: 100%;
+}
+
+.status-filter :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: none;
+  transition: all 0.3s ease;
+}
+
+.status-filter :deep(.el-input__wrapper:hover) {
+  border-color: rgba(34, 211, 107, 0.3);
+}
+
+.status-filter :deep(.el-input__wrapper.is-focus) {
+  border-color: #22d36b;
+  box-shadow: 0 0 0 2px rgba(34, 211, 107, 0.1);
+}
+
+.status-filter :deep(.el-input__inner) {
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.status-filter :deep(.el-select__caret) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.filter-stats {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.filter-count {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  opacity: 0.7;
+  font-weight: 500;
+}
+
 .section-header h2 {
   font-size: 2.5rem;
   font-weight: 700;
@@ -866,6 +1033,33 @@ const navigateTo = (path) => {
     padding: 80px 16px 40px;
   }
   
+  .filter-controls {
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .search-input-wrapper {
+    width: 100%;
+  }
+  
+  .status-filter-wrapper {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .filter-stats {
+    justify-content: center;
+  }
+  
+  .filter-count {
+    font-size: 0.85rem;
+  }
+  
   .world-info-card {
     padding: 40px 24px;
   }
@@ -955,6 +1149,27 @@ const navigateTo = (path) => {
 @media (max-width: 480px) {
   .main-content {
     padding: 80px 12px 40px;
+  }
+  
+  .filter-controls {
+    padding: 16px;
+    margin-bottom: 25px;
+  }
+  
+  .filter-group {
+    gap: 10px;
+  }
+  
+  .search-input :deep(.el-input__inner) {
+    font-size: 0.9rem;
+  }
+  
+  .status-filter :deep(.el-input__inner) {
+    font-size: 0.9rem;
+  }
+  
+  .filter-count {
+    font-size: 0.8rem;
   }
   
   .world-info-card {

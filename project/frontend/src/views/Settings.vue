@@ -169,23 +169,23 @@ onMounted(async () => {
 // 方法
 const updateTheme = async (key, value) => {
   try {
-    console.log('主题切换:', { key, value })
+  console.log('主题切换:', { key, value })
     await configStore.updateTheme(key, value)
     
     if (isLoggedIn.value) {
       message.success('主题设置已保存')
     }
     
-    // 添加延迟检查，确保主题已应用
-    setTimeout(() => {
-      const root = document.documentElement
-      console.log('当前主题状态:', {
-        mode: config.value.theme.mode,
-        hasDarkModeClass: root.classList.contains('dark-mode'),
-        dataTheme: root.getAttribute('data-theme'),
-        computedStyle: getComputedStyle(root).getPropertyValue('--color-bg')
-      })
-    }, 100)
+  // 添加延迟检查，确保主题已应用
+  setTimeout(() => {
+    const root = document.documentElement
+    console.log('当前主题状态:', {
+      mode: config.value.theme.mode,
+      hasDarkModeClass: root.classList.contains('dark-mode'),
+      dataTheme: root.getAttribute('data-theme'),
+      computedStyle: getComputedStyle(root).getPropertyValue('--color-bg')
+    })
+  }, 100)
   } catch (error) {
     console.error('主题切换失败:', error)
     message.error('主题设置保存失败')

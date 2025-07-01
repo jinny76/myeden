@@ -9,6 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -28,6 +34,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/users")
+@Tag(name = "用户管理", description = "用户注册、登录、信息管理等接口")
 public class UserController {
     
     @Autowired
@@ -41,6 +48,11 @@ public class UserController {
      * POST /api/v1/users/register
      */
     @PostMapping("/register")
+    @Operation(summary = "用户注册", description = "新用户注册，自动生成昵称和JWT token")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "注册成功"),
+        @ApiResponse(responseCode = "400", description = "参数错误或用户已存在")
+    })
     public ResponseEntity<EventResponse> register(@RequestBody Map<String, String> request) {
         try {
             String phone = request.get("phone");
@@ -69,6 +81,11 @@ public class UserController {
      * POST /api/v1/users/login
      */
     @PostMapping("/login")
+    @Operation(summary = "用户登录", description = "用户登录验证，返回JWT token和登录状态")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "登录成功"),
+        @ApiResponse(responseCode = "400", description = "参数错误或登录失败")
+    })
     public ResponseEntity<EventResponse> login(@RequestBody Map<String, String> request) {
         try {
             String phone = request.get("phone");
@@ -97,6 +114,13 @@ public class UserController {
      * GET /api/v1/users/me
      */
     @GetMapping("/me")
+    @Operation(summary = "获取当前用户信息", description = "根据JWT token获取当前登录用户的详细信息")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "401", description = "未提供有效的认证token"),
+        @ApiResponse(responseCode = "404", description = "用户不存在")
+    })
     public ResponseEntity<EventResponse> getCurrentUserInfo(HttpServletRequest request) {
         try {
             // 从请求头获取token
@@ -158,6 +182,13 @@ public class UserController {
      * - 只能更新自己的用户信息
      */
     @PutMapping("/{userId}")
+    @Operation(summary = "更新用户信息", description = "更新指定用户的个人信息，只能更新自己的信息")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "更新成功"),
+        @ApiResponse(responseCode = "401", description = "未提供有效的认证token"),
+        @ApiResponse(responseCode = "403", description = "只能更新自己的用户信息")
+    })
     public ResponseEntity<EventResponse> updateUser(@PathVariable String userId, @RequestBody User userUpdate, HttpServletRequest request) {
         try {
             // 从请求头获取token进行身份验证
@@ -198,6 +229,13 @@ public class UserController {
      * - 只能上传自己的头像
      */
     @PostMapping("/{userId}/avatar")
+    @Operation(summary = "上传用户头像", description = "上传用户头像文件，只能上传自己的头像")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "上传成功"),
+        @ApiResponse(responseCode = "401", description = "未提供有效的认证token"),
+        @ApiResponse(responseCode = "403", description = "只能上传自己的头像")
+    })
     public ResponseEntity<EventResponse> uploadAvatar(@PathVariable String userId, @RequestParam("file") MultipartFile file, HttpServletRequest request) {
         try {
             // 从请求头获取token进行身份验证

@@ -144,7 +144,7 @@ public class CommentServiceImpl implements CommentService {
                     logger.info("用户评论可见性设置为: {}", visibility);
                 } else {
                     // 如果visibility为null，保持默认值（private）
-                    comment.setVisibility("private");
+                comment.setVisibility("private");
                     logger.info("用户评论可见性保持默认值: private");
                 }
             } else if ("robot".equals(authorType)) {
@@ -277,7 +277,7 @@ public class CommentServiceImpl implements CommentService {
                     logger.info("用户回复可见性设置为: {}", visibility);
                 } else {
                     // 如果visibility为null，保持默认值（private）
-                    reply.setVisibility("private");
+                reply.setVisibility("private");
                     logger.info("用户回复可见性保持默认值: private");
                 }
             } else if ("robot".equals(authorType)) {
@@ -353,9 +353,9 @@ public class CommentServiceImpl implements CommentService {
             if (currentUserId != null) {
                 List<UserRobotLinkService.LinkSummary> activeLinks = userRobotLinkService.getUserActiveLinks(currentUserId);
                 if(currentUserId.startsWith("user_")) {
-                    connectedRobotIds = activeLinks.stream()
-                            .map(UserRobotLinkService.LinkSummary::getRobotId)
-                            .collect(Collectors.toList());
+                connectedRobotIds = activeLinks.stream()
+                    .map(UserRobotLinkService.LinkSummary::getRobotId)
+                    .collect(Collectors.toList());
                 } else {
                     connectedRobotIds = activeLinks.stream()
                             .map(UserRobotLinkService.LinkSummary::getUserId)
