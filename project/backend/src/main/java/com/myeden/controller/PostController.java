@@ -2,6 +2,7 @@ package com.myeden.controller;
 
 import com.myeden.service.PostService;
 import com.myeden.service.UserSettingService;
+import com.myeden.service.UserRobotLinkService;
 import com.myeden.model.PostQueryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 /**
  * 动态管理控制器
@@ -39,6 +42,9 @@ public class PostController {
     
     @Autowired
     private UserSettingService userSettingService;
+    
+    @Autowired
+    private UserRobotLinkService userRobotLinkService;
     
     /**
      * 发布动态
@@ -121,8 +127,28 @@ public class PostController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String currentUserId = authentication.getName();
             
+            // 获取用户链接的机器人ID列表
+            List<String> connectedRobotIds = new ArrayList<>();
+            try {
+                List<UserRobotLinkService.LinkSummary> userLinks = userRobotLinkService.getUserActiveLinks(currentUserId);
+                connectedRobotIds = userLinks.stream()
+                    .map(UserRobotLinkService.LinkSummary::getRobotId)
+                    .collect(Collectors.toList());
+                logger.debug("用户 {} 链接的机器人数量: {}", currentUserId, connectedRobotIds.size());
+            } catch (Exception e) {
+                logger.warn("获取用户链接机器人失败，用户ID: {}", currentUserId, e);
+            }
+            
+            // 构建查询参数
+            PostQueryParams params = new PostQueryParams();
+            params.setPage(page);
+            params.setSize(size);
+            params.setAuthorType(authorType);
+            params.setCurrentUserId(currentUserId);
+            params.setConnectedRobotIds(connectedRobotIds);
+            
             // 获取动态列表
-            PostService.PostListResult result = postService.getPostList(page, size, authorType, currentUserId);
+            PostService.PostListResult result = postService.queryPosts(params);
             
             logger.info("获取动态列表成功，总数: {}", result.getTotal());
             
@@ -384,15 +410,29 @@ public class PostController {
                 size = 10;
             }
             
-            // 使用统一查询接口进行搜索
+            // 获取当前用户信息
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String currentUserId = authentication.getName();
             
+            // 获取用户链接的机器人ID列表
+            List<String> connectedRobotIds = new ArrayList<>();
+            try {
+                List<UserRobotLinkService.LinkSummary> userLinks = userRobotLinkService.getUserActiveLinks(currentUserId);
+                connectedRobotIds = userLinks.stream()
+                    .map(UserRobotLinkService.LinkSummary::getRobotId)
+                    .collect(Collectors.toList());
+                logger.debug("用户 {} 链接的机器人数量: {}", currentUserId, connectedRobotIds.size());
+            } catch (Exception e) {
+                logger.warn("获取用户链接机器人失败，用户ID: {}", currentUserId, e);
+            }
+            
+            // 使用统一查询接口进行搜索
             PostQueryParams params = new PostQueryParams();
             params.setPage(page);
             params.setSize(size);
             params.setKeyword(keyword.trim());
             params.setCurrentUserId(currentUserId);
+            params.setConnectedRobotIds(connectedRobotIds);
             
             PostService.PostListResult result = postService.queryPosts(params);
             
@@ -480,6 +520,18 @@ public class PostController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String currentUserId = authentication.getName();
             
+            // 获取用户链接的机器人ID列表
+            List<String> connectedRobotIds = new ArrayList<>();
+            try {
+                List<UserRobotLinkService.LinkSummary> userLinks = userRobotLinkService.getUserActiveLinks(currentUserId);
+                connectedRobotIds = userLinks.stream()
+                    .map(UserRobotLinkService.LinkSummary::getRobotId)
+                    .collect(Collectors.toList());
+                logger.debug("用户 {} 链接的机器人数量: {}", currentUserId, connectedRobotIds.size());
+            } catch (Exception e) {
+                logger.warn("获取用户链接机器人失败，用户ID: {}", currentUserId, e);
+            }
+            
             // 构建查询参数
             PostQueryParams params = new PostQueryParams();
             params.setPage(page);
@@ -487,6 +539,7 @@ public class PostController {
             params.setAuthorType(authorType);
             params.setKeyword(keyword);
             params.setCurrentUserId(currentUserId);
+            params.setConnectedRobotIds(connectedRobotIds);
             
             // 执行统一查询
             PostService.PostListResult result = postService.queryPosts(params);

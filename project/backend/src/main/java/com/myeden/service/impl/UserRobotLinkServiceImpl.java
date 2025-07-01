@@ -213,31 +213,17 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
     public boolean updateLinkStrength(String userId, String robotId, Integer strength) {
         try {
             logger.info("更新用户机器人链接强度，用户ID: {}, 机器人ID: {}, 强度: {}", userId, robotId, strength);
-            
-            // 验证强度值
-            if (strength == null || strength < 1 || strength > 10) {
-                throw new IllegalArgumentException("链接强度必须在1-10之间");
-            }
-            
-            // 查找链接 - 使用findFirst()处理可能的重复记录
-            List<UserRobotLink> links = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
-            if (links.isEmpty()) {
+            // 查找链接
+            Optional<UserRobotLink> linkOpt = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
+            if (linkOpt.isEmpty()) {
                 logger.warn("用户机器人链接不存在，用户ID: {}, 机器人ID: {}", userId, robotId);
                 return false;
             }
-            
-            // 如果有多个记录，记录警告并只处理第一个
-            if (links.size() > 1) {
-                logger.warn("发现重复的用户机器人链接记录，用户ID: {}, 机器人ID: {}, 记录数: {}", userId, robotId, links.size());
-            }
-            
-            UserRobotLink link = links.get(0);
+            UserRobotLink link = linkOpt.get();
             link.updateStrength(strength);
             userRobotLinkRepository.save(link);
-            
             logger.info("用户机器人链接强度更新成功");
             return true;
-            
         } catch (Exception e) {
             logger.error("更新用户机器人链接强度失败", e);
             throw e;
@@ -248,26 +234,17 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
     public boolean incrementInteraction(String userId, String robotId) {
         try {
             logger.info("增加用户机器人互动次数，用户ID: {}, 机器人ID: {}", userId, robotId);
-            
-            // 查找链接 - 使用findFirst()处理可能的重复记录
-            List<UserRobotLink> links = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
-            if (links.isEmpty()) {
+            // 查找链接
+            Optional<UserRobotLink> linkOpt = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
+            if (linkOpt.isEmpty()) {
                 logger.warn("用户机器人链接不存在，用户ID: {}, 机器人ID: {}", userId, robotId);
                 return false;
             }
-            
-            // 如果有多个记录，记录警告并只处理第一个
-            if (links.size() > 1) {
-                logger.warn("发现重复的用户机器人链接记录，用户ID: {}, 机器人ID: {}, 记录数: {}", userId, robotId, links.size());
-            }
-            
-            UserRobotLink link = links.get(0);
+            UserRobotLink link = linkOpt.get();
             link.incrementInteraction();
             userRobotLinkRepository.save(link);
-            
             logger.info("用户机器人互动次数增加成功");
             return true;
-            
         } catch (Exception e) {
             logger.error("增加用户机器人互动次数失败", e);
             throw e;

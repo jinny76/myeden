@@ -13,6 +13,7 @@ import com.myeden.service.FileService;
 import com.myeden.service.WebSocketService;
 import com.myeden.service.RobotBehaviorService;
 import com.myeden.service.CommentService;
+import com.myeden.service.UserRobotLinkService;
 import com.myeden.service.CommentService.CommentSummary;
 import com.myeden.model.PostQueryParams;
 import org.slf4j.Logger;
@@ -81,6 +82,9 @@ public class PostServiceImpl implements PostService {
     
     @Autowired
     private CommentService commentService;
+    
+    @Autowired
+    private UserRobotLinkService userRobotLinkService;
     
     @Override
     public PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images, String visibility) {
@@ -523,9 +527,14 @@ public class PostServiceImpl implements PostService {
             // 验证参数
             params.validate();
             
-            // 获取用户已连接的机器人ID列表
-            // 这些机器人的动态对用户可见，无论visibility设置如何
-            List<String> connectedRobotIds = getConnectedRobotIds(params.getCurrentUserId());
+            // 使用传入的已连接机器人ID列表，如果没有则自动获取
+            List<String> connectedRobotIds = params.getConnectedRobotIds();
+            if (connectedRobotIds == null || connectedRobotIds.isEmpty()) {
+                connectedRobotIds = getConnectedRobotIds(params.getCurrentUserId());
+                logger.debug("自动获取用户 {} 连接的机器人，数量: {}", params.getCurrentUserId(), connectedRobotIds.size());
+            } else {
+                logger.debug("使用传入的连接机器人参数，数量: {}", connectedRobotIds.size());
+            }
             
             // 确定排序方式
             Sort sort = determineSort(params);
@@ -537,23 +546,13 @@ public class PostServiceImpl implements PostService {
             if (StringUtils.hasText(params.getKeyword())) {
                 // 有关键词搜索
                 if (StringUtils.hasText(params.getAuthorType())) {
-                    // 关键词 + 作者类型过滤
-                    postPage = postRepository.findByKeywordAndIsDeletedFalse(
-                        params.getKeyword(), 
+                    // 关键词 + 作者类型过滤 - 使用专门的查询方法
+                    postPage = postRepository.findByKeywordAndAuthorTypeAndIsDeletedFalse(
+                        params.getKeyword(),
+                        params.getAuthorType(),
                         pageable, 
                         params.getCurrentUserId(), 
                         connectedRobotIds
-                    );
-                    // 在内存中过滤作者类型
-                    List<Post> filteredPosts = postPage.getContent().stream()
-                        .filter(post -> params.getAuthorType().equals(post.getAuthorType()))
-                        .collect(Collectors.toList());
-                    
-                    // 创建新的Page对象
-                    postPage = new PageImpl<>(
-                        filteredPosts, 
-                        pageable, 
-                        filteredPosts.size()
                     );
                 } else {
                     // 只有关键词搜索
@@ -684,24 +683,61 @@ public class PostServiceImpl implements PostService {
             
             // 直接执行机器人评论，不添加延时
             
-            // 获取所有活跃的机器人
-            List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
-            if (activeRobots.isEmpty()) {
-                logger.info("没有活跃的机器人，跳过评论触发");
+            // 获取动态信息，确定作者
+            Optional<Post> postOpt = postRepository.findByPostId(postId);
+            if (postOpt.isEmpty()) {
+                logger.warn("动态不存在，跳过机器人评论触发，动态ID: {}", postId);
                 return;
             }
             
-            // 随机选择1-3个机器人进行评论
+            Post post = postOpt.get();
+            String authorId = post.getAuthorId();
+            String authorType = post.getAuthorType();
+            
+            // 只对用户发布的动态触发机器人评论
+            if (!"user".equals(authorType)) {
+                logger.debug("动态作者不是用户，跳过机器人评论触发，作者类型: {}", authorType);
+                return;
+            }
+            
+            // 获取与用户有链接的机器人
+            List<UserRobotLinkService.LinkSummary> userLinks = userRobotLinkService.getUserActiveLinks(authorId);
+            if (userLinks.isEmpty()) {
+                logger.debug("用户 {} 没有链接的机器人，跳过评论触发", authorId);
+                return;
+            }
+            
+            // 获取链接的机器人ID列表
+            List<String> linkedRobotIds = userLinks.stream()
+                .map(UserRobotLinkService.LinkSummary::getRobotId)
+                .collect(Collectors.toList());
+            
+            // 获取这些机器人的详细信息
+            List<Robot> linkedRobots = new ArrayList<>();
+            for (String robotId : linkedRobotIds) {
+                Optional<Robot> robotOpt = robotRepository.findByRobotId(robotId);
+                if (robotOpt.isPresent()) {
+                    linkedRobots.add(robotOpt.get());
+                }
+            }
+            
+            if (linkedRobots.isEmpty()) {
+                logger.debug("没有找到链接的机器人，跳过评论触发");
+                return;
+            }
+            
+            // 随机选择1-3个有链接的机器人进行评论
             int commentCount = new Random().nextInt(3) + 1;
-            commentCount = Math.min(commentCount, activeRobots.size());
+            commentCount = Math.min(commentCount, linkedRobots.size());
             
             // 随机打乱机器人列表
-            Collections.shuffle(activeRobots);
+            Collections.shuffle(linkedRobots);
             
             List<String> skippedRobots = new ArrayList<>();
+            List<String> successRobots = new ArrayList<>();
             
             for (int i = 0; i < commentCount; i++) {
-                Robot robot = activeRobots.get(i);
+                Robot robot = linkedRobots.get(i);
                 
                 try {
                     // 检查机器人是否在活跃时间段
@@ -724,6 +760,7 @@ public class PostServiceImpl implements PostService {
                     
                     if (success) {
                         logger.info("机器人 {} 评论成功", robot.getName());
+                        successRobots.add(robot.getName());
                     } else {
                         logger.debug("机器人 {} 评论未触发", robot.getName());
                         skippedRobots.add(robot.getName() + "(概率未触发)");
@@ -734,6 +771,9 @@ public class PostServiceImpl implements PostService {
                     skippedRobots.add(robot.getName() + "(评论失败)");
                 }
             }
+            
+            logger.info("机器人评论触发完成，动态ID: {}, 成功: {}, 跳过: {}", 
+                       postId, successRobots.size(), skippedRobots.size());
             
             if (!skippedRobots.isEmpty()) {
                 logger.info("跳过的机器人: {}", String.join(", ", skippedRobots));
@@ -822,11 +862,13 @@ public class PostServiceImpl implements PostService {
         List<String> connectedRobotIds = new ArrayList<>();
         if (currentUserId != null) {
             try {
-                // 这里需要注入 UserRobotLinkService 来获取连接的机器人
-                // 暂时返回空列表，后续可以完善
-                // UserRobotLinkService userRobotLinkService = applicationContext.getBean(UserRobotLinkService.class);
-                // List<UserRobotLinkService.LinkSummary> links = userRobotLinkService.getUserActiveLinks(currentUserId);
-                // connectedRobotIds = links.stream().map(UserRobotLinkService.LinkSummary::getRobotId).collect(Collectors.toList());
+                // 获取用户激活的机器人链接
+                List<UserRobotLinkService.LinkSummary> links = userRobotLinkService.getUserActiveLinks(currentUserId);
+                connectedRobotIds = links.stream()
+                    .map(UserRobotLinkService.LinkSummary::getRobotId)
+                    .collect(Collectors.toList());
+                
+                logger.debug("用户 {} 连接的机器人数量: {}", currentUserId, connectedRobotIds.size());
             } catch (Exception e) {
                 logger.warn("获取用户连接机器人失败，用户ID: {}", currentUserId, e);
             }
