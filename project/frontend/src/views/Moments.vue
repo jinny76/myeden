@@ -1546,25 +1546,56 @@ onMounted(async () => {
   // 添加点击外部关闭移动端菜单的监听
   document.addEventListener('click', handleClickOutside)
 
-  // WebSocket事件处理函数
-  const handlePostUpdate = async () => {
-    await momentsStore.loadPosts({}, true)
-    await loadAllCommentsAndReplies()
+  // WebSocket事件处理函数 - 仅在支持增量刷新时启用
+  let handlePostUpdate, handleCommentUpdate, handleRobotAction
+  
+  if (window.canIncrementalRefresh !== false) {
+    handlePostUpdate = async () => {
+      console.log('📝 Moments.vue收到动态更新事件')
+      // 检查是否支持增量刷新，如果不支持则跳过
+      if (!window.canIncrementalRefresh) {
+        console.log('⚠️ 不支持增量刷新，跳过动态更新处理')
+        return
+      }
+      await momentsStore.loadPosts({}, true)
+      await loadAllCommentsAndReplies()
+    }
+    
+    handleCommentUpdate = async () => {
+      console.log('💬 Moments.vue收到评论更新事件')
+      // 检查是否支持增量刷新，如果不支持则跳过
+      if (!window.canIncrementalRefresh) {
+        console.log('⚠️ 不支持增量刷新，跳过评论更新处理')
+        return
+      }
+      await momentsStore.loadPosts({}, true)
+      await loadAllCommentsAndReplies()
+    }
+    
+    handleRobotAction = async () => {
+      console.log('🤖 Moments.vue收到机器人行为事件')
+      // 检查是否支持增量刷新，如果不支持则跳过
+      if (!window.canIncrementalRefresh) {
+        console.log('⚠️ 不支持增量刷新，跳过机器人行为处理')
+        return
+      }
+      await momentsStore.loadPosts({}, true)
+      await loadAllCommentsAndReplies()
+    }
   }
-  const handleCommentUpdate = async () => {
-    await momentsStore.loadPosts({}, true)
-    await loadAllCommentsAndReplies()
+  
+  // 仅在支持增量刷新时添加事件监听
+  if (window.canIncrementalRefresh !== false && handlePostUpdate) {
+    window.addEventListener('post-update', handlePostUpdate)
+    window.addEventListener('comment-update', handleCommentUpdate)
+    window.addEventListener('robot-post', handleRobotAction)
+    window.addEventListener('robot-comment', handleRobotAction)
+    window.addEventListener('robot-like', handleRobotAction)
+    window.addEventListener('robot-reply', handleRobotAction)
+    console.log('✅ Moments.vue已添加WebSocket事件监听')
+  } else {
+    console.log('⚠️ Moments.vue跳过WebSocket事件监听（不支持增量刷新）')
   }
-  const handleRobotAction = async () => {
-    await momentsStore.loadPosts({}, true)
-    await loadAllCommentsAndReplies()
-  }
-  window.addEventListener('post-update', handlePostUpdate)
-  window.addEventListener('comment-update', handleCommentUpdate)
-  window.addEventListener('robot-post', handleRobotAction)
-  window.addEventListener('robot-comment', handleRobotAction)
-  window.addEventListener('robot-like', handleRobotAction)
-  window.addEventListener('robot-reply', handleRobotAction)
 })
 
 // 组件卸载时移除事件监听
@@ -1591,13 +1622,16 @@ onUnmounted(() => {
   
   document.removeEventListener('click', handleClickOutside)
 
-  // WebSocket事件处理函数
-  window.removeEventListener('post-update', handlePostUpdate)
-  window.removeEventListener('comment-update', handleCommentUpdate)
-  window.removeEventListener('robot-post', handleRobotAction)
-  window.removeEventListener('robot-comment', handleRobotAction)
-  window.removeEventListener('robot-like', handleRobotAction)
-  window.removeEventListener('robot-reply', handleRobotAction)
+  // 清理WebSocket事件监听（仅在已添加的情况下）
+  if (window.canIncrementalRefresh !== false && handlePostUpdate) {
+    window.removeEventListener('post-update', handlePostUpdate)
+    window.removeEventListener('comment-update', handleCommentUpdate)
+    window.removeEventListener('robot-post', handleRobotAction)
+    window.removeEventListener('robot-comment', handleRobotAction)
+    window.removeEventListener('robot-like', handleRobotAction)
+    window.removeEventListener('robot-reply', handleRobotAction)
+    console.log('🛑 Moments.vue已清理WebSocket事件监听')
+  }
 })
 
 // 点击外部区域关闭移动端菜单

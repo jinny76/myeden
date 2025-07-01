@@ -543,7 +543,7 @@ public class PostServiceImpl implements PostService {
     /**
      * 异步触发所有在线机器人对新动态进行评论
      * 使用Spring的@Async注解，由AI任务执行器处理
-     * 添加20-60秒随机延时，使回复更自然
+     * 移除延时逻辑，直接执行机器人评论
      * 
      * @param postId 动态ID
      * @param postContent 动态内容
@@ -553,17 +553,7 @@ public class PostServiceImpl implements PostService {
         try {
             logger.info("开始触发AI机器人评论，动态ID: {}", postId);
             
-            // 添加20-60秒的随机延时，使回复更自然
-            int delaySeconds = new Random().nextInt(41) + 20; // 20-60秒
-            logger.info("机器人评论延时 {} 秒后执行", delaySeconds);
-            
-            try {
-                Thread.sleep(delaySeconds * 1000L);
-            } catch (InterruptedException e) {
-                logger.warn("机器人评论延时被中断", e);
-                Thread.currentThread().interrupt();
-                return;
-            }
+            // 直接执行机器人评论，不添加延时
             
             // 获取所有活跃的机器人
             List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
