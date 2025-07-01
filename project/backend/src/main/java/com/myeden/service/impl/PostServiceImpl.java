@@ -83,7 +83,7 @@ public class PostServiceImpl implements PostService {
     private CommentService commentService;
     
     @Override
-    public PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images) {
+    public PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images, String visibility) {
         try {
             logger.info("开始创建动态，作者ID: {}, 作者类型: {}", authorId, authorType);
             
@@ -145,6 +145,23 @@ public class PostServiceImpl implements PostService {
             post.setLikeCount(0);
             post.setCommentCount(0);
             post.setIsDeleted(false);
+            
+            // 设置可见性
+            if ("user".equals(authorType)) {
+                // 用户动态：根据传入的visibility参数设置
+                if (visibility != null) {
+                    post.setVisibility(visibility);
+                    logger.info("用户动态可见性设置为: {}", visibility);
+                } else {
+                    // 如果visibility为null，保持默认值（private）
+                    logger.info("用户动态可见性保持默认值: private");
+                }
+            } else if ("robot".equals(authorType)) {
+                // 机器人动态：不设置visibility，保持为null
+                post.setVisibility(null);
+                logger.info("机器人动态可见性保持为null");
+            }
+            
             post.setCreatedAt(LocalDateTime.now());
             post.setUpdatedAt(LocalDateTime.now());
             

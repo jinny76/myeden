@@ -65,6 +65,12 @@ public class UserSetting {
     private Boolean notifyRobotInteraction = true;
     
     /**
+     * 公开我的帖子开关
+     */
+    @Field("public_posts")
+    private Boolean publicPosts = false;
+    
+    /**
      * 语言设置：zh-CN(中文)、en-US(英文)
      */
     @Field("language")
@@ -162,6 +168,14 @@ public class UserSetting {
         this.notifyRobotInteraction = notifyRobotInteraction != null ? notifyRobotInteraction : true;
     }
     
+    public Boolean getPublicPosts() {
+        return publicPosts;
+    }
+    
+    public void setPublicPosts(Boolean publicPosts) {
+        this.publicPosts = publicPosts != null ? publicPosts : false;
+    }
+    
     public String getLanguage() {
         return language;
     }
@@ -226,6 +240,7 @@ public class UserSetting {
         if (notifyCommentReceived == null) notifyCommentReceived = true;
         if (notifyLikeReceived == null) notifyLikeReceived = true;
         if (notifyRobotInteraction == null) notifyRobotInteraction = true;
+        if (publicPosts == null) publicPosts = false;
     }
     
     /**

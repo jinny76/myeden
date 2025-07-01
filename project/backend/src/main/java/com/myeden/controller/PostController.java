@@ -1,6 +1,7 @@
 package com.myeden.controller;
 
 import com.myeden.service.PostService;
+import com.myeden.service.UserSettingService;
 import com.myeden.model.PostQueryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,9 @@ public class PostController {
     @Autowired
     private PostService postService;
     
+    @Autowired
+    private UserSettingService userSettingService;
+    
     /**
      * 发布动态
      * @param content 动态内容
@@ -54,10 +58,24 @@ public class PostController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userId = authentication.getName();
             
-            // 发布动态
-            PostService.PostResult result = postService.createPost(userId, "user", content, images);
+            // 检查用户隐私设置
+            String visibility = null; // 默认为null，表示继承用户设置
+            try {
+                var userSetting = userSettingService.getUserSetting(userId);
+                if (userSetting != null && userSetting.getPublicPosts() != null && userSetting.getPublicPosts()) {
+                    visibility = "public";
+                    logger.info("用户允许公开帖子，设置可见性为: public");
+                } else {
+                    logger.info("用户不允许公开帖子，保持可见性为null（继承默认设置）");
+                }
+            } catch (Exception e) {
+                logger.warn("获取用户隐私设置失败，使用默认设置", e);
+            }
             
-            logger.info("动态发布成功，动态ID: {}", result.getPostId());
+            // 发布动态
+            PostService.PostResult result = postService.createPost(userId, "user", content, images, visibility);
+            
+            logger.info("动态发布成功，动态ID: {}, 可见性: {}", result.getPostId(), visibility);
             
             return ResponseEntity.ok(new EventResponse(
                 200,

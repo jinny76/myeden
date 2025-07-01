@@ -26,9 +26,10 @@ public interface PostService {
      * @param authorType 作者类型（user/robot）
      * @param content 动态内容
      * @param images 图片文件列表
+     * @param visibility 可见性设置（public/private/null，null表示继承用户设置）
      * @return 动态发布结果
      */
-    PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images);
+    PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images, String visibility);
     
     /**
      * 获取动态列表

@@ -1,6 +1,7 @@
 package com.myeden.controller;
 
 import com.myeden.service.CommentService;
+import com.myeden.service.UserSettingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ public class CommentController {
     @Autowired
     private CommentService commentService;
     
+    @Autowired
+    private UserSettingService userSettingService;
+    
     /**
      * 发表评论
      * @param postId 动态ID
@@ -49,10 +53,24 @@ public class CommentController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userId = authentication.getName();
             
-            // 发表评论
-            CommentService.CommentResult result = commentService.createComment(postId, userId, "user", request.getContent());
+            // 检查用户隐私设置
+            String visibility = null; // 默认为null，表示继承用户设置
+            try {
+                var userSetting = userSettingService.getUserSetting(userId);
+                if (userSetting != null && userSetting.getPublicPosts() != null && userSetting.getPublicPosts()) {
+                    visibility = "public";
+                    logger.info("用户允许公开评论，设置可见性为: public");
+                } else {
+                    logger.info("用户不允许公开评论，保持可见性为null（继承默认设置）");
+                }
+            } catch (Exception e) {
+                logger.warn("获取用户隐私设置失败，使用默认设置", e);
+            }
             
-            logger.info("评论发表成功，评论ID: {}", result.getCommentId());
+            // 发表评论
+            CommentService.CommentResult result = commentService.createComment(postId, userId, "user", request.getContent(), visibility);
+            
+            logger.info("评论发表成功，评论ID: {}, 可见性: {}", result.getCommentId(), visibility);
             
             return ResponseEntity.ok(new EventResponse(
                 200,
@@ -88,10 +106,24 @@ public class CommentController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userId = authentication.getName();
             
-            // 回复评论
-            CommentService.CommentResult result = commentService.replyComment(commentId, userId, "user", request.getContent());
+            // 检查用户隐私设置
+            String visibility = null; // 默认为null，表示继承用户设置
+            try {
+                var userSetting = userSettingService.getUserSetting(userId);
+                if (userSetting != null && userSetting.getPublicPosts() != null && userSetting.getPublicPosts()) {
+                    visibility = "public";
+                    logger.info("用户允许公开回复，设置可见性为: public");
+                } else {
+                    logger.info("用户不允许公开回复，保持可见性为null（继承默认设置）");
+                }
+            } catch (Exception e) {
+                logger.warn("获取用户隐私设置失败，使用默认设置", e);
+            }
             
-            logger.info("回复评论成功，回复ID: {}", result.getCommentId());
+            // 回复评论
+            CommentService.CommentResult result = commentService.replyComment(commentId, userId, "user", request.getContent(), visibility);
+            
+            logger.info("回复评论成功，回复ID: {}, 可见性: {}", result.getCommentId(), visibility);
             
             return ResponseEntity.ok(new EventResponse(
                 200,

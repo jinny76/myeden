@@ -25,9 +25,23 @@ public interface CommentService {
      * @param authorType 评论者类型（user/robot）
      * @param content 评论内容
      * @param innerThoughts 内心活动（可选，主要用于机器人）
+     * @param visibility 可见性设置（public/private/null，null表示继承用户设置）
      * @return 评论发布结果
      */
-    CommentResult createComment(String postId, String authorId, String authorType, String content, String innerThoughts);
+    CommentResult createComment(String postId, String authorId, String authorType, String content, String innerThoughts, String visibility);
+    
+    /**
+     * 发表评论（重载方法，兼容旧版本）
+     * @param postId 动态ID
+     * @param authorId 评论者ID
+     * @param authorType 评论者类型（user/robot）
+     * @param content 评论内容
+     * @param innerThoughts 内心活动（可选，主要用于机器人）
+     * @return 评论发布结果
+     */
+    default CommentResult createComment(String postId, String authorId, String authorType, String content, String innerThoughts) {
+        return createComment(postId, authorId, authorType, content, innerThoughts, null);
+    }
     
     /**
      * 发表评论（重载方法，兼容旧版本）
@@ -38,7 +52,7 @@ public interface CommentService {
      * @return 评论发布结果
      */
     default CommentResult createComment(String postId, String authorId, String authorType, String content) {
-        return createComment(postId, authorId, authorType, content, null);
+        return createComment(postId, authorId, authorType, content, null, null);
     }
     
     /**
@@ -48,9 +62,23 @@ public interface CommentService {
      * @param authorType 回复者类型（user/robot）
      * @param content 回复内容
      * @param innerThoughts 内心活动（可选，主要用于机器人）
+     * @param visibility 可见性设置（public/private/null，null表示继承用户设置）
      * @return 回复发布结果
      */
-    CommentResult replyComment(String commentId, String authorId, String authorType, String content, String innerThoughts);
+    CommentResult replyComment(String commentId, String authorId, String authorType, String content, String innerThoughts, String visibility);
+    
+    /**
+     * 回复评论（重载方法，兼容旧版本）
+     * @param commentId 评论ID
+     * @param authorId 回复者ID
+     * @param authorType 回复者类型（user/robot）
+     * @param content 回复内容
+     * @param innerThoughts 内心活动（可选，主要用于机器人）
+     * @return 回复发布结果
+     */
+    default CommentResult replyComment(String commentId, String authorId, String authorType, String content, String innerThoughts) {
+        return replyComment(commentId, authorId, authorType, content, innerThoughts, null);
+    }
     
     /**
      * 回复评论（重载方法，兼容旧版本）
@@ -61,7 +89,7 @@ public interface CommentService {
      * @return 回复发布结果
      */
     default CommentResult replyComment(String commentId, String authorId, String authorType, String content) {
-        return replyComment(commentId, authorId, authorType, content, null);
+        return replyComment(commentId, authorId, authorType, content, null, null);
     }
     
     /**

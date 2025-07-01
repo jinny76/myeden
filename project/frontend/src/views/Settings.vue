@@ -91,6 +91,33 @@
           </div>
         </div>
 
+        <!-- 隐私设置 -->
+        <div class="settings-section">
+          <div class="section-header">
+            <el-icon><Lock /></el-icon>
+            <span>隐私设置</span>
+          </div>
+          <div class="setting-item">
+            <label class="setting-label">公开我的帖子</label>
+            <div class="setting-control">
+              <label class="switch">
+                <input 
+                  type="checkbox" 
+                  v-model="config.privacy.publicPosts"
+                  @change="updatePrivacy('publicPosts', config.privacy.publicPosts)"
+                >
+                <span class="slider"></span>
+              </label>
+              <span class="setting-description">
+                {{ config.privacy.publicPosts ? '公开' : '私密' }}
+              </span>
+            </div>
+            <div class="setting-hint">
+              开启后，其他用户可以查看你发布的帖子
+            </div>
+          </div>
+        </div>
+
         <!-- 操作按钮 -->
         <div class="settings-actions">
           <button @click="resetSettings" class="reset-btn">
@@ -107,7 +134,7 @@
 import { computed, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { useUserStore } from '@/stores/user'
-import { Setting, Brush, Bell, Refresh, Monitor } from '@element-plus/icons-vue'
+import { Setting, Brush, Bell, Refresh, Monitor, Lock } from '@element-plus/icons-vue'
 import { message } from '@/utils/message'
 
 /**
@@ -175,6 +202,19 @@ const updateNotification = async (key, value) => {
   } catch (error) {
     console.error('通知设置更新失败:', error)
     message.error('通知设置保存失败')
+  }
+}
+
+const updatePrivacy = async (key, value) => {
+  try {
+    await configStore.updatePrivacy(key, value)
+    
+    if (isLoggedIn.value) {
+      message.success('隐私设置已保存')
+    }
+  } catch (error) {
+    console.error('隐私设置更新失败:', error)
+    message.error('隐私设置保存失败')
   }
 }
 
@@ -415,6 +455,14 @@ const testTheme = () => {
   opacity: 0.7;
   min-width: 40px;
   text-align: center;
+}
+
+.setting-hint {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  opacity: 0.6;
+  margin-top: 8px;
+  line-height: 1.4;
 }
 
 /* 主题选择器 */

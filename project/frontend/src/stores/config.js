@@ -27,6 +27,11 @@ export const useConfigStore = defineStore('config', () => {
       userOnline: false, // 用户上线消息通知，默认关闭
     },
     
+    // 隐私设置
+    privacy: {
+      publicPosts: false, // 公开我的帖子，默认否
+    },
+    
     // 主题设置
     theme: {
       mode: 'auto', // light, dark, auto
@@ -54,6 +59,10 @@ export const useConfigStore = defineStore('config', () => {
           theme: {
             ...config.value.theme,
             ...parsed.theme
+          },
+          privacy: {
+            ...config.value.privacy,
+            ...parsed.privacy
           }
         }
       }
@@ -82,6 +91,9 @@ export const useConfigStore = defineStore('config', () => {
         config.value = {
           notifications: {
             userOnline: userSetting.notifyUserOnline || false,
+          },
+          privacy: {
+            publicPosts: userSetting.publicPosts || false,
           },
           theme: {
             mode: userSetting.themeMode || 'auto',
@@ -126,6 +138,7 @@ export const useConfigStore = defineStore('config', () => {
       const userSettingData = {
         themeMode: config.value.theme.mode,
         notifyUserOnline: config.value.notifications.userOnline,
+        publicPosts: config.value.privacy.publicPosts,
       }
       
       const response = await saveUserSetting(userSettingData)
@@ -175,6 +188,19 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
+  const updatePrivacy = async (key, value) => {
+    config.value.privacy[key] = value
+    
+    // 同步到后端
+    if (userStore.isLoggedIn) {
+      try {
+        await saveUserSettingToBackend()
+      } catch (error) {
+        console.error('更新隐私设置失败:', error)
+      }
+    }
+  }
+
   const updateTheme = async (key, value) => {
     config.value.theme[key] = value
     
@@ -220,6 +246,9 @@ export const useConfigStore = defineStore('config', () => {
       notifications: {
         userOnline: false,
       },
+      privacy: {
+        publicPosts: false,
+      },
       theme: {
         mode: 'auto',
       }
@@ -260,6 +289,7 @@ export const useConfigStore = defineStore('config', () => {
     
     // 方法
     updateNotification,
+    updatePrivacy,
     updateTheme,
     applyTheme,
     resetConfig,

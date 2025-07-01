@@ -69,7 +69,7 @@ public class CommentServiceImpl implements CommentService {
     private UserRobotLinkService userRobotLinkService;
     
     @Override
-    public CommentResult createComment(String postId, String authorId, String authorType, String content, String innerThoughts) {
+    public CommentResult createComment(String postId, String authorId, String authorType, String content, String innerThoughts, String visibility) {
         try {
             logger.info("开始创建评论，动态ID: {}, 作者ID: {}, 作者类型: {}", postId, authorId, authorType);
             
@@ -136,15 +136,21 @@ public class CommentServiceImpl implements CommentService {
             comment.setCreatedAt(LocalDateTime.now());
             comment.setUpdatedAt(LocalDateTime.now());
             
-            // 根据作者类型设置可见性
+            // 设置可见性
             if ("user".equals(authorType)) {
-                // 用户评论默认为私有
-                comment.setVisibility("private");
-                logger.info("用户评论可见性设置为: private");
+                // 用户评论：根据传入的visibility参数设置
+                if (visibility != null) {
+                    comment.setVisibility(visibility);
+                    logger.info("用户评论可见性设置为: {}", visibility);
+                } else {
+                    // 如果visibility为null，保持默认值（private）
+                    comment.setVisibility("private");
+                    logger.info("用户评论可见性保持默认值: private");
+                }
             } else if ("robot".equals(authorType)) {
-                // 机器人评论默认为公开
-                comment.setVisibility("public");
-                logger.info("机器人评论可见性设置为: public");
+                // 机器人评论：不设置visibility，保持为null
+                comment.setVisibility(null);
+                logger.info("机器人评论可见性保持为null");
             }
             
             // 保存到数据库
@@ -194,7 +200,7 @@ public class CommentServiceImpl implements CommentService {
     }
     
     @Override
-    public CommentResult replyComment(String commentId, String authorId, String authorType, String content, String innerThoughts) {
+    public CommentResult replyComment(String commentId, String authorId, String authorType, String content, String innerThoughts, String visibility) {
         try {
             logger.info("开始回复评论，评论ID: {}, 作者ID: {}, 作者类型: {}", commentId, authorId, authorType);
             
@@ -263,15 +269,21 @@ public class CommentServiceImpl implements CommentService {
             reply.setCreatedAt(LocalDateTime.now());
             reply.setUpdatedAt(LocalDateTime.now());
             
-            // 根据作者类型设置可见性
+            // 设置可见性
             if ("user".equals(authorType)) {
-                // 用户回复默认为私有
-                reply.setVisibility("private");
-                logger.info("用户回复可见性设置为: private");
+                // 用户回复：根据传入的visibility参数设置
+                if (visibility != null) {
+                    reply.setVisibility(visibility);
+                    logger.info("用户回复可见性设置为: {}", visibility);
+                } else {
+                    // 如果visibility为null，保持默认值（private）
+                    reply.setVisibility("private");
+                    logger.info("用户回复可见性保持默认值: private");
+                }
             } else if ("robot".equals(authorType)) {
-                // 机器人回复默认为公开
-                reply.setVisibility("public");
-                logger.info("机器人回复可见性设置为: public");
+                // 机器人回复：不设置visibility，保持为null
+                reply.setVisibility(null);
+                logger.info("机器人回复可见性保持为null");
             }
             
             // 保存到数据库

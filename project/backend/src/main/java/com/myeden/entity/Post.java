@@ -78,7 +78,7 @@ public class Post {
     /**
      * 可见性：private/public，继承用户设置
      */
-    private String visibility = "public";
+    private String visibility = "private";
     
     /**
      * 创建时间
