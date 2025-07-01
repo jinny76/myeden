@@ -69,8 +69,20 @@
         <!-- 机器人列表 -->
         <div class="robots-section">
           <div class="section-header">
-            <h2>天使们</h2>
-            <p>与天使们进行互动交流，体验温暖的社交氛围</p>
+            <div class="header-left">
+              <h2>天使们</h2>
+              <p>与天使们进行互动交流，体验温暖的社交氛围</p>
+            </div>
+            <div class="header-right">
+              <el-button 
+                type="primary" 
+                @click="createRobot"
+                class="create-robot-btn"
+              >
+                <el-icon><Plus /></el-icon>
+                创建天使
+              </el-button>
+            </div>
           </div>
           
           <!-- 过滤控制区域 -->
@@ -181,7 +193,7 @@ import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
-import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { 
   createUserRobotLink, 
@@ -381,6 +393,11 @@ const navigateTo = (path) => {
   router.push(path)
   // 移动端导航后关闭菜单
   isMobileMenuOpen.value = false
+}
+
+// 创建机器人
+const createRobot = () => {
+  router.push('/robot-editor')
 }
 </script>
 
@@ -656,8 +673,34 @@ const navigateTo = (path) => {
 }
 
 .section-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 50px;
+  gap: 20px;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.header-right {
+  flex-shrink: 0;
+}
+
+.create-robot-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.create-robot-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
 }
 
 /* 过滤控制区域 */
@@ -1089,12 +1132,28 @@ const navigateTo = (path) => {
     font-size: 0.9rem;
   }
   
+  .section-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .header-left {
+    text-align: center;
+  }
+  
   .section-header h2 {
     font-size: 2rem;
   }
   
   .section-header p {
     font-size: 1rem;
+  }
+  
+  .create-robot-btn {
+    width: 100%;
+    max-width: 200px;
   }
   
   .robots-grid {
@@ -1206,11 +1265,29 @@ const navigateTo = (path) => {
     font-size: 0.8rem;
   }
   
+  .section-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+  
+  .header-left {
+    text-align: center;
+  }
+  
   .section-header h2 {
     font-size: 1.8rem;
   }
   
   .section-header p {
+    font-size: 0.9rem;
+  }
+  
+  .create-robot-btn {
+    width: 100%;
+    max-width: 180px;
+    padding: 10px 20px;
     font-size: 0.9rem;
   }
   

@@ -71,12 +71,27 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/users/check-phone").permitAll()
                 .requestMatchers("/api/v1/users/check-nickname").permitAll()
                 .requestMatchers("/api/v1/world/**").permitAll()
-                .requestMatchers("/api/v1/robots/**").permitAll()
+                .requestMatchers("/api/v1/robots").permitAll()
+                .requestMatchers("/api/v1/robots/{robotId}").permitAll()
+                // 机器人接口权限配置
+                .requestMatchers("/api/v1/robots/create").authenticated()
+                .requestMatchers("/api/v1/robots/my-robots").authenticated()
+                .requestMatchers("/api/v1/robots/{robotId}/edit").authenticated()
+                .requestMatchers("/api/v1/robots/{robotId}/update").authenticated()
+                .requestMatchers("/api/v1/robots/{robotId}/avatar").authenticated()
+                .requestMatchers("/api/v1/robots/{robotId}/copy").authenticated()
+                .requestMatchers("/api/v1/robots/{robotId}/restore").authenticated()
+                .requestMatchers("/api/v1/robots/{robotId}").authenticated()
+
                 .requestMatchers("/api/v1/files/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/avatars/**").permitAll()
+                .requestMatchers("/uploads/avatars/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 // 测试接口
                 .requestMatchers("/api/v1/test/public").permitAll()
+                .requestMatchers("/api/v1/test/auth").authenticated()
+                .requestMatchers("/api/v1/test/robot-create").authenticated()
                 // 允许Swagger UI相关路径
                 .requestMatchers("/swagger-ui.html").permitAll()
                 .requestMatchers("/swagger-ui/**").permitAll()

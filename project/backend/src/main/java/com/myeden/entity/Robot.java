@@ -157,9 +157,20 @@ public class Robot {
     private List<Topic> topics = new ArrayList<>();
     
     /**
+     * 机器人所有者ID
+     */
+    @Indexed
+    private String owner;
+    
+    /**
      * 是否激活
      */
     private Boolean isActive = true;
+    
+    /**
+     * 是否删除（软删除标记）
+     */
+    private Boolean isDeleted = false;
     
     /**
      * 创建时间
@@ -282,6 +293,13 @@ public class Robot {
         this();
         this.robotId = robotId;
         this.name = name;
+    }
+    
+    public Robot(String robotId, String name, String owner) {
+        this();
+        this.robotId = robotId;
+        this.name = name;
+        this.owner = owner;
     }
     
     // Getter和Setter方法
@@ -509,6 +527,22 @@ public class Robot {
         this.createdAt = createdAt;
     }
     
+    public String getOwner() {
+        return owner;
+    }
+    
+    public void setOwner(String owner) {
+        this.owner = owner;
+    }
+    
+    public Boolean getIsDeleted() {
+        return isDeleted;
+    }
+    
+    public void setIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
+    }
+    
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
@@ -630,15 +664,41 @@ public class Robot {
         this.updatedAt = LocalDateTime.now();
     }
     
+    /**
+     * 软删除机器人
+     */
+    public void softDelete() {
+        this.isDeleted = true;
+        this.isActive = false;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * 恢复机器人
+     */
+    public void restore() {
+        this.isDeleted = false;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * 检查机器人是否属于指定用户
+     */
+    public boolean isOwnedBy(String userId) {
+        return userId != null && userId.equals(this.owner);
+    }
+    
     @Override
     public String toString() {
         return "Robot{" +
                 "id='" + id + '\'' +
                 ", robotId='" + robotId + '\'' +
                 ", name='" + name + '\'' +
+                ", owner='" + owner + '\'' +
                 ", gender='" + gender + '\'' +
                 ", occupation='" + occupation + '\'' +
                 ", isActive=" + isActive +
+                ", isDeleted=" + isDeleted +
                 ", topicsCount=" + (topics != null ? topics.size() : 0) +
                 ", createdAt=" + createdAt +
                 '}';

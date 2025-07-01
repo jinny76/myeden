@@ -40,6 +40,11 @@ service.interceptors.request.use(
     // 添加请求时间戳
     config.headers['X-Request-Time'] = Date.now()
     
+    // 对于文件上传，不设置默认的Content-Type，让浏览器自动设置
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+    }
+    
     console.log('🚀 发送请求:', config.method?.toUpperCase(), config.url)
     return config
   },

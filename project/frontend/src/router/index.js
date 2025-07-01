@@ -85,6 +85,24 @@ const routes = [
           title: '设置 - 我的伊甸园',
           requiresAuth: true
         }
+      },
+      {
+        path: 'robot-editor',
+        name: 'RobotEditor',
+        component: () => import('@/views/RobotEditor.vue'),
+        meta: {
+          title: '创建天使 - 我的伊甸园',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'robot-editor/:robotId',
+        name: 'RobotEditorEdit',
+        component: () => import('@/views/RobotEditor.vue'),
+        meta: {
+          title: '编辑天使 - 我的伊甸园',
+          requiresAuth: true
+        }
       }
     ]
   }

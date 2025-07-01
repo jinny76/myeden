@@ -274,4 +274,34 @@ public interface RobotRepository extends MongoRepository<Robot, String> {
      * @return 机器人列表
      */
     List<Robot> findByShareFrequency(Integer shareFrequency);
+    
+    /**
+     * 根据所有者查找机器人
+     * @param owner 所有者ID
+     * @return 机器人列表
+     */
+    List<Robot> findByOwner(String owner);
+    
+    /**
+     * 根据所有者和删除状态查找机器人
+     * @param owner 所有者ID
+     * @param isDeleted 是否删除
+     * @return 机器人列表
+     */
+    List<Robot> findByOwnerAndIsDeleted(String owner, Boolean isDeleted);
+    
+    /**
+     * 根据所有者统计机器人数量
+     * @param owner 所有者ID
+     * @return 机器人数量
+     */
+    long countByOwner(String owner);
+    
+    /**
+     * 根据所有者和删除状态统计机器人数量
+     * @param owner 所有者ID
+     * @param isDeleted 是否删除
+     * @return 机器人数量
+     */
+    long countByOwnerAndIsDeleted(String owner, Boolean isDeleted);
 } 
