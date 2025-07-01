@@ -106,9 +106,9 @@ public class Robot {
     private String relationship;
     
     /**
-     * 发帖示例
+     * 家庭背景
      */
-    private String example;
+    private String family;
     
     /**
      * 性格特征列表
@@ -413,12 +413,12 @@ public class Robot {
         this.relationship = relationship;
     }
     
-    public String getExample() {
-        return example;
+    public String getFamily() {
+        return family;
     }
     
-    public void setExample(String example) {
-        this.example = example;
+    public void setFamily(String family) {
+        this.family = family;
     }
     
     public List<String> getTraits() {
@@ -616,7 +616,7 @@ public class Robot {
         this.location = robot.getLocation();
         this.education = robot.getEducation();
         this.relationship = robot.getRelationship();
-        this.example = robot.getExample();
+        this.family = robot.getFamily();
         this.traits = robot.getTraits();
         this.interests = robot.getInterests();
         this.speakingStyle = robot.getSpeakingStyle();

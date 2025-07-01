@@ -13,7 +13,7 @@
       <!-- 页面标题 -->
       <div class="page-header">
         <h1 class="page-title">欢迎回来</h1>
-        <p class="page-subtitle">登录你的伊甸园，开启美好之旅</p>
+        <p class="page-subtitle">登录，就是现在</p>
       </div>
 
       <!-- 登录卡片 -->
@@ -170,6 +170,29 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
+
+// 页面加载时尝试自动登录
+onMounted(async () => {
+  // 如果已经登录，直接跳转到首页
+  if (userStore.isLoggedIn) {
+    router.push('/')
+    return
+  }
+  
+  // 尝试自动登录
+  loading.value = true
+  try {
+    const success = await userStore.initUser()
+    if (success) {
+      message.success('自动登录成功！')
+      router.push('/')
+    }
+  } catch (error) {
+    console.log('自动登录失败或未启用:', error)
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <style scoped>

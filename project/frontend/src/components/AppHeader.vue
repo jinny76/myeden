@@ -72,32 +72,52 @@
         </template>
       </div>
       
-      <!-- 移动端菜单按钮 -->
-      <div class="mobile-menu-toggle" @click="toggleMobileMenu($event)">
-        <el-icon size="20">
-          <Menu v-if="!isMobileMenuOpen" />
-          <Close v-else />
-        </el-icon>
-      </div>
-    </div>
-    
-    <!-- 移动端导航菜单 -->
-    <div class="mobile-menu" :class="{ 'mobile-menu-open': isMobileMenuOpen }" @click.stop>
-      <div class="mobile-menu-content">
-        <div class="mobile-nav-item" @click="navigateTo('/')">
+      <!-- 移动端快速导航 -->
+      <div class="mobile-quick-nav">
+        <div class="quick-nav-item" 
+          :class="{ active: activeMenu === '/' }" 
+          @click="navigateTo('/')"
+        >
           <el-icon><House /></el-icon>
-          <span>伊甸园</span>
+          <span>首页</span>
         </div>
-        <div class="mobile-nav-item" @click="navigateTo('/moments')">
+        <div class="quick-nav-item" 
+          :class="{ active: activeMenu === '/moments' }" 
+          @click="navigateTo('/moments')"
+        >
           <el-icon><ChatDotRound /></el-icon>
           <span>动态</span>
         </div>
-        <div class="mobile-nav-item" @click="navigateTo('/world')">
-          <el-icon><Compass /></el-icon>
-          <span>介绍</span>
-        </div>
-        <div class="mobile-nav-divider"></div>
+      </div>
+      
+      <!-- 移动端用户菜单按钮 -->
+      <div class="mobile-user-menu" @click="toggleMobileMenu($event)">
         <template v-if="isLoggedIn">
+          <el-avatar :src="getUserAvatarUrl(userStore.userInfo)" size="small" />
+        </template>
+        <template v-else>
+          <el-icon size="20">
+            <Menu v-if="!isMobileMenuOpen" />
+            <Close v-else />
+          </el-icon>
+        </template>
+      </div>
+    </div>
+    
+    <!-- 移动端用户菜单 -->
+    <div class="mobile-menu" :class="{ 'mobile-menu-open': isMobileMenuOpen }" @click.stop>
+      <div class="mobile-menu-content">
+        <template v-if="isLoggedIn">
+          <!-- 用户信息 -->
+          <div class="mobile-user-info">
+            <el-avatar :src="getUserAvatarUrl(userStore.userInfo)" size="large" />
+            <div class="user-details">
+              <span class="user-name">{{ userStore.userInfo?.nickname || '用户' }}</span>
+              <span class="user-status">已登录</span>
+            </div>
+          </div>
+          
+          <!-- 用户菜单 -->
           <div class="mobile-nav-item" @click="navigateTo('/profile-setup')">
             <el-icon><User /></el-icon>
             <span>个人资料</span>
@@ -106,18 +126,19 @@
             <el-icon><Setting /></el-icon>
             <span>设置</span>
           </div>
-          <div class="mobile-nav-item" @click="handleLogout">
+          <div class="mobile-nav-item logout-item" @click="handleLogout">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </div>
         </template>
         <template v-else>
+          <!-- 未登录状态 -->
           <div class="mobile-nav-item" @click="navigateTo('/login')">
             <el-icon><UserFilled /></el-icon>
             <span>登录</span>
           </div>
           <div class="mobile-nav-item" @click="navigateTo('/register')">
-            <el-icon><UserFilled /></el-icon>
+            <el-icon><Plus /></el-icon>
             <span>注册</span>
           </div>
         </template>
@@ -276,6 +297,7 @@ onUnmounted(() => {
 .nav-item {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 16px;
   border-radius: 12px;
@@ -286,6 +308,7 @@ onUnmounted(() => {
   font-size: 14px;
   position: relative;
   overflow: hidden;
+  min-height: 44px;
 }
 
 .nav-item::before {
@@ -333,6 +356,7 @@ onUnmounted(() => {
 .user-avatar {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   cursor: pointer;
   padding: 8px 12px;
@@ -340,6 +364,7 @@ onUnmounted(() => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  min-height: 44px;
 }
 
 .user-avatar:hover {
@@ -377,6 +402,7 @@ onUnmounted(() => {
 .auth-button {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 8px 16px;
   border-radius: 12px;
@@ -385,6 +411,7 @@ onUnmounted(() => {
   font-weight: 500;
   font-size: 14px;
   border: 1px solid transparent;
+  min-height: 40px;
 }
 
 .login-btn {
@@ -413,27 +440,89 @@ onUnmounted(() => {
   transform: translateY(-1px);
 }
 
-/* 移动端菜单按钮 */
-.mobile-menu-toggle {
+/* 移动端快速导航 */
+.mobile-quick-nav {
   display: none;
-  cursor: pointer;
-  padding: 10px;
-  border-radius: 10px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  color: var(--color-text);
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+  margin: 0 16px;
 }
 
-.mobile-menu-toggle:hover {
+.quick-nav-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--color-text);
+  font-weight: 500;
+  font-size: 12px;
+  position: relative;
+  min-width: 60px;
+  min-height: 60px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.quick-nav-item:hover {
+  background: rgba(34, 211, 107, 0.1);
+  border-color: rgba(34, 211, 107, 0.2);
+  transform: translateY(-1px);
+}
+
+.quick-nav-item.active {
+  background: linear-gradient(135deg, rgba(34, 211, 107, 0.15), rgba(74, 222, 128, 0.08));
+  color: #22d36b;
+  border-color: rgba(34, 211, 107, 0.3);
+  box-shadow: 0 2px 8px rgba(34, 211, 107, 0.2);
+}
+
+.quick-nav-item .el-icon {
+  font-size: 16px;
+  transition: transform 0.3s ease;
+}
+
+.quick-nav-item:hover .el-icon {
+  transform: scale(1.1);
+}
+
+.quick-nav-item span {
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 移动端用户菜单按钮 */
+.mobile-user-menu {
+  display: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 40px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-user-menu:hover {
   background: rgba(255, 255, 255, 0.8);
   border-color: rgba(34, 211, 107, 0.2);
   transform: translateY(-1px);
 }
 
-.mobile-menu-toggle:active {
+.mobile-user-menu:active {
   transform: translateY(0);
 }
 
@@ -463,6 +552,7 @@ onUnmounted(() => {
 .mobile-nav-item {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
   padding: 14px 16px;
   cursor: pointer;
@@ -472,6 +562,7 @@ onUnmounted(() => {
   font-weight: 500;
   font-size: 16px;
   margin-bottom: 4px;
+  min-height: 48px;
 }
 
 .mobile-nav-item:hover {
@@ -498,6 +589,52 @@ onUnmounted(() => {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(34, 211, 107, 0.2), transparent);
   margin: 16px 0;
+}
+
+/* 移动端用户信息 */
+.mobile-user-info {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(34, 211, 107, 0.1), rgba(74, 222, 128, 0.05));
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(34, 211, 107, 0.2);
+  min-height: 60px;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.user-status {
+  font-size: 12px;
+  color: #22d36b;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* 退出登录项 */
+.logout-item {
+  color: #ff4757;
+}
+
+.logout-item .el-icon {
+  color: #ff4757;
+}
+
+.logout-item:hover {
+  background: rgba(255, 71, 87, 0.1);
 }
 
 @keyframes slideDown {
@@ -550,13 +687,12 @@ onUnmounted(() => {
     display: none;
   }
   
-  .mobile-menu-toggle {
+  .mobile-quick-nav {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    min-width: 40px;
-    min-height: 40px;
+  }
+  
+  .mobile-user-menu {
+    display: flex;
   }
 }
 
@@ -574,10 +710,30 @@ onUnmounted(() => {
     padding: 4px 8px;
   }
   
-  .mobile-menu-toggle {
-    padding: 6px;
-    min-width: 36px;
-    min-height: 36px;
+  .mobile-quick-nav {
+    margin: 0 6px;
+    gap: 4px;
+  }
+  
+  .quick-nav-item {
+    padding: 4px 6px;
+    min-width: 44px;
+    min-height: 44px;
+    gap: 4px;
+  }
+  
+  .quick-nav-item .el-icon {
+    font-size: 14px;
+  }
+  
+  .quick-nav-item span {
+    font-size: 10px;
+  }
+  
+  .mobile-user-menu {
+    padding: 4px;
+    min-width: 32px;
+    min-height: 32px;
   }
   
   .mobile-menu-content {
@@ -623,12 +779,41 @@ onUnmounted(() => {
     color: #e5e5e5;
   }
   
+  .mobile-quick-nav .quick-nav-item {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e5e5e5;
+  }
+  
+  .mobile-quick-nav .quick-nav-item:hover {
+    background: rgba(34, 211, 107, 0.15);
+  }
+  
+  .mobile-user-menu {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e5e5e5;
+  }
+  
+  .mobile-user-menu:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  
   .mobile-menu {
     background: rgba(30, 30, 30, 0.95);
     border-top-color: rgba(255, 255, 255, 0.1);
   }
   
   .mobile-nav-item {
+    color: #e5e5e5;
+  }
+  
+  .mobile-user-info {
+    background: linear-gradient(135deg, rgba(34, 211, 107, 0.15), rgba(74, 222, 128, 0.08));
+    border-color: rgba(34, 211, 107, 0.3);
+  }
+  
+  .user-name {
     color: #e5e5e5;
   }
 }

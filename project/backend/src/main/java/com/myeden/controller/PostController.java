@@ -133,8 +133,12 @@ public class PostController {
         try {
             logger.info("获取动态详情，动态ID: {}", postId);
             
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
             // 获取动态详情
-            PostService.PostDetail result = postService.getPostDetail(postId);
+            PostService.PostDetail result = postService.getPostDetail(postId, currentUserId);
             
             logger.info("获取动态详情成功");
             

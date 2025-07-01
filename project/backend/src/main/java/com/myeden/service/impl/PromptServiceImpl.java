@@ -114,6 +114,9 @@ public class PromptServiceImpl implements PromptService {
         // 添加动态信息
         prompt.append(String.format("\n\n## 你看到的动态内容：%s", post.getContent()));
         prompt.append(String.format("\n作者信息：%s", getAuthorInfo(post)));
+        if (post.getImages() != null && !post.getImages().isEmpty()) {
+            prompt.append(String.format("\n动态图片：%s张", post.getImages().size()));
+        }
         
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
@@ -219,6 +222,15 @@ public class PromptServiceImpl implements PromptService {
 
         // 移除多余的换行和空格
         processedContent = processedContent.replaceAll("\\n+", "\n").replaceAll(" +", " ");
+        if (processedContent.startsWith("“") && processedContent.endsWith("”")) {
+            processedContent = processedContent.substring(1, processedContent.length() - 1);
+        }
+        if (processedContent.startsWith("\"") && processedContent.endsWith("\"")) {
+            processedContent = processedContent.substring(1, processedContent.length() - 1);
+        }
+        if (processedContent.startsWith("'") && processedContent.endsWith("'")) {
+            processedContent = processedContent.substring(1, processedContent.length() - 1);
+        }
         if (processedContent.startsWith("<think>\n</think>\n")) {
             processedContent = processedContent.replaceAll("<think>\n</think>\n", "");
         }
@@ -337,6 +349,7 @@ public class PromptServiceImpl implements PromptService {
         info.append(String.format("\n- 所在地：%s", robot.getLocation() != null ? robot.getLocation() : "未知"));
         info.append(String.format("\n- 学历：%s", robot.getEducation() != null ? robot.getEducation() : "未知"));
         info.append(String.format("\n- 感情状态：%s", getRelationshipText(robot.getRelationship())));
+        info.append(String.format("\n- 家庭背景：%s", robot.getFamily() != null ? robot.getFamily() : "未知"));
         
         return info.toString();
     }
@@ -774,6 +787,12 @@ public class PromptServiceImpl implements PromptService {
             background.append(String.format("\n### 背景信息：%s", String.join("、", backgroundInfo)));
         }
         
+        // 家庭背景 - 选择性获取
+        List<String> familyInfo = getRobotValue(robot, "family", 1, 0.3);
+        if (!familyInfo.isEmpty()) {
+            background.append(String.format("\n### 家庭背景：%s", String.join("、", familyInfo)));
+        }
+        
         return background.toString();
     }
     
@@ -787,7 +806,7 @@ public class PromptServiceImpl implements PromptService {
         info.append("\n### 个人档案：");
         
         // 基本信息 - 选择性显示
-        String[] basicFields = {"gender", "age", "mbti", "bloodType", "zodiac", "occupation", "location", "education", "relationship"};
+        String[] basicFields = {"gender", "age", "mbti", "bloodType", "zodiac", "occupation", "location", "education", "relationship", "family"};
         for (String field : basicFields) {
             List<String> values = getRobotValue(robot, "robot." + field, 1, 0.3);
             if (!values.isEmpty()) {
@@ -814,6 +833,7 @@ public class PromptServiceImpl implements PromptService {
             case "location": return "所在地";
             case "education": return "学历";
             case "relationship": return "感情状态";
+            case "family": return "家庭背景";
             default: return field;
         }
     }

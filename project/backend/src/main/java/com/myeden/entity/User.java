@@ -1,5 +1,6 @@
 package com.myeden.entity;
 
+import com.myeden.constant.UserRole;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -111,9 +112,11 @@ public class User {
     private List<String> dislikes = new ArrayList<>();
     
     /**
-     * 隐私设置
+     * 用户角色
+     * 可选值：user（普通用户）、moderator（版主）、admin（管理员）、super_admin（超级管理员）
+     * 默认为user
      */
-    private UserPrivacySettings privacySettings = new UserPrivacySettings();
+    private String role = UserRole.USER;
     
     /**
      * 是否首次登录
@@ -134,6 +137,7 @@ public class User {
     public User() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        this.role = UserRole.USER; // 确保角色字段被初始化
     }
     
     public User(String userId, String phone, String password) {
@@ -280,12 +284,9 @@ public class User {
         this.dislikes = dislikes;
     }
     
-    public UserPrivacySettings getPrivacySettings() {
-        return privacySettings;
-    }
-    
-    public void setPrivacySettings(UserPrivacySettings privacySettings) {
-        this.privacySettings = privacySettings;
+    public String getRole() {
+        // 如果角色为空，返回默认用户角色
+        return role != null ? role : UserRole.USER;
     }
     
     public Boolean getIsFirstLogin() {
@@ -388,6 +389,12 @@ public class User {
         if (user.getDislikes() != null && !user.getDislikes().isEmpty()) {
             this.dislikes = user.getDislikes();
         }
+        if (user.getRole() != null) {
+            this.role = user.getRole();
+        } else if (this.role == null) {
+            // 如果当前用户角色为空，设置为默认用户角色
+            this.role = UserRole.USER;
+        }
         if (user.getIsFirstLogin() != null) {
             this.isFirstLogin = user.getIsFirstLogin();
         }
@@ -402,6 +409,133 @@ public class User {
         this.updatedAt = LocalDateTime.now();
     }
     
+    /**
+     * 检查是否为管理员
+     */
+    public boolean isAdmin() {
+        return UserRole.ADMIN.equals(this.getRole());
+    }
+    
+    /**
+     * 检查是否为版主
+     */
+    public boolean isModerator() {
+        return UserRole.MODERATOR.equals(this.getRole());
+    }
+    
+    /**
+     * 检查是否为普通用户
+     */
+    public boolean isUser() {
+        return UserRole.USER.equals(this.getRole());
+    }
+    
+    /**
+     * 检查是否为超级管理员
+     */
+    public boolean isSuperAdmin() {
+        return UserRole.SUPER_ADMIN.equals(this.getRole());
+    }
+    
+    /**
+     * 检查是否有管理权限（管理员、版主或超级管理员）
+     */
+    public boolean hasAdminPermission() {
+        return isAdmin() || isModerator() || isSuperAdmin();
+    }
+    
+    /**
+     * 检查是否有超级管理员权限
+     */
+    public boolean hasSuperAdminPermission() {
+        return isSuperAdmin();
+    }
+    
+    /**
+     * 升级为超级管理员
+     */
+    public void promoteToSuperAdmin() {
+        this.role = UserRole.SUPER_ADMIN;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * 升级为管理员
+     */
+    public void promoteToAdmin() {
+        this.role = UserRole.ADMIN;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * 升级为版主
+     */
+    public void promoteToModerator() {
+        this.role = UserRole.MODERATOR;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * 降级为普通用户
+     */
+    public void demoteToUser() {
+        this.role = UserRole.USER;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * 设置角色（带验证）
+     */
+    public void setRole(String role) {
+        if (UserRole.isValidRole(role)) {
+            this.role = role;
+            this.updatedAt = LocalDateTime.now();
+        } else {
+            throw new IllegalArgumentException("无效的角色: " + role);
+        }
+    }
+    
+    /**
+     * 获取角色显示名称
+     */
+    public String getRoleDisplayName() {
+        return UserRole.getRoleDisplayName(this.getRole());
+    }
+    
+    /**
+     * 获取角色描述
+     */
+    public String getRoleDescription() {
+        return UserRole.getRoleDescription(this.getRole());
+    }
+    
+    /**
+     * 检查是否有足够权限执行某个操作
+     */
+    public boolean hasPermission(String requiredRole) {
+        return UserRole.hasPermission(this.getRole(), requiredRole);
+    }
+    
+    /**
+     * 确保角色字段有效，如果为空则设置为默认用户角色
+     */
+    public void ensureValidRole() {
+        if (this.role == null || !UserRole.isValidRole(this.role)) {
+            this.role = UserRole.USER;
+            this.updatedAt = LocalDateTime.now();
+        }
+    }
+    
+    /**
+     * 初始化用户角色（用于从数据库加载时的数据修复）
+     */
+    public void initializeRole() {
+        if (this.role == null) {
+            this.role = UserRole.USER;
+            this.updatedAt = LocalDateTime.now();
+        }
+    }
+    
     @Override
     public String toString() {
         return "User{" +
@@ -410,6 +544,7 @@ public class User {
                 ", phone='" + phone + '\'' +
                 ", nickname='" + nickname + '\'' +
                 ", gender='" + gender + '\'' +
+                ", role='" + getRole() + '\'' +
                 ", isFirstLogin=" + isFirstLogin +
                 ", createdAt=" + createdAt +
                 '}';

@@ -25,7 +25,7 @@ export const useConfigStore = defineStore('config', () => {
     
     // 主题设置
     theme: {
-      mode: 'light', // light, dark, auto
+      mode: 'dark', // light, dark, auto
     }
   })
 

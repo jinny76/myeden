@@ -16,24 +16,36 @@
           <div class="hero-text">
             <h1 class="hero-title">
               <span class="title-main">我的伊甸园</span>
-              <span class="title-subtitle">虚拟社交世界</span>
+              <span class="title-subtitle">一个人的心灵港湾</span>
             </h1>
             <p class="hero-description">
-              欢迎来到这个充满爱与温暖的虚拟社交世界，在这里你可以与智能天使们进行自然的互动，
-              分享生活点滴，体验真实的社交氛围。
+              如果有一天，你厌倦了尔虞我诈的现实世界，无法得到幸福，
+              那么来这里，这里没有压力，没有焦虑，只有温暖和爱。
             </p>
             <div class="hero-stats">
-              <div class="stat-item">
-                <span class="stat-number">{{ stats.onlineUsers }}</span>
-                <span class="stat-label">天使总数</span>
+              <div class="stat-item" v-if="isLoggedIn && userPersonalStats">
+                <span class="stat-number">{{ userPersonalStats.registrationDays }}</span>
+                <span class="stat-label">注册天数</span>
               </div>
-              <div class="stat-item">
+              <div class="stat-item" v-if="isLoggedIn && userPersonalStats">
+                <span class="stat-number">{{ userPersonalStats.totalPosts }}</span>
+                <span class="stat-label">发帖数</span>
+              </div>
+              <div class="stat-item" v-if="isLoggedIn && userPersonalStats">
+                <span class="stat-number">{{ userPersonalStats.totalComments }}</span>
+                <span class="stat-label">评论数</span>
+              </div>
+              <div class="stat-item" v-if="!isLoggedIn">
+                <span class="stat-number">{{ stats.totalUsers }}</span>
+                <span class="stat-label">注册用户</span>
+              </div>
+              <div class="stat-item" v-if="!isLoggedIn">
+                <span class="stat-number">{{ stats.todayRegisteredUsers }}</span>
+                <span class="stat-label">今日新增</span>
+              </div>
+              <div class="stat-item" v-if="!isLoggedIn">
                 <span class="stat-number">{{ stats.totalPosts }}</span>
                 <span class="stat-label">动态总数</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-number">{{ stats.activeRobots }}</span>
-                <span class="stat-label">活跃天使</span>
               </div>
             </div>
           </div>
@@ -229,6 +241,16 @@
           </div>
         </div>
       </div>
+
+      <!-- 页脚 -->
+      <footer class="site-footer">
+        <div class="footer-content">
+          <div class="footer-info">
+            <p class="copyright">©2025 Kingfisher Technology Co., Ltd.</p>
+            <p class="icp">京ICP备14027376号-2</p>
+          </div>
+        </div>
+      </footer>
     </div>
   </div>
 </template>
@@ -238,7 +260,6 @@ import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
-import { useWorldStore } from '@/stores/world'
 import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
 import { 
@@ -252,19 +273,19 @@ import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/u
 const router = useRouter()
 const userStore = useUserStore()
 const momentsStore = useMomentsStore()
-const worldStore = useWorldStore()
 const activeMenu = computed(() => router.currentRoute.value.path)
 const recentPosts = ref([])
 const isMobileMenuOpen = ref(false)
+const userPersonalStats = ref(null)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
 
-// 统计数据 - 使用worldStore的真实数据
+// 统计数据 - 使用用户统计服务的真实数据
 const stats = computed(() => ({
-  onlineUsers: worldStore.worldStatistics?.activeRobots || 0,
-  totalPosts: worldStore.worldStatistics?.totalPosts || 0,
-  activeRobots: worldStore.totalRobots || 0
+  totalUsers: userStore.userStatistics?.totalUsers || 0,
+  todayRegisteredUsers: userStore.userStatistics?.todayRegisteredUsers || 0,
+  totalPosts: userStore.userStatistics?.totalPosts || 0
 }))
 
 // 方法
@@ -407,22 +428,35 @@ const handleAuthorAvatarError = (event, post) => {
 onMounted(() => {
   if (isLoggedIn.value) {
     loadRecentPosts()
-    // 初始化世界数据以获取统计数据
-    initWorldData()
+    // 初始化用户统计数据
+    initUserStatistics()
+    loadUserPersonalStatistics()
   }
   document.addEventListener('click', handleClickOutside)
 })
 
-// 初始化世界数据
-const initWorldData = async () => {
+// 初始化用户统计数据
+const initUserStatistics = async () => {
   try {
-    if (!worldStore.isWorldLoaded) {
-      await worldStore.initWorld()
-    }
+    await userStore.fetchUserStatistics()
   } catch (error) {
-    console.error('初始化世界数据失败:', error)
+    console.error('初始化用户统计数据失败:', error)
   }
 }
+
+// 获取用户个人统计信息
+const loadUserPersonalStatistics = async () => {
+  try {
+    const response = await userStore.fetchCurrentUserPersonalStatistics()
+    if (response.code === 200 && response.data) {
+      userPersonalStats.value = response.data
+    }
+  } catch (error) {
+    console.error('获取用户个人统计信息失败:', error)
+  }
+}
+
+
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
@@ -439,10 +473,12 @@ watch(isLoggedIn, (newValue, oldValue) => {
   if (newValue && !oldValue) {
     message.success(`欢迎回来，${userStore.userInfo?.nickname || '用户'}！`)
     loadRecentPosts()
-    initWorldData()
+    initUserStatistics()
+    loadUserPersonalStatistics()
   } else if (newValue) {
     loadRecentPosts()
-    initWorldData()
+    initUserStatistics()
+    loadUserPersonalStatistics()
   }
 })
 </script>
@@ -1018,8 +1054,45 @@ watch(isLoggedIn, (newValue, oldValue) => {
   transition: opacity 0.3s ease;
 }
 
-.post-card:hover .post-card-bg {
-  opacity: 1;
+  .post-card:hover .post-card-bg {
+    opacity: 1;
+  }
+
+/* 页脚样式 */
+.site-footer {
+  margin-top: 80px;
+  padding: 40px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(10px);
+}
+
+.footer-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.footer-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.copyright {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  opacity: 0.7;
+  margin: 0;
+}
+
+.icp {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  opacity: 0.6;
+  margin: 0;
 }
 
 /* 响应式设计 */
@@ -1055,6 +1128,16 @@ watch(isLoggedIn, (newValue, oldValue) => {
     margin-bottom: 60px;
   }
   
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    text-align: center;
+  }
+  
+  .hero-text {
+    max-width: 100%;
+  }
+  
   .title-main {
     font-size: 2.5rem;
   }
@@ -1082,6 +1165,11 @@ watch(isLoggedIn, (newValue, oldValue) => {
   
   .stat-label {
     font-size: 0.8rem;
+  }
+  
+  /* 移动端隐藏漂浮图标 */
+  .hero-visual {
+    display: none;
   }
   
   .section-header h2 {
@@ -1187,6 +1275,16 @@ watch(isLoggedIn, (newValue, oldValue) => {
     margin-bottom: 40px;
   }
   
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    text-align: center;
+  }
+  
+  .hero-text {
+    max-width: 100%;
+  }
+  
   .title-main {
     font-size: 2rem;
   }
@@ -1218,12 +1316,13 @@ watch(isLoggedIn, (newValue, oldValue) => {
     font-size: 0.75rem;
   }
   
-  .section-header h2 {
-    font-size: 1.8rem;
+  /* 确保小屏幕也隐藏漂浮图标 */
+  .hero-visual {
+    display: none;
   }
   
-  .section-header p {
-    font-size: 1rem;
+  .section-header h2 {
+    font-size: 1.8rem;
   }
   
   .feature-card {
@@ -1280,6 +1379,24 @@ watch(isLoggedIn, (newValue, oldValue) => {
   
   .post-stats {
     gap: 12px;
+  }
+  
+  /* 移动端页脚样式 */
+  .site-footer {
+    margin-top: 60px;
+    padding: 30px 0;
+  }
+  
+  .footer-content {
+    padding: 0 16px;
+  }
+  
+  .copyright {
+    font-size: 0.85rem;
+  }
+  
+  .icp {
+    font-size: 0.8rem;
   }
 }
 </style> 

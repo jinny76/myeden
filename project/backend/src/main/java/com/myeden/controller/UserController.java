@@ -348,4 +348,61 @@ public class UserController {
             return ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()));
         }
     }
+    
+    /**
+     * 获取用户个人统计信息
+     * GET /api/v1/users/{userId}/statistics
+     * 
+     * 功能说明：
+     * - 返回指定用户的个人统计信息
+     * - 包括注册天数、发帖数、评论数、获得的点赞数等
+     * - 支持获取自己的统计信息或其他用户的统计信息
+     */
+    @GetMapping("/{userId}/statistics")
+    public ResponseEntity<EventResponse> getUserPersonalStatistics(@PathVariable String userId) {
+        try {
+            UserService.UserPersonalStatistics statistics = userService.getUserPersonalStatistics(userId);
+            
+            return ResponseEntity.ok(EventResponse.success(statistics, "获取用户个人统计信息成功"));
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()));
+        }
+    }
+    
+    /**
+     * 获取当前用户个人统计信息
+     * GET /api/v1/users/me/statistics
+     * 
+     * 功能说明：
+     * - 返回当前登录用户的个人统计信息
+     * - 需要JWT认证
+     * - 包括注册天数、发帖数、评论数、获得的点赞数等
+     */
+    @GetMapping("/me/statistics")
+    public ResponseEntity<EventResponse> getCurrentUserPersonalStatistics(HttpServletRequest request) {
+        try {
+            // 从请求头获取token进行身份验证
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body(EventResponse.error(401, "未提供有效的认证token"));
+            }
+            
+            String token = authHeader.substring(7);
+            
+            // 从token中提取当前用户ID
+            String currentUserId = jwtService.extractUserId(token);
+            if (currentUserId == null) {
+                return ResponseEntity.status(401).body(EventResponse.error(401, "Token无效"));
+            }
+            
+            // 获取当前用户的个人统计信息
+            UserService.UserPersonalStatistics statistics = userService.getUserPersonalStatistics(currentUserId);
+            
+            return ResponseEntity.ok(EventResponse.success(statistics, "获取当前用户个人统计信息成功"));
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()));
+        }
+    }
 } 

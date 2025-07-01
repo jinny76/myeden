@@ -12,6 +12,8 @@ import com.myeden.service.PostService;
 import com.myeden.service.FileService;
 import com.myeden.service.WebSocketService;
 import com.myeden.service.RobotBehaviorService;
+import com.myeden.service.CommentService;
+import com.myeden.service.CommentService.CommentSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +76,9 @@ public class PostServiceImpl implements PostService {
     
     @Autowired
     private RobotBehaviorService robotBehaviorService;
+    
+    @Autowired
+    private CommentService commentService;
     
     @Override
     public PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images) {
@@ -217,7 +222,7 @@ public class PostServiceImpl implements PostService {
     }
     
     @Override
-    public PostDetail getPostDetail(String postId) {
+    public PostDetail getPostDetail(String postId, String currentUserId) {
         try {
             logger.info("获取动态详情，动态ID: {}", postId);
             
@@ -249,14 +254,64 @@ public class PostServiceImpl implements PostService {
                 }
             }
             
-            // 获取点赞用户列表和当前用户是否点赞状态
+            // 获取点赞详情列表和当前用户是否点赞状态
             List<PostLike> postLikes = postLikeRepository.findByPostId(postId);
-            List<String> likedUsers = postLikes.stream()
-                .map(PostLike::getUserId)
-                .collect(Collectors.toList());
-            boolean isLiked = false; // 这里需要传入当前用户ID来判断，暂时设为false
+            List<LikeDetail> likes = new ArrayList<>();
+            boolean isLiked = false;
             
-            logger.info("获取动态详情成功");
+            // 判断当前用户是否已点赞
+            if (currentUserId != null) {
+                Optional<PostLike> userLike = postLikeRepository.findByPostIdAndUserId(postId, currentUserId);
+                isLiked = userLike.isPresent();
+            }
+            
+            for (PostLike postLike : postLikes) {
+                String userId = postLike.getUserId();
+                String userName = "";
+                String userAvatar = "";
+                String userType = "user";
+                
+                // 查询用户信息
+                Optional<User> userOpt = userRepository.findByUserId(userId);
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    userName = user.getNickname();
+                    userAvatar = user.getAvatar();
+                    userType = "user";
+                } else {
+                    // 如果不是用户，可能是机器人
+                    Optional<Robot> robotOpt = robotRepository.findByRobotId(userId);
+                    if (robotOpt.isPresent()) {
+                        Robot robot = robotOpt.get();
+                        userName = robot.getName();
+                        userAvatar = robot.getAvatar();
+                        userType = "robot";
+                    } else {
+                        // 如果用户和机器人都找不到，使用默认信息
+                        userName = "未知用户";
+                        userAvatar = "";
+                        userType = "unknown";
+                    }
+                }
+                
+                LikeDetail likeDetail = new LikeDetail(
+                    userId,
+                    userName,
+                    userAvatar,
+                    userType,
+                    postLike.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                );
+                
+                likes.add(likeDetail);
+            }
+            
+            // 按点赞时间倒序排列
+            likes.sort((a, b) -> b.getLikedAt().compareTo(a.getLikedAt()));
+            
+            // 加载评论和回复列表
+            List<CommentSummary> comments = loadCommentsWithReplies(postId);
+            
+            logger.info("获取动态详情成功，评论数量: {}", comments.size());
             
             return new PostDetail(
                 post.getPostId(),
@@ -269,7 +324,8 @@ public class PostServiceImpl implements PostService {
                 post.getLikeCount(),
                 post.getCommentCount(),
                 isLiked,
-                likedUsers,
+                likes,
+                comments,
                 post.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
                 post.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
             );
@@ -543,6 +599,7 @@ public class PostServiceImpl implements PostService {
     /**
      * 异步触发所有在线机器人对新动态进行评论
      * 使用Spring的@Async注解，由AI任务执行器处理
+     * 移除延时逻辑，直接执行机器人评论
      * 
      * @param postId 动态ID
      * @param postContent 动态内容
@@ -551,6 +608,8 @@ public class PostServiceImpl implements PostService {
     public void triggerRobotCommentsAsync(String postId, String postContent) {
         try {
             logger.info("开始触发AI机器人评论，动态ID: {}", postId);
+            
+            // 直接执行机器人评论，不添加延时
             
             // 获取所有活跃的机器人
             List<Robot> activeRobots = robotRepository.findByIsActiveTrue();
@@ -703,5 +762,58 @@ public class PostServiceImpl implements PostService {
     private RobotDailyStats getDailyStats(String robotId) {
         // 简化实现，实际项目中应该使用缓存或数据库
         return new RobotDailyStats();
+    }
+    
+    /**
+     * 加载动态的评论和回复列表
+     * 一次性加载所有评论和回复，避免前端多次调用
+     * 
+     * @param postId 动态ID
+     * @return 评论和回复列表
+     */
+    private List<CommentSummary> loadCommentsWithReplies(String postId) {
+        try {
+            logger.debug("开始加载动态评论和回复，动态ID: {}", postId);
+            
+            // 获取动态的所有评论（一级评论）
+            CommentService.CommentListResult commentResult = commentService.getCommentList(postId, 1, 1000); // 获取所有评论
+            List<CommentSummary> allComments = new ArrayList<>();
+            
+            logger.debug("获取到一级评论数量: {}", commentResult.getComments().size());
+            
+            for (CommentSummary comment : commentResult.getComments()) {
+                // 添加一级评论
+                allComments.add(comment);
+                logger.debug("添加一级评论: {}, 回复数: {}", comment.getCommentId(), comment.getReplyCount());
+                
+                // 如果评论有回复，加载回复列表
+                if (comment.getReplyCount() > 0) {
+                    try {
+                        CommentService.CommentListResult replyResult = commentService.getReplyList(comment.getCommentId(), 1, 1000); // 获取所有回复
+                        logger.debug("评论 {} 的回复数量: {}", comment.getCommentId(), replyResult.getComments().size());
+                        allComments.addAll(replyResult.getComments());
+                        
+                        // 调试回复信息
+                        for (CommentSummary reply : replyResult.getComments()) {
+                            logger.debug("回复: commentId={}, parentId={}, content={}", 
+                                       reply.getCommentId(), reply.getParentId(), reply.getContent());
+                        }
+                    } catch (Exception e) {
+                        logger.warn("加载评论回复失败，评论ID: {}", comment.getCommentId(), e);
+                    }
+                }
+            }
+            
+            // 按创建时间排序
+            allComments.sort((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()));
+            
+            logger.debug("动态评论和回复加载完成，动态ID: {}, 总数: {}", postId, allComments.size());
+            
+            return allComments;
+            
+        } catch (Exception e) {
+            logger.error("加载动态评论和回复失败，动态ID: {}", postId, e);
+            return new ArrayList<>();
+        }
     }
 } 
