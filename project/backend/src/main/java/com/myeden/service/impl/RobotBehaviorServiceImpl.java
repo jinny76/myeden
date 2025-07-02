@@ -470,8 +470,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             logger.debug("机器人 {} 活跃状态检查 - 当前时间: {}, 活跃时间段: {}, 结果: {}", 
                         robot.getName(), 
                         currentTime.format(DateTimeFormatter.ofPattern("HH:mm")),
-                        robot.getActiveTimeRanges().stream()
-                            .map(range -> range.getStartTime() + "-" + range.getEndTime())
+                        robot.getActiveHours().stream()
+                            .map(range -> range.getStart() + "-" + range.getEnd())
                             .collect(java.util.stream.Collectors.joining(", ")),
                         isActive ? "在线" : "离线");
         }

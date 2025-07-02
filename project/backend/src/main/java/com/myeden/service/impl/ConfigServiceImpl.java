@@ -363,7 +363,7 @@ public class ConfigServiceImpl implements ConfigService {
         robot.setName(robotConfig.getName());
         robot.setAvatar(robotConfig.getAvatar());
         robot.setPersonality(robotConfig.getPersonality());
-        robot.setIntroduction(robotConfig.getDescription());
+        robot.setDescription(robotConfig.getDescription());
         
         // 新增的个人信息字段
         robot.setGender(robotConfig.getGender());
@@ -424,12 +424,12 @@ public class ConfigServiceImpl implements ConfigService {
         
         // 昵称作为简介的一部分
         if (StringUtils.hasText(robotConfig.getNickname())) {
-            robot.setIntroduction(robotConfig.getNickname() + " - " + robot.getIntroduction());
+            robot.setDescription(robotConfig.getNickname() + " - " + robot.getDescription());
         }
         
         // 背景信息
         if (StringUtils.hasText(robotConfig.getBackground())) {
-            robot.setIntroduction(robot.getIntroduction() + "\n\n" + robotConfig.getBackground());
+            robot.setDescription(robot.getDescription() + "\n\n" + robotConfig.getBackground());
         }
         
         // 行为模式转换（保持原有逻辑）
@@ -449,7 +449,7 @@ public class ConfigServiceImpl implements ConfigService {
         if (robotConfig.getActiveHours() != null) {
             for (RobotConfig.ActiveHours timeRange : robotConfig.getActiveHours()) {
                 if (StringUtils.hasText(timeRange.getStart()) && StringUtils.hasText(timeRange.getEnd())) {
-                    robot.addActiveTimeRange(timeRange.getStart(), timeRange.getEnd());
+                    robot.addActiveHour(timeRange.getStart(), timeRange.getEnd());
                 }
             }
         }
@@ -501,7 +501,7 @@ public class ConfigServiceImpl implements ConfigService {
         existing.setName(newConfig.getName());
         existing.setAvatar(newConfig.getAvatar());
         existing.setPersonality(newConfig.getPersonality());
-        existing.setIntroduction(newConfig.getIntroduction());
+        existing.setDescription(newConfig.getDescription());
         
         // 更新新增的个人信息字段
         existing.setGender(newConfig.getGender());
@@ -551,7 +551,7 @@ public class ConfigServiceImpl implements ConfigService {
         existing.setShareFrequency(newConfig.getShareFrequency());
         
         // 更新活跃时间段
-        existing.setActiveTimeRanges(newConfig.getActiveTimeRanges());
+        existing.setActiveHours(newConfig.getActiveHours());
         
         // 更新时间戳
         existing.setUpdatedAt(LocalDateTime.now());

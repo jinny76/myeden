@@ -527,6 +527,10 @@ public class UserServiceImpl implements UserService {
                 logger.warn("没有可用的机器人进行关联");
                 return;
             }
+            // 过滤掉已删除的机器人
+            robots = robots.stream()
+                    .filter(r -> r.getIsDeleted() == null || !r.getIsDeleted())
+                    .collect(java.util.stream.Collectors.toList());
             
             // 取前5个机器人
             int maxRobots = Math.min(5, robots.size());

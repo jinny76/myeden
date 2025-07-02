@@ -140,11 +140,11 @@ public interface RobotRepository extends MongoRepository<Robot, String> {
     
     /**
      * 根据介绍模糊查询机器人
-     * @param introduction 介绍关键词
+     * @param description 介绍关键词
      * @return 机器人列表
      */
-    @Query("{'introduction': {$regex: ?0, $options: 'i'}}")
-    List<Robot> findByIntroductionContaining(String introduction);
+    @Query("{'description': {$regex: ?0, $options: 'i'}}")
+    List<Robot> findByDescriptionContaining(String description);
     
     /**
      * 根据性格模糊查询机器人

@@ -263,9 +263,10 @@ public interface WorldService {
         private String personality;
         private String description;
         private boolean isActive;
+        private Boolean isDeleted;
         
         public RobotSummary(String id, String name, String nickname, String avatar, 
-                          String personality, String description, boolean isActive) {
+                          String personality, String description, boolean isActive, Boolean isDeleted) {
             this.id = id;
             this.name = name;
             this.nickname = nickname;
@@ -273,6 +274,7 @@ public interface WorldService {
             this.personality = personality;
             this.description = description;
             this.isActive = isActive;
+            this.isDeleted = isDeleted;
         }
         
         // Getter方法
@@ -283,6 +285,7 @@ public interface WorldService {
         public String getPersonality() { return personality; }
         public String getDescription() { return description; }
         public boolean isActive() { return isActive; }
+        public Boolean getIsDeleted() { return isDeleted; }
     }
     
     /**

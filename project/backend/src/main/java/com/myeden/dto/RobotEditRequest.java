@@ -33,7 +33,7 @@ public class RobotEditRequest {
     private Integer age;
     
     @Schema(description = "一句话简介", example = "一个温柔细心的咖啡师")
-    private String introduction;
+    private String description;
     
     @Schema(description = "性格设定", example = "温柔细心，喜欢照顾别人")
     private String personality;
@@ -87,7 +87,7 @@ public class RobotEditRequest {
     private Integer shareFrequency;
     
     @Schema(description = "活跃时间段列表")
-    private List<Robot.ActiveTimeRange> activeTimeRanges;
+    private List<Robot.ActiveHours> activeHours;
     
     @Schema(description = "个人主题列表")
     private List<Robot.Topic> topics;
@@ -107,10 +107,15 @@ public class RobotEditRequest {
     
     public Integer getAge() { return age; }
     public void setAge(Integer age) { this.age = age; }
-    
-    public String getIntroduction() { return introduction; }
-    public void setIntroduction(String introduction) { this.introduction = introduction; }
-    
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     public String getPersonality() { return personality; }
     public void setPersonality(String personality) { this.personality = personality; }
     
@@ -162,8 +167,8 @@ public class RobotEditRequest {
     public Integer getShareFrequency() { return shareFrequency; }
     public void setShareFrequency(Integer shareFrequency) { this.shareFrequency = shareFrequency; }
     
-    public List<Robot.ActiveTimeRange> getActiveTimeRanges() { return activeTimeRanges; }
-    public void setActiveTimeRanges(List<Robot.ActiveTimeRange> activeTimeRanges) { this.activeTimeRanges = activeTimeRanges; }
+    public List<Robot.ActiveHours> getActiveHours() { return activeHours; }
+    public void setActiveHours(List<Robot.ActiveHours> activeHours) { this.activeHours = activeHours; }
     
     public List<Robot.Topic> getTopics() { return topics; }
     public void setTopics(List<Robot.Topic> topics) { this.topics = topics; }
@@ -179,7 +184,7 @@ public class RobotEditRequest {
         robot.setAvatar(avatar);
         robot.setGender(gender);
         robot.setAge(age);
-        robot.setIntroduction(introduction);
+        robot.setDescription(description);
         robot.setPersonality(personality);
         robot.setMbti(mbti);
         robot.setBloodType(bloodType);
@@ -197,7 +202,7 @@ public class RobotEditRequest {
         robot.setReplySpeed(replySpeed);
         robot.setReplyFrequency(replyFrequency);
         robot.setShareFrequency(shareFrequency);
-        robot.setActiveTimeRanges(activeTimeRanges != null ? activeTimeRanges : new ArrayList<>());
+        robot.setActiveHours(activeHours != null ? activeHours : new ArrayList<>());
         robot.setTopics(topics != null ? topics : new ArrayList<>());
         robot.setIsActive(isActive);
         return robot;
@@ -211,7 +216,7 @@ public class RobotEditRequest {
         robot.setAvatar(avatar);
         robot.setGender(gender);
         robot.setAge(age);
-        robot.setIntroduction(introduction);
+        robot.setDescription(description);
         robot.setPersonality(personality);
         robot.setMbti(mbti);
         robot.setBloodType(bloodType);
@@ -229,7 +234,7 @@ public class RobotEditRequest {
         robot.setReplySpeed(replySpeed);
         robot.setReplyFrequency(replyFrequency);
         robot.setShareFrequency(shareFrequency);
-        robot.setActiveTimeRanges(activeTimeRanges != null ? activeTimeRanges : new ArrayList<>());
+        robot.setActiveHours(activeHours != null ? activeHours : new ArrayList<>());
         robot.setTopics(topics != null ? topics : new ArrayList<>());
         robot.setIsActive(isActive);
         robot.setUpdatedAt(java.time.LocalDateTime.now());

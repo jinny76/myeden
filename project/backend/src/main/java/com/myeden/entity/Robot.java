@@ -12,11 +12,8 @@ import java.util.ArrayList;
 /**
  * 机器人实体类
  * 
- * 功能说明：
- * - 存储AI机器人的基本信息和配置
- * - 管理机器人的行为模式和概率
- * - 记录机器人的活跃状态
- * - 支持机器人个性化设定
+ * 用于数据库存储和业务逻辑，结构与RobotConfig.RobotInfo完全一致。
+ * 支持机器人基础信息、性格、行为、活跃时间、主题等配置。
  * 
  * @author MyEden Team
  * @version 1.0.0
@@ -41,6 +38,11 @@ public class Robot {
     private String name;
     
     /**
+     * 机器人昵称
+     */
+    private String nickname;
+    
+    /**
      * 机器人头像
      */
     private String avatar;
@@ -58,7 +60,7 @@ public class Robot {
     /**
      * 一句话简介
      */
-    private String introduction;
+    private String description;
     
     /**
      * 性格设定
@@ -148,7 +150,7 @@ public class Robot {
     /**
      * 活跃时间段
      */
-    private List<ActiveTimeRange> activeTimeRanges = new ArrayList<>();
+    private List<ActiveHours> activeHours = new ArrayList<>();
     
     /**
      * 个人主题列表
@@ -183,32 +185,25 @@ public class Robot {
     private LocalDateTime updatedAt;
     
     // 内部类：活跃时间段
-    public static class ActiveTimeRange {
-        private String startTime; // 开始时间 HH:mm
-        private String endTime;   // 结束时间 HH:mm
+    public static class ActiveHours {
+        private String start;
+        private String end;
+        private double probability;
         
-        public ActiveTimeRange() {}
-        
-        public ActiveTimeRange(String startTime, String endTime) {
-            this.startTime = startTime;
-            this.endTime = endTime;
+        public ActiveHours() {}
+        public ActiveHours(String start, String end) {
+            this.start = start;
+            this.end = end;
         }
         
-        public String getStartTime() {
-            return startTime;
-        }
+        public String getStart() { return start; }
+        public void setStart(String start) { this.start = start; }
         
-        public void setStartTime(String startTime) {
-            this.startTime = startTime;
-        }
+        public String getEnd() { return end; }
+        public void setEnd(String end) { this.end = end; }
         
-        public String getEndTime() {
-            return endTime;
-        }
-        
-        public void setEndTime(String endTime) {
-            this.endTime = endTime;
-        }
+        public double getProbability() { return probability; }
+        public void setProbability(double probability) { this.probability = probability; }
     }
     
     // 内部类：说话风格
@@ -327,6 +322,14 @@ public class Robot {
         this.name = name;
     }
     
+    public String getNickname() {
+        return nickname;
+    }
+    
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+    
     public String getAvatar() {
         return avatar;
     }
@@ -351,12 +354,12 @@ public class Robot {
         this.age = age;
     }
     
-    public String getIntroduction() {
-        return introduction;
+    public String getDescription() {
+        return description;
     }
     
-    public void setIntroduction(String introduction) {
-        this.introduction = introduction;
+    public void setDescription(String description) {
+        this.description = description;
     }
     
     public String getPersonality() {
@@ -495,12 +498,12 @@ public class Robot {
         this.shareFrequency = shareFrequency;
     }
     
-    public List<ActiveTimeRange> getActiveTimeRanges() {
-        return activeTimeRanges;
+    public List<ActiveHours> getActiveHours() {
+        return activeHours;
     }
     
-    public void setActiveTimeRanges(List<ActiveTimeRange> activeTimeRanges) {
-        this.activeTimeRanges = activeTimeRanges != null ? activeTimeRanges : new ArrayList<>();
+    public void setActiveHours(List<ActiveHours> activeHours) {
+        this.activeHours = activeHours != null ? activeHours : new ArrayList<>();
     }
     
     public List<Topic> getTopics() {
@@ -554,8 +557,8 @@ public class Robot {
     /**
      * 添加活跃时间段
      */
-    public void addActiveTimeRange(String startTime, String endTime) {
-        this.activeTimeRanges.add(new ActiveTimeRange(startTime, endTime));
+    public void addActiveHour(String start, String end) {
+        this.activeHours.add(new ActiveHours(start, end));
     }
     
     /**
@@ -593,14 +596,14 @@ public class Robot {
      * 检查是否在活跃时间段
      */
     public boolean isInActiveTimeSlot() {
-        if (this.activeTimeRanges.isEmpty()) {
+        if (this.activeHours.isEmpty()) {
             return true; // 如果没有设置活跃时间，默认全天活跃
         }
         
         LocalTime currentTime = LocalTime.now();
         
-        for (ActiveTimeRange range : this.activeTimeRanges) {
-            if (isTimeInRange(currentTime, range.getStartTime(), range.getEndTime())) {
+        for (ActiveHours range : this.activeHours) {
+            if (isTimeInRange(currentTime, range.getStart(), range.getEnd())) {
                 return true;
             }
         }
@@ -641,7 +644,7 @@ public class Robot {
         this.avatar = robot.getAvatar();
         this.gender = robot.getGender();
         this.age = robot.getAge();
-        this.introduction = robot.getIntroduction();
+        this.description = robot.getDescription();
         this.personality = robot.getPersonality();
         this.occupation = robot.getOccupation();
         this.mbti = robot.getMbti();
@@ -658,7 +661,7 @@ public class Robot {
         this.replySpeed = robot.getReplySpeed();
         this.replyFrequency = robot.getReplyFrequency();
         this.shareFrequency = robot.getShareFrequency();
-        this.activeTimeRanges = robot.getActiveTimeRanges();
+        this.activeHours = robot.getActiveHours();
         this.topics = robot.getTopics();
         this.isActive = robot.getIsActive();
         this.updatedAt = LocalDateTime.now();

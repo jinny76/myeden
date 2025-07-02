@@ -79,6 +79,10 @@ public class RobotController {
     public ResponseEntity<EventResponse> getRobotList(@RequestParam(required = false) Boolean isActive) {
         try {
             List<WorldService.RobotSummary> robots = worldService.getRobotList();
+            // 过滤掉已删除的机器人
+            robots = robots.stream()
+                .filter(r -> r.getIsDeleted() == null || !r.getIsDeleted())
+                .collect(java.util.stream.Collectors.toList());
             return ResponseEntity.ok(EventResponse.success(robots, "获取机器人列表成功"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(EventResponse.error("获取机器人列表失败: " + e.getMessage()));
@@ -303,7 +307,7 @@ public class RobotController {
                 return ResponseEntity.status(401).body(EventResponse.error(401, "Token无效"));
             }
             
-            Robot robot = robotService.getRobotById(robotId);
+            Robot robot = robotService.getRobotByRobotId(robotId);
             if (robot == null) {
                 return ResponseEntity.status(404).body(EventResponse.error(404, "机器人不存在"));
             }
@@ -406,7 +410,7 @@ public class RobotController {
             }
             
             // 获取现有机器人
-            Robot existingRobot = robotService.getRobotById(robotId);
+            Robot existingRobot = robotService.getRobotByRobotId(robotId);
             if (existingRobot == null) {
                 return ResponseEntity.status(404).body(EventResponse.error(404, "机器人不存在"));
             }
@@ -458,7 +462,7 @@ public class RobotController {
             }
             
             // 获取机器人
-            Robot robot = robotService.getRobotById(robotId);
+            Robot robot = robotService.getRobotByRobotId(robotId);
             if (robot == null) {
                 return ResponseEntity.status(404).body(EventResponse.error(404, "机器人不存在"));
             }
@@ -510,7 +514,7 @@ public class RobotController {
             }
             
             // 获取机器人
-            Robot robot = robotService.getRobotById(robotId);
+            Robot robot = robotService.getRobotByRobotId(robotId);
             if (robot == null) {
                 return ResponseEntity.status(404).body(EventResponse.error(404, "机器人不存在"));
             }
@@ -564,7 +568,7 @@ public class RobotController {
             }
             
             // 获取原机器人
-            Robot originalRobot = robotService.getRobotById(robotId);
+            Robot originalRobot = robotService.getRobotByRobotId(robotId);
             if (originalRobot == null) {
                 return ResponseEntity.status(404).body(EventResponse.error(404, "机器人不存在"));
             }
@@ -588,7 +592,7 @@ public class RobotController {
             newRobot.setAvatar(originalRobot.getAvatar());
             newRobot.setGender(originalRobot.getGender());
             newRobot.setAge(originalRobot.getAge());
-            newRobot.setIntroduction(originalRobot.getIntroduction());
+            newRobot.setDescription(originalRobot.getDescription());
             newRobot.setPersonality(originalRobot.getPersonality());
             newRobot.setMbti(originalRobot.getMbti());
             newRobot.setBloodType(originalRobot.getBloodType());
@@ -606,7 +610,7 @@ public class RobotController {
             newRobot.setReplySpeed(originalRobot.getReplySpeed());
             newRobot.setReplyFrequency(originalRobot.getReplyFrequency());
             newRobot.setShareFrequency(originalRobot.getShareFrequency());
-            newRobot.setActiveTimeRanges(originalRobot.getActiveTimeRanges());
+            newRobot.setActiveHours(originalRobot.getActiveHours());
             newRobot.setTopics(originalRobot.getTopics());
             newRobot.setIsActive(false); // 新复制的机器人默认不激活
             
@@ -657,7 +661,7 @@ public class RobotController {
             
             if (!isTempRobot) {
                 // 编辑模式：获取现有机器人并检查权限
-                Robot robot = robotService.getRobotById(robotId);
+                Robot robot = robotService.getRobotByRobotId(robotId);
                 if (robot == null) {
                     return ResponseEntity.status(404).body(EventResponse.error(404, "机器人不存在"));
                 }

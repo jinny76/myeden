@@ -24,15 +24,7 @@
             </div>
           </div>
           <div class="header-right">
-            <div 
-              class="save-action" 
-              :class="{ 'loading': saving }"
-              @click="saveRobot"
-            >
-              <el-icon v-if="!saving"><Check /></el-icon>
-              <el-icon v-else class="loading-icon"><Loading /></el-icon>
-              <span class="save-text">{{ isEdit ? '保存修改' : '创建天使' }}</span>
-            </div>
+            <!-- 顶部按钮已移除，改为底部显示 -->
           </div>
         </div>
       </div>
@@ -146,12 +138,12 @@
                   </div>
                 </el-form-item>
                 
-                <el-form-item label="一句话简介 *" prop="introduction">
+                <el-form-item label="背景设定 *" prop="description">
                   <el-input 
-                    v-model="robotData.introduction" 
+                    v-model="robotData.description" 
                     type="textarea" 
                     :rows="3"
-                    placeholder="用一句话描述这个天使（必填）"
+                    placeholder="这个天使的背景设定（提示词, 必填）"
                     size="large"
                   />
                 </el-form-item>
@@ -208,7 +200,7 @@
                   placeholder="输入特征后按回车"
                   style="width: 200px"
                 />
-                <el-button v-else size="large" @click="showTraitInput = true" type="dashed">
+                <el-button v-else size="large" @click="focusTraitInput" type="dashed">
                   <el-icon><Plus /></el-icon>
                   添加特征
                 </el-button>
@@ -238,7 +230,7 @@
                   placeholder="输入兴趣后按回车"
                   style="width: 200px"
                 />
-                <el-button v-else size="large" @click="showInterestInput = true" type="dashed">
+                <el-button v-else size="large" @click="focusInterestInput" type="dashed">
                   <el-icon><Plus /></el-icon>
                   添加兴趣
                 </el-button>
@@ -410,9 +402,91 @@
                   />
                 </div>
               </div>
-            </div>
+            </div>            
+          </div>
+        </div>
 
-            <div class="activation-section">
+        <!-- 步骤5：活跃时间段和个人主题 -->
+        <div v-show="currentStep === 4" class="step-content">
+          <div class="step-header">
+            <h2>活跃时间段与个人主题</h2>
+            <p>设置天使的活跃时间和喜欢的话题</p>
+          </div>
+          <div class="form-section">
+            <!-- 移动端适配：活跃时间段 -->
+            <div class="card-block-mobile">
+              <div class="card-block-title">活跃时间段</div>
+              <div class="active-time-list-mobile">
+                <template v-if="robotData.activeHours.length > 0">
+                  <div v-for="(range, idx) in robotData.activeHours" :key="idx" class="active-time-item-mobile">
+                    <span class="active-time-range">{{ range.start }}:00 - {{ range.end }}:00</span>
+                    <span class="probability-label">发动态/回复概率:</span>
+                    <span class="probability-value">{{ range.probability }}</span>
+                    <el-button type="danger" size="small" @click="removeActiveHour(idx)" circle :icon="Delete" />
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="empty-tip">暂无活跃时间段</div>
+                </template>
+              </div>
+              <div class="add-btn-row">
+                <el-button type="primary" class="add-btn-mobile" @click="showActiveHourDrawer = true" :icon="Plus" size="medium">添加活跃时间段</el-button>
+              </div>
+            </div>
+            <!-- 活跃时间段添加浮层 -->
+            <div v-if="showActiveHourDrawer" class="simple-modal-mask" @click.self="showActiveHourDrawer = false">
+              <div class="simple-modal-card">
+                <div class="modal-title">添加活跃时间段</div>
+                <el-select v-model="newActiveTime.start" placeholder="开始小时" size="large" style="width: 100%; margin-bottom: 12px;">
+                  <el-option v-for="h in hourOptions" :key="h" :label="h + ':00'" :value="h.toString().padStart(2, '0')" :disabled="robotData.activeHours.length > 0 && h < nextStartHour" />
+                </el-select>
+                <el-select v-model="newActiveTime.end" placeholder="结束小时" size="large" style="width: 100%; margin-bottom: 12px;">
+                  <el-option v-for="h in endHourOptions" :key="h" :label="h + ':00'" :value="h.toString().padStart(2, '0')" />
+                </el-select>
+                <el-input v-model.number="newActiveTime.probability" type="number" :min="0" :max="1" step="0.01" placeholder="发动态/回复概率(0~1)" size="large" style="width: 100%; margin-bottom: 18px;" />
+                <div class="modal-footer-row">
+                  <el-button @click="showActiveHourDrawer = false" size="medium">取消</el-button>
+                  <el-button type="primary" @click="addActiveHourAndClose" size="medium">确认添加</el-button>
+                </div>
+              </div>
+            </div>
+            <!-- 移动端适配：个人主题 -->
+            <div class="card-block-mobile">
+              <div class="card-block-title">个人主题</div>
+              <div class="topic-list-mobile">
+                <template v-if="robotData.topics.length > 0">
+                  <el-card v-for="(topic, idx) in robotData.topics" :key="idx" class="topic-card-mobile">
+                    <div class="topic-title-mobile">{{ topic.name }}
+                      <span class="probability-label">发动态/回复概率:</span>
+                      <span class="probability-value">{{ topic.frequency }}</span>
+                    </div>
+                    <div class="topic-content-mobile">{{ topic.content }}</div>
+                    <el-button type="danger" size="small" @click="removeTopic(idx)" circle :icon="Delete" style="position:absolute;top:8px;right:8px;" />
+                  </el-card>
+                </template>
+                <template v-else>
+                  <div class="empty-tip">暂无个人主题</div>
+                </template>
+              </div>
+              <div class="add-btn-row">
+                <el-button type="primary" class="add-btn-mobile" @click="showTopicDrawer = true" :icon="Plus" size="medium">添加主题</el-button>
+              </div>
+            </div>
+            <!-- 个人主题添加浮层 -->
+            <div v-if="showTopicDrawer" class="simple-modal-mask" @click.self="showTopicDrawer = false">
+              <div class="simple-modal-card">
+                <div class="modal-title">添加个人主题</div>
+                <el-input v-model="newTopic.name" placeholder="主题名称" size="large" style="margin-bottom: 12px;" />
+                <el-input v-model.number="newTopic.frequency" type="number" :min="0" :max="1" step="0.01" placeholder="发动态/回复概率(0~1)" size="large" style="margin-bottom: 12px; width: 100%;" />
+                <el-input v-model="newTopic.content" type="textarea" :rows="4" placeholder="主题内容" size="large" style="margin-bottom: 12px;" />
+                <div class="modal-footer-row">
+                  <el-button @click="showTopicDrawer = false" size="medium">取消</el-button>
+                  <el-button type="primary" @click="addTopicAndClose" size="medium">确认添加</el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="activation-section">
               <h3>激活状态</h3>
               <div class="activation-card">
                 <div class="activation-info">
@@ -432,7 +506,6 @@
                 />
               </div>
             </div>
-          </div>
         </div>
       </div>
 
@@ -443,7 +516,7 @@
             <td class="footer-left">
               <div 
                 v-if="currentStep > 0" 
-                class="nav-action prev-action"
+                class="nav-action prev-action main-action-btn"
                 @click="prevStep"
               >
                 <el-icon><ArrowLeft /></el-icon>
@@ -453,11 +526,16 @@
             <td class="footer-right" style="text-align: right;">
               <div 
                 v-if="currentStep < steps.length - 1" 
-                class="nav-action next-action"
+                class="nav-action next-action main-action-btn"
                 @click="nextStep"
               >
                 <span class="nav-text">下一步</span>
                 <el-icon><ArrowRight /></el-icon>
+              </div>
+              <div v-else class="save-action main-action-btn" :class="{ 'loading': saving }" @click="saveRobot">
+                <el-icon v-if="!saving"><Check /></el-icon>
+                <el-icon v-else class="loading-icon"><Loading /></el-icon>
+                <span class="save-text">{{ isEdit ? '保存修改' : '创建天使' }}</span>
               </div>
             </td>
           </tr>
@@ -468,12 +546,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { 
   User, Upload, Delete, Plus, Check, ArrowLeft, ArrowRight,
-  CircleCheck, CircleClose, Camera, Loading
+  CircleCheck, CircleClose, Camera, Loading, Clock, ChatDotRound
 } from '@element-plus/icons-vue'
 import { 
   getRobotForEdit, 
@@ -502,6 +580,25 @@ const avatarUpload = ref(null)
 const avatarPreviewUrl = ref('')
 const currentStep = ref(0)
 
+// 新增：活跃时间段
+const newActiveTime = reactive({ start: '', end: '', probability: 1.0 })
+
+// 计算可选小时数组
+const hourOptions = Array.from({ length: 24 }, (_, i) => i)
+
+// 结束小时选项：必须大于当前开始小时
+const endHourOptions = computed(() => {
+  const start = parseInt(newActiveTime.start, 10)
+  return hourOptions.filter(h => !isNaN(start) ? h > start : true)
+})
+
+// 下一条开始小时选项：必须大于等于上一条的结束小时
+const nextStartHour = computed(() => {
+  if (robotData.activeHours.length === 0) return 0
+  const lastEnd = parseInt(robotData.activeHours[robotData.activeHours.length - 1].end, 10)
+  return isNaN(lastEnd) ? 0 : lastEnd
+})
+
 // 表单验证规则
 const formRules = {
   name: [
@@ -515,7 +612,7 @@ const formRules = {
     { required: true, message: '请设置年龄', trigger: 'change' },
     { type: 'number', min: 1, max: 100, message: '年龄必须在 1 到 100 之间', trigger: 'blur' }
   ],
-  introduction: [
+  description: [
     { required: true, message: '请输入一句话简介', trigger: 'blur' },
     { min: 5, max: 100, message: '简介长度在 5 到 100 个字符', trigger: 'blur' }
   ],
@@ -542,6 +639,10 @@ const steps = [
   {
     title: '行为设置',
     description: '配置互动参数'
+  },
+  {
+    title: '活跃与主题',
+    description: '设置活跃时间和个人主题'
   }
 ]
 
@@ -551,7 +652,7 @@ const robotData = reactive({
   avatar: '',
   gender: '',
   age: 25,
-  introduction: '',
+  description: '',
   personality: '',
   mbti: '',
   bloodType: '',
@@ -567,7 +668,9 @@ const robotData = reactive({
   replySpeed: 0.5,
   replyFrequency: 0.5,
   shareFrequency: 0.5,
-  isActive: true
+  isActive: true,
+  activeHours: [],
+  topics: []
 })
 
 // 计算属性
@@ -601,8 +704,8 @@ const addTrait = () => {
   if (newTrait.value.trim()) {
     robotData.traits.push(newTrait.value.trim())
     newTrait.value = ''
+    showTraitInput.value = false
   }
-  showTraitInput.value = false
 }
 
 const removeTrait = (index) => {
@@ -613,8 +716,8 @@ const addInterest = () => {
   if (newInterest.value.trim()) {
     robotData.interests.push(newInterest.value.trim())
     newInterest.value = ''
+    showInterestInput.value = false
   }
-  showInterestInput.value = false
 }
 
 const removeInterest = (index) => {
@@ -690,7 +793,7 @@ const loadRobotData = async () => {
         avatar: robot.avatar || '',
         gender: robot.gender || '',
         age: robot.age || 25,
-        introduction: robot.introduction || '',
+        description: robot.description || '',
         personality: robot.personality || '',
         mbti: robot.mbti || '',
         bloodType: robot.bloodType || '',
@@ -706,7 +809,9 @@ const loadRobotData = async () => {
         replySpeed: robot.replySpeed || 0.5,
         replyFrequency: robot.replyFrequency || 0.5,
         shareFrequency: robot.shareFrequency || 0.5,
-        isActive: robot.isActive !== undefined ? robot.isActive : true
+        isActive: robot.isActive !== undefined ? robot.isActive : true,
+        activeHours: robot.activeHours || [],
+        topics: robot.topics || []
       })
       
       // 设置头像预览
@@ -738,7 +843,7 @@ const saveRobot = async () => {
       return
     }
     
-    if (!robotData.introduction || robotData.introduction.trim() === '') {
+    if (!robotData.description || robotData.description.trim() === '') {
       ElMessage.error('请输入一句话简介')
       return
     }
@@ -754,7 +859,7 @@ const saveRobot = async () => {
       return
     }
     
-    if (robotData.introduction.trim().length < 5 || robotData.introduction.trim().length > 100) {
+    if (robotData.description.trim().length < 5 || robotData.description.trim().length > 100) {
       ElMessage.error('一句话简介长度必须在 5 到 100 个字符之间')
       return
     }
@@ -789,10 +894,87 @@ const saveRobot = async () => {
   }
 }
 
+// 新增：活跃时间段操作
+const addActiveHour = () => {
+  const pad = (h) => h.toString().padStart(2, '0') + ':00'
+  const startNum = parseInt(newActiveTime.start, 10)
+  const endNum = parseInt(newActiveTime.end, 10)
+  if (isNaN(startNum) || isNaN(endNum) || endNum <= startNum) {
+    ElMessage.error('结束时间必须大于开始时间')
+    return
+  }
+  // 校验不能与上一条重叠
+  if (robotData.activeHours.length > 0) {
+    const lastEnd = parseInt(robotData.activeHours[robotData.activeHours.length - 1].end, 10)
+    if (startNum < lastEnd) {
+      ElMessage.error('新时间段的开始时间不能早于上一段的结束时间')
+      return
+    }
+  }
+  robotData.activeHours.push({
+    start: pad(newActiveTime.start),
+    end: pad(newActiveTime.end),
+    probability: newActiveTime.probability
+  })
+  // 下一条自动填充开始时间为上一条结束时间
+  newActiveTime.start = newActiveTime.end
+  newActiveTime.end = ''
+  newActiveTime.probability = 1.0
+}
+
+const removeActiveHour = (index) => {
+  robotData.activeHours.splice(index, 1)
+}
+
+// 新增：个人主题操作
+const newTopic = reactive({ name: '', frequency: 1, content: '' })
+const addTopic = () => {
+  if (newTopic.name.trim()) {
+    robotData.topics.push({
+      name: newTopic.name.trim(),
+      frequency: newTopic.frequency,
+      content: newTopic.content.trim()
+    })
+    newTopic.name = ''
+    newTopic.frequency = 1
+    newTopic.content = ''
+  }
+}
+
+const removeTopic = (index) => {
+  robotData.topics.splice(index, 1)
+}
+
 // 生命周期
 onMounted(() => {
   loadRobotData()
 })
+
+const showActiveHourDrawer = ref(false)
+const showTopicDrawer = ref(false)
+
+const addActiveHourAndClose = () => {
+  addActiveHour()
+  showActiveHourDrawer.value = false
+}
+const addTopicAndClose = () => {
+  addTopic()
+  showTopicDrawer.value = false
+}
+
+const focusTraitInput = () => {
+  showTraitInput.value = true
+  nextTick(() => {
+    traitInput.value && traitInput.value.focus()
+  })
+}
+
+const focusInterestInput = () => {
+  showInterestInput.value = true
+  nextTick(() => {
+    interestInput.value && interestInput.value.focus()
+  })
+}
 </script>
 
 <style scoped>
@@ -2078,5 +2260,396 @@ onMounted(() => {
   .step-desc {
     font-size: 10px;
   }
+}
+
+.card-section {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(34, 211, 107, 0.06);
+  transition: all 0.3s;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.section-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.section-desc {
+  color: var(--color-text);
+  opacity: 0.7;
+  font-size: 13px;
+  margin-left: 8px;
+}
+.active-time-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.active-time-tag {
+  font-size: 15px;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+.active-time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.topic-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.topic-card {
+  min-width: 260px;
+  max-width: 340px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.topic-card-content {
+  flex: 1;
+  min-width: 0;
+}
+.topic-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.topic-frequency {
+  color: var(--color-primary);
+  font-size: 13px;
+}
+.topic-content {
+  color: var(--color-text);
+  opacity: 0.85;
+  font-size: 14px;
+  margin-top: 2px;
+}
+.topic-remove-btn {
+  margin-left: 12px;
+}
+.topic-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.topic-section-large {
+  max-width: 900px;
+}
+.topic-list-large {
+  gap: 24px;
+}
+.topic-card-large {
+  min-width: 340px;
+  max-width: 600px;
+  padding: 24px 20px;
+}
+.topic-inputs-large {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-top: 12px;
+}
+
+@media (max-width: 600px) {
+  .active-time-list-mobile, .topic-list-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .active-time-item-mobile {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-card);
+    border-radius: 12px;
+    padding: 12px 10px;
+    position: relative;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .active-time-range, .probability-label, .probability-value {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 32vw;
+    font-size: 15px;
+  }
+  .active-time-range {
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  .probability-label {
+    color: var(--color-text);
+    opacity: 0.7;
+    font-size: 13px;
+    margin-right: 2px;
+  }
+  .probability-value {
+    color: var(--color-primary);
+    font-weight: 600;
+    margin-right: 8px;
+  }
+  .active-time-item-mobile .el-button {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .topic-card-mobile {
+    background: var(--color-card);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+.el-drawer {
+  --el-drawer-bg-color: transparent !important;
+
+  
+}
+
+.el-drawer__body {
+  --el-drawer-bg-color: transparent !important;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.10);
+  padding: 0;
+}
+.drawer-content {
+  padding: 24px 16px 32px 16px;
+  background: var(--color-card);
+  border-radius: 20px 20px 0 0;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.el-drawer__body .el-input,
+.el-drawer__body .el-input-number,
+.el-drawer__body .el-time-picker,
+.el-drawer__body .el-slider {
+  margin-bottom: 18px;
+}
+.el-drawer__body .el-button {
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.el-drawer__body .el-button--primary {
+  background: linear-gradient(135deg, var(--color-primary), #4ade80);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(34,211,107,0.10);
+}
+.el-drawer__body .el-button--primary:hover {
+  background: linear-gradient(135deg, #22d36b, #16a34a);
+}
+
+/* 暗色模式下抽屉适配 */
+.dark-mode .el-drawer__body {
+  background: #181f2a;
+  color: #e5e7eb;
+}
+.dark-mode .drawer-content {
+  background: #232b3b;
+}
+.dark-mode .el-drawer__body .el-button--primary {
+  background: linear-gradient(135deg, #22d36b, #16a34a);
+  color: #fff;
+}
+.dark-mode .el-drawer__body .el-button--primary:hover {
+  background: linear-gradient(135deg, #4ade80, #22d36b);
+}
+
+.drawer-light-modal {
+  background: rgba(0,0,0,0.25) !important;
+}
+.drawer-dark-modal {
+  background: rgba(20,24,38,0.85) !important;
+}
+
+.active-time-item-mobile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-card);
+  border-radius: 12px;
+  padding: 12px 10px;
+  position: relative;
+}
+.active-time-range {
+  font-weight: 600;
+  font-size: 15px;
+  margin-right: 8px;
+}
+.probability-label {
+  color: var(--color-text);
+  opacity: 0.7;
+  font-size: 13px;
+  margin-right: 2px;
+}
+.probability-value {
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.card-block-mobile {
+  background: var(--color-card);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(34,211,107,0.06);
+  padding: 18px 12px 12px 12px;
+  margin-bottom: 18px;
+}
+.card-block-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+.empty-tip {
+  color: #b0b4ba;
+  font-size: 15px;
+  text-align: center;
+  padding: 18px 0 10px 0;
+}
+
+.el-drawer__sr-focus {
+  background: transparent !important;
+}
+
+.el-overlay, .el-drawer__wrapper, .el-drawer__container {
+  background: transparent !important;
+}
+
+.simple-modal-mask {
+  position: fixed;
+  z-index: 3000;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.simple-modal-card {
+  background: var(--color-card);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  padding: 28px 18px 18px 18px;
+  min-width: 80vw;
+  max-width: 96vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 18px;
+  text-align: center;
+}
+@media (max-width: 600px) {
+  .simple-modal-card {
+    min-width: 96vw;
+    padding: 18px 6px 12px 6px;
+  }
+}
+
+.simple-modal-card .modal-footer-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+@media (max-width: 600px) {
+  .simple-modal-card .modal-footer-row {
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .simple-modal-card .el-button {
+    min-width: 60px;
+    height: 32px;
+    font-size: 13px;
+    padding: 0 10px;
+  }
+}
+
+.add-btn-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 12px;
+}
+@media (max-width: 600px) {
+  .add-btn-row {
+    margin-top: 8px;
+  }
+  .add-btn-row .el-button {
+    min-width: 60px;
+    height: 32px;
+    font-size: 13px;
+    padding: 0 10px;
+  }
+}
+
+.main-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--color-primary), #4ade80);
+  color: white;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(34, 211, 107, 0.3);
+  white-space: nowrap;
+  font-size: 15px;
+  border: none;
+}
+.main-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(34, 211, 107, 0.4);
+  background: linear-gradient(135deg, #4ade80, var(--color-primary));
+}
+.main-action-btn:active {
+  transform: translateY(0);
+}
+.main-action-btn.loading {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+.main-action-btn .el-icon {
+  font-size: 18px;
 }
 </style> 

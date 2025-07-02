@@ -159,6 +159,11 @@ public class WorldController {
     public ResponseEntity<EventResponse> getRobotList() {
         try {
             List<WorldService.RobotSummary> robots = worldService.getRobotList();
+
+            // 过滤掉已删除的机器人
+            robots = robots.stream()
+                    .filter(r -> r.getIsDeleted() == null || !r.getIsDeleted())
+                    .collect(java.util.stream.Collectors.toList());
             
             if (robots == null) {
                 return ResponseEntity.status(500).body(EventResponse.error(500, "获取机器人列表失败"));

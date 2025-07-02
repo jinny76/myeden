@@ -237,7 +237,7 @@ public class RobotServiceImpl implements RobotService {
                 return avatarUrl;
             } else {
                 // 正式机器人：获取机器人信息并更新
-                Robot robot = getRobotById(robotId);
+                Robot robot = getRobotByRobotId(robotId);
                 if (robot == null) {
                     throw new RuntimeException("机器人不存在");
                 }

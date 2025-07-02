@@ -141,7 +141,7 @@
                   <div class="robot-quick-info">
                     <h3>{{ robot.name }}</h3>
                     <div class="robot-personality">
-                      <el-tag size="small" type="info">{{ robot.personality }}</el-tag>
+                      <el-tag size="small" type="info" style="width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ robot.personality }}</el-tag>
                     </div>
                   </div>
                 </div>
@@ -176,11 +176,9 @@
                         </el-icon>
                         <span>{{ isRobotLinked(robot.id) ? '断开' : '链接' }}</span>
                       </button>
-                    </div>
-                    
-                    <!-- 编辑按钮（仅对用户拥有的机器人显示） -->
-                    <div v-if="isMyRobot(robot.id)" class="robot-edit-control">
+
                       <button 
+                        v-if="isMyRobot(robot.id)" 
                         class="edit-btn"
                         @click="editRobot(robot.id)"
                         title="编辑机器人"
@@ -188,7 +186,7 @@
                         <el-icon><Edit /></el-icon>
                         <span>编辑</span>
                       </button>
-                    </div>
+                    </div>                  
                   </div>
                 </div>
               </div>

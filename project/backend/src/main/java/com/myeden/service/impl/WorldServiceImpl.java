@@ -244,8 +244,9 @@ public class WorldServiceImpl implements WorldService {
                     robot.getName(), // 使用name作为nickname
                     robot.getAvatar(),
                     robot.getPersonality(),
-                    robot.getIntroduction(), // 使用introduction作为description
-                    robot.getIsActive() != null ? robot.getIsActive() : false
+                    robot.getDescription(), // 使用description作为description
+                    robot.getIsActive() != null ? robot.getIsActive() : false,
+                    robot.getIsDeleted() != null ? robot.getIsDeleted() : false
                 ))
                 .collect(Collectors.toList());
             
@@ -269,11 +270,11 @@ public class WorldServiceImpl implements WorldService {
             
             // 转换活跃时间为ActiveHours格式
             List<ActiveHours> activeHours = null;
-            if (robot.getActiveTimeRanges() != null && !robot.getActiveTimeRanges().isEmpty()) {
-                activeHours = robot.getActiveTimeRanges().stream()
+            if (robot.getActiveHours() != null && !robot.getActiveHours().isEmpty()) {
+                activeHours = robot.getActiveHours().stream()
                     .map(range -> new ActiveHours(
-                        range.getStartTime(),
-                        range.getEndTime(),
+                        range.getStart(),
+                        range.getEnd(),
                         1.0 // 默认概率为1.0
                     ))
                     .collect(Collectors.toList());
@@ -285,8 +286,8 @@ public class WorldServiceImpl implements WorldService {
                 robot.getName(), // 使用name作为nickname
                 robot.getAvatar(),
                 robot.getPersonality(),
-                robot.getIntroduction(), // 使用introduction作为description
-                robot.getIntroduction(), // 使用introduction作为background
+                robot.getDescription(), // 使用description作为description
+                robot.getDescription(), // 使用description作为background
                 null, // example - Robot实体中没有对应字段
                 null, // traits - Robot实体中没有对应字段
                 null, // interests - Robot实体中没有对应字段
