@@ -1803,4 +1803,25 @@ const getTopLevelComments = (post) => {
 
 <style scoped>
 @import url('../styles/moment.scss');
+</style>
+
+<style>
+html.dark .inner-thoughts-dialog .el-dialog {
+  background: #23272e !important;
+  color: #f0f0f0 !important;
+}
+html.dark .inner-thoughts-dialog .el-dialog__header {
+  background: #23272e !important;
+  color: #f0f0f0 !important;
+}
+html.dark .inner-thoughts-dialog .el-dialog__body {
+  background: #23272e !important;
+  color: #f0f0f0 !important;
+}
+html.dark .inner-thoughts-dialog .el-dialog__title {
+  color: #f0f0f0 !important;
+}
+html.dark .inner-thoughts-dialog .el-dialog__footer {
+  background: #23272e !important;
+}
 </style> 

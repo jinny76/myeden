@@ -55,7 +55,7 @@ const routes = [
         name: 'Moments',
         component: () => import('@/views/Moments.vue'),
         meta: {
-          title: '朋友圈 - 我的伊甸园',
+          title: '动态 - 我的伊甸园',
           requiresAuth: true
         }
       },
@@ -64,7 +64,7 @@ const routes = [
         name: 'World',
         component: () => import('@/views/World.vue'),
         meta: {
-          title: '虚拟世界 - 我的伊甸园',
+          title: '世界 - 我的伊甸园',
           requiresAuth: true
         }
       },
@@ -73,7 +73,7 @@ const routes = [
         name: 'ProfileSetup',
         component: () => import('@/views/ProfileSetup.vue'),
         meta: {
-          title: '完善资料 - 我的伊甸园',
+          title: '个人资料 - 我的伊甸园',
           requiresAuth: true
         }
       },
@@ -107,7 +107,7 @@ const routes = [
       {
         path: 'robot-daily-plan',
         component: () => import('@/views/RobotDailyPlanPage.vue'),
-        meta: { title: '机器人每日计划' }
+        meta: { title: '天使的每一天' }
       }
     ]
   }

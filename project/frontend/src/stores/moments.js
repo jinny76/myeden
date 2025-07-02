@@ -4,7 +4,7 @@ import { queryPosts, getPostList, createPost, deletePost, likePost, unlikePost }
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment } from '@/api/comment'
 
 /**
- * 朋友圈状态管理
+ * 动态状态管理
  * 
  * 功能说明：
  * - 管理动态列表、评论列表状态

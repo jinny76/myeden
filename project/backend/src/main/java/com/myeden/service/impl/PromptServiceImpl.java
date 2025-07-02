@@ -64,26 +64,17 @@ public class PromptServiceImpl implements PromptService {
         RobotConfig.RobotInfo robotInfo = getRobotInfo(robot.getName());
         
         // 构建机器人身份设定
-        prompt.append(String.format("你是%s（昵称：%s），%s。\n\n## 背景信息清单",
+        String selectedTopic = selectRandomTopic(robot);
+        prompt.append(String.format("你是%s（昵称：%s），%s。正在看朋友圈, 想发一条%s的动态\n\n",
             robot.getName(), 
             robotInfo != null ? robotInfo.getNickname() : robot.getName(), 
-            robot.getPersonality()));
-        
-        // 使用智能选择器构建背景信息
-        prompt.append(buildSmartBackground(robot));
-        
-        // 使用智能选择器构建个人档案
-        prompt.append(buildSmartPersonalInfo(robot));
-        
+            robot.getPersonality(), selectedTopic));
+
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
             prompt.append(String.format("\n\n### 当前情况：%s", context));
         }
-        
-        // 添加随机选择的主题
-        String selectedTopic = selectRandomTopic(robot);
-        prompt.append(String.format("\n\n## 生成%s相关内容", selectedTopic));
-        
+
         // 添加动态生成要求
         prompt.append("\n\n## 根据以下发帖要求, 和你的性格和当前情况，生成一条纯文本的，自然、真实的朋友圈动态, 仅返回动态本身, 不包含任何标题。");
         prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
@@ -92,6 +83,18 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n- 长度控制在10-150字之间");
         prompt.append("\n- 必须围绕指定的主题进行创作");
         prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
+        prompt.append("\n- 后面的背景信息可以作为参考");
+
+        prompt.append("\n\n## 你的背景资料");
+        
+        // 使用智能选择器构建背景信息
+        prompt.append(buildSmartBackground(robot));
+        
+        // 使用智能选择器构建个人档案
+        prompt.append(buildSmartPersonalInfo(robot));
+
+        // 今日安排
+        prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
 
         log.info("生成的动态提示词: {}", prompt.toString());
         
@@ -107,28 +110,21 @@ public class PromptServiceImpl implements PromptService {
         
         // 构建机器人身份设定
         String nickname = robotInfo != null ? robotInfo.getNickname() : robot.getName();
-        prompt.append(String.format("你是%s（昵称：%s），%s。你看到了一条朋友圈动态，想要评论一下。\n\n## 背景信息清单",
+        prompt.append(String.format("你是%s（昵称：%s），%s。",
             robot.getName(), nickname, robot.getPersonality()));
-        
-        // 使用智能选择器构建背景信息
-        prompt.append(buildSmartBackground(robot));
-        
-        // 使用智能选择器构建个人档案
-        prompt.append(buildSmartPersonalInfo(robot));
-        
+
         // 添加动态信息
-        prompt.append(String.format("\n\n## 你看到的动态内容：%s", post.getContent()));
-        prompt.append(String.format("\n作者信息：%s", getAuthorInfo(post)));
+        prompt.append(String.format("\n\n## 你看到的动态内容：\"%s\" 想要评论一下。", post.getContent()));
+        prompt.append(String.format("\n这条动态的作者信息是：%s", getAuthorInfo(post)));
         if (post.getImages() != null && !post.getImages().isEmpty()) {
-            prompt.append(String.format("\n动态图片：%s张", post.getImages().size()));
+            prompt.append(String.format("\n动态有%s张图片", post.getImages().size()));
         }
         
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
             prompt.append(String.format("\n\n当前情况：%s", context));
         }
-        prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
-        
+
         // 添加评论生成要求
         prompt.append("\n\n请根据一下发帖要求，加上你的性格和先前你看到的动态内容，生成一条纯文本的，自然、真实的评论, 仅返回动态本身, 不包含任何标题。");
         prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
@@ -136,6 +132,18 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n- 语言风格要符合你的说话习惯");
         prompt.append("\n- 长度控制在20-40字之间");
         prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
+        prompt.append("\n- 后面的背景信息可以作为参考");
+
+        prompt.append("\n\n## 你的背景资料");
+
+        // 使用智能选择器构建背景信息
+        prompt.append(buildSmartBackground(robot));
+
+        // 使用智能选择器构建个人档案
+        prompt.append(buildSmartPersonalInfo(robot));
+
+        // 今日安排
+        prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
 
         log.info("生成的评论提示词: {}", prompt.toString());
         
@@ -152,33 +160,39 @@ public class PromptServiceImpl implements PromptService {
         
         // 构建机器人身份设定
         String nickname = robotInfo != null ? robotInfo.getNickname() : robot.getName();
-        prompt.append(String.format("你是%s（昵称：%s），%s。你看到一个朋友圈消息的评论， 要回复一条评论\n\n## 背景信息列表",
+        prompt.append(String.format("你是%s（昵称：%s），%s。\n",
             robot.getName(), nickname, robot.getPersonality()));
-        
-        // 使用智能选择器构建背景信息
-        prompt.append(buildSmartBackground(robot));
-        
-        // 使用智能选择器构建个人档案
-        prompt.append(buildSmartPersonalInfo(robot));
-        
-        // 添加动态和评论信息
-        prompt.append(String.format("\n\n你看到的朋友圈内容：%s", postDetail.getContent()));
-        prompt.append(String.format("\n你看到的评论内容：%s", commentDetail.getContent()));
-        prompt.append(String.format("\n评论者是：%s", getCommentAuthorInfo(commentDetail)));
-        
+
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
-            prompt.append(String.format("\n\n当前情况：%s", context));
+            prompt.append(String.format("\n\n当前的情况：%s", context));
         }
-        prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
-        
+
+        // 添加动态和评论信息
+        prompt.append(String.format("\n你正在查看朋友圈内容：%s", postDetail.getContent()));
+        prompt.append(String.format("\n这条动态的作者信息是：%s", getAuthorInfo(postDetail)));
+        prompt.append(String.format("\n你朋友圈下面你看到有条的评论内容：%s", commentDetail.getContent()));
+        prompt.append(String.format("\n这条评论的评论者是：%s, 请注意, 他这条评论是对 %s 说的", getCommentAuthorInfo(commentDetail), postDetail.getAuthorName()));
+
         // 添加回复生成要求
-        prompt.append("\n\n请根据以下要求, 结合你的性格和评论内容，生成一条纯文本的, 自然、真实的回复，只返回评论内容, 不要任何标题。");
+        prompt.append("\n\n请根据以下要求, 结合你的性格和评论内容，生成一条纯文本的, 自然、真实的回复来回复这条评论，只返回回复内容, 不要任何标题。");
         prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
         prompt.append("\n- 回复要符合你的性格特征");
         prompt.append("\n- 语言风格要符合你的说话习惯");
         prompt.append("\n- 长度控制在15-30字之间");
         prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
+        prompt.append("\n- 后面的背景信息可以作为参考");
+
+        prompt.append("\n\n## 你的背景资料");
+
+        // 使用智能选择器构建背景信息
+        prompt.append(buildSmartBackground(robot));
+        
+        // 使用智能选择器构建个人档案
+        prompt.append(buildSmartPersonalInfo(robot));
+
+        // 今日安排
+        prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
 
         log.info("生成的回复提示词: {}", prompt.toString());
         
@@ -194,28 +208,32 @@ public class PromptServiceImpl implements PromptService {
         
         // 构建机器人身份设定
         String nickname = robotInfo != null ? robotInfo.getNickname() : robot.getName();
-        prompt.append(String.format("你是%s（昵称：%s），一个%s的伊甸园居民。现在你要进行内心独白。", 
+        prompt.append(String.format("你是%s（昵称：%s），一个%s普通居民。",
             robot.getName(), nickname, robot.getPersonality()));
-        
+
+        // 添加当前情况
+        prompt.append(String.format("\n\n当前发生了：%s", situation));
+
+        // 添加内心独白生成要求
+        prompt.append("\n\n请根据你的性格和当前情况，生成一段内心独白。");
+        prompt.append("要求：");
+        prompt.append("\n- 独白要符合你的性格特征");
+        prompt.append("\n- 语言风格要符合你的说话习惯");
+        prompt.append("\n- 长度控制在30-100字之间");
+        prompt.append("\n- 内容要真实自然，体现内心感受");
+        prompt.append("\n- 可以适当使用省略号等表达方式");
+        prompt.append("\n- 后面的背景信息可以作为参考");
+
+        prompt.append("\n\n## 你的背景资料");
         // 使用智能选择器构建背景信息
         prompt.append(buildSmartBackground(robot));
         
         // 使用智能选择器构建个人档案
         prompt.append(buildSmartPersonalInfo(robot));
-        
-        // 添加当前情况
-        prompt.append(String.format("\n\n当前情况：%s", situation));
+
+        // 今日安排
         prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
-        
-        // 添加内心独白生成要求
-        prompt.append("\n\n请根据你的性格和当前情况，生成一段内心独白。");
-        prompt.append("要求：");
-        prompt.append("\n1. 独白要符合你的性格特征");
-        prompt.append("\n2. 语言风格要符合你的说话习惯");
-        prompt.append("\n3. 长度控制在30-100字之间");
-        prompt.append("\n4. 内容要真实自然，体现内心感受");
-        prompt.append("\n5. 可以适当使用省略号等表达方式");
-        
+
         log.info("生成的内心活动提示词: {}", prompt.toString());
         
         return prompt.toString();
@@ -313,12 +331,12 @@ public class PromptServiceImpl implements PromptService {
  */
     private String buildTodayPlanContext(Robot robot, LocalDate planDate) {
         Optional<RobotDailyPlan> planOpt = planRepository.findByRobotIdAndPlanDate(robot.getRobotId(), planDate);
-        if (planOpt.isPresent()) {
+        if (planOpt.isPresent() && "SUCCESS".equals(planOpt.get().getStatus())) {
             RobotDailyPlan plan = planOpt.get();
             StringBuilder sb = new StringBuilder();
-            sb.append("\n【今日已安排内容】\n");
+            sb.append("\n### 今日的计划\n");
             if (plan.getSlots() != null && !plan.getSlots().isEmpty()) {
-                sb.append("时间段安排：\n");
+                sb.append("- 时间段安排：\n");
                 for (RobotDailyPlan.PlanSlot slot : plan.getSlots()) {
                     sb.append(slot.getStart()).append("-").append(slot.getEnd()).append("：");
                     if (slot.getEvents() != null) {
@@ -337,8 +355,8 @@ public class PromptServiceImpl implements PromptService {
                 .filter(slot -> slot.getStart().compareTo(now) <= 0 && slot.getEnd().compareTo(now) > 0)
                 .findFirst().orElse(null);
             if (currentSlot != null) {
-                sb.append("【当前时间 ").append(now).append("，对应安排：")
-                .append(currentSlot.getStart()).append("-").append(currentSlot.getEnd()).append("】");
+                sb.append("\n### 当前时间 ").append(now).append("\n- 对应安排：")
+                .append(currentSlot.getStart()).append("-").append(currentSlot.getEnd());
                 if (currentSlot.getEvents() != null) {
                     for (RobotDailyPlan.PlanEvent event : currentSlot.getEvents()) {
                         sb.append(event.getContent());

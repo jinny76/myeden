@@ -36,13 +36,6 @@
       <!-- 主要内容 -->
       <div v-else-if="worldStore.isWorldLoaded" class="content-wrapper">
         <!-- 新增：机器人每日计划入口 -->
-        <div class="daily-plan-entry" style="margin-bottom: 32px; text-align: right;">
-          <el-button type="primary" @click="$router.push('/robot-daily-plan')" size="large" style="border-radius: 24px; font-weight: bold;">
-            <el-icon><Calendar /></el-icon>
-            机器人每日计划
-          </el-button>
-        </div>
-
         <!-- 世界基本信息 -->
         <div class="world-info-section">
           <div class="world-info-card">
@@ -82,6 +75,10 @@
               <p>与天使们进行互动交流，体验温暖的社交氛围</p>
             </div>
             <div class="header-right">
+              <el-button type="primary" @click="$router.push('/robot-daily-plan')" class="create-robot-btn">
+                <el-icon><Calendar /></el-icon>
+                天使的每一天
+              </el-button>              
               <el-button 
                 type="primary" 
                 @click="createRobot"
@@ -89,7 +86,7 @@
               >
                 <el-icon><Plus /></el-icon>
                 创建天使
-              </el-button>
+              </el-button>            
             </div>
           </div>
           
@@ -750,6 +747,7 @@ const isMyRobot = (robotId) => {
   font-weight: 600;
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
   transition: all 0.3s ease;
+  width: 100px !important;
 }
 
 .create-robot-btn:hover {
