@@ -1,8 +1,11 @@
 package com.myeden.service.impl;
 
+import ch.qos.logback.core.testUtil.RandomUtil;
 import com.myeden.config.WorldConfig;
 import com.myeden.entity.Robot;
+import com.myeden.entity.RobotDailyPlan;
 import com.myeden.entity.User;
+import com.myeden.repository.RobotDailyPlanRepository;
 import com.myeden.repository.RobotRepository;
 import com.myeden.repository.UserRepository;
 import com.myeden.service.DifyService;
@@ -13,13 +16,12 @@ import com.myeden.config.RobotConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.Random;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -45,6 +47,9 @@ public class PromptServiceImpl implements PromptService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RobotDailyPlanRepository planRepository;
 
     @Autowired
     private DifyService difyService;
@@ -122,6 +127,7 @@ public class PromptServiceImpl implements PromptService {
         if (context != null && !context.trim().isEmpty()) {
             prompt.append(String.format("\n\n当前情况：%s", context));
         }
+        prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
         
         // 添加评论生成要求
         prompt.append("\n\n请根据一下发帖要求，加上你的性格和先前你看到的动态内容，生成一条纯文本的，自然、真实的评论, 仅返回动态本身, 不包含任何标题。");
@@ -164,6 +170,7 @@ public class PromptServiceImpl implements PromptService {
         if (context != null && !context.trim().isEmpty()) {
             prompt.append(String.format("\n\n当前情况：%s", context));
         }
+        prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
         
         // 添加回复生成要求
         prompt.append("\n\n请根据以下要求, 结合你的性格和评论内容，生成一条纯文本的, 自然、真实的回复，只返回评论内容, 不要任何标题。");
@@ -198,6 +205,7 @@ public class PromptServiceImpl implements PromptService {
         
         // 添加当前情况
         prompt.append(String.format("\n\n当前情况：%s", situation));
+        prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
         
         // 添加内心独白生成要求
         prompt.append("\n\n请根据你的性格和当前情况，生成一段内心独白。");
@@ -222,7 +230,7 @@ public class PromptServiceImpl implements PromptService {
 
         // 移除多余的换行和空格
         processedContent = processedContent.replaceAll("\\n+", "\n").replaceAll(" +", " ");
-        if (processedContent.startsWith("“") && processedContent.endsWith("”")) {
+        if (processedContent.startsWith("\"") && processedContent.endsWith("\"")) {
             processedContent = processedContent.substring(1, processedContent.length() - 1);
         }
         if (processedContent.startsWith("\"") && processedContent.endsWith("\"")) {
@@ -298,6 +306,51 @@ public class PromptServiceImpl implements PromptService {
         }
         
         return true;
+    }
+
+    /**
+ * 获取机器人今日已生成的计划内容（可选）
+ */
+    private String buildTodayPlanContext(Robot robot, LocalDate planDate) {
+        Optional<RobotDailyPlan> planOpt = planRepository.findByRobotIdAndPlanDate(robot.getRobotId(), planDate);
+        if (planOpt.isPresent()) {
+            RobotDailyPlan plan = planOpt.get();
+            StringBuilder sb = new StringBuilder();
+            sb.append("\n【今日已安排内容】\n");
+            if (plan.getSlots() != null && !plan.getSlots().isEmpty()) {
+                sb.append("时间段安排：\n");
+                for (RobotDailyPlan.PlanSlot slot : plan.getSlots()) {
+                    sb.append(slot.getStart()).append("-").append(slot.getEnd()).append("：");
+                    if (slot.getEvents() != null) {
+                        for (RobotDailyPlan.PlanEvent event : slot.getEvents()) {
+                            sb.append(event.getContent());
+                            if (event.getMood() != null) sb.append("（").append(event.getMood()).append("）");
+                            sb.append("，");
+                        }
+                    }
+                    sb.append("\n");
+                }
+            }
+            // 当前时间段
+            String now = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+            RobotDailyPlan.PlanSlot currentSlot = plan.getSlots().stream()
+                .filter(slot -> slot.getStart().compareTo(now) <= 0 && slot.getEnd().compareTo(now) > 0)
+                .findFirst().orElse(null);
+            if (currentSlot != null) {
+                sb.append("【当前时间 ").append(now).append("，对应安排：")
+                .append(currentSlot.getStart()).append("-").append(currentSlot.getEnd()).append("】");
+                if (currentSlot.getEvents() != null) {
+                    for (RobotDailyPlan.PlanEvent event : currentSlot.getEvents()) {
+                        sb.append(event.getContent());
+                        if (event.getMood() != null) sb.append("（").append(event.getMood()).append("）");
+                        sb.append("，");
+                    }
+                }
+                sb.append("\n");
+            }
+            return sb.toString();
+        }
+        return "";
     }
     
     @Override
@@ -998,5 +1051,150 @@ public class PromptServiceImpl implements PromptService {
         }
         
         return result;
+    }
+
+    private String isHoliday(java.time.LocalDate planDate) {
+        return planDate.getDayOfWeek().toString().equals("SATURDAY") || planDate.getDayOfWeek().toString().equals("SUNDAY") ? "周末" : "";
+    }
+
+    @Override
+    public String buildDailyPlanPrompt(Robot robot, java.time.LocalDate planDate) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append(String.format(
+            "你是一个居民，请为你生成 %s 的详细日常计划，包括一篇日记和当天的时间段安排。\n",
+            planDate.toString() + ", 星期" + planDate.getDayOfWeek().toString() + ", " + isHoliday(planDate)
+        ));
+        // 拼接个人档案
+        prompt.append(buildPersonalInfo(robot, null));
+        prompt.append("\n");
+        prompt.append(String.format("- 姓名：%s\n- 性格：%s\n- 兴趣：%s\n",
+            robot.getName(),
+            robot.getPersonality() != null ? robot.getPersonality() : "",            
+            robot.getInterests() != null ? String.join(",", robot.getInterests()) : ""
+        ));
+        if (robot.getActiveHours() != null) {
+            StringBuilder hours = new StringBuilder("\n- 活跃时间: ");
+            for (int i = 0; i < robot.getActiveHours().size(); i++) {
+                Robot.ActiveHours activeHours = robot.getActiveHours().get(i);
+                hours.append(activeHours.getStart() + " - " + activeHours.getEnd() + ",");
+            }
+            prompt.append(hours.toString());
+        }
+        prompt.append("\n\n## 请注意：\n");
+        prompt.append("1. 计划主要发生在活跃时间，但也可以略微不一致，内容要生活化、拟人化。\n");
+        prompt.append("2. 每个时间段可包含多个事件，每个事件需有简短心情描述（如开心、难过等）。\n");
+        prompt.append("3. 日记需反映当天整体心情和亮点, 100字以内。\n");
+        prompt.append("4. 输出格式为JSON，包含diary字段和slots数组，每个slot含start、end、events（每个event含content、mood）\n");
+        prompt.append("5. 注意区分工作日、周末和节假日，内容要有变化。\n");
+        prompt.append("6. 事件可包含突发小插曲、情绪波动等细节。\n");
+        prompt.append("7. 只返回JSON，不要其他解释。\n");
+
+        prompt.append("\n\n## 范例:\n");
+        prompt.append("""
+{
+  "diary": "今天早上可真叫有惊无险，公交车站了一半人就晕倒了，还是空调车呢，人就是直冒冷汗，然后眼前就黑了，亏得有好心人让座，我才得以安抵，现在才觉得上班族真是辛苦呀，穿得是套装加高跟鞋，衬衫加领带得，挤个公交车，湿了一身不说，像我这样的还带晕倒车上的，真是没到办公室，就已经历经磨难阿，可见白领不易啊，也看出身体本钱的重要性阿。",
+  "slots": [
+    {
+      "start": "06:00",
+      "end": "07:00",
+      "events": [
+        {"content": "早起洗漱", "mood": "平静"},
+        {"content": "面膜不见了", "mood": "惊讶"},
+        {"content": "化妆美美的", "mood": "开心"}
+      ]
+    },
+    {
+      "start": "07:00",
+      "end": "08:30",
+      "events": [
+        {"content": "上班通勤", "mood": "平静"},
+        {"content": "抢到座位", "mood": "满足"},
+        {"content": "买了杯咖啡", "mood": "愉快"}
+      ]
+    },
+    {
+      "start": "08:30",
+      "end": "12:00",
+      "events": [
+        {"content": "上午上班", "mood": "专注"},
+        {"content": "老板又给安排了个新任务", "mood": "无奈"}
+      ]
+    },
+    {
+      "start": "12:00",
+      "end": "13:00",
+      "events": [
+        {"content": "午休", "mood": "放松"}
+      ]
+    },
+    {
+      "start": "13:00",
+      "end": "17:30",
+      "events": [
+        {"content": "下午上班", "mood": "努力"},
+        {"content": "财务说报销单填错了", "mood": "郁闷"},
+        {"content": "买了杯咖啡", "mood": "提神"}
+      ]
+    },
+    {
+      "start": "17:30",
+      "end": "19:00",
+      "events": [
+        {"content": "回家", "mood": "轻松"},
+        {"content": "给老奶奶让座", "mood": "温暖"}
+      ]
+    },
+    {
+      "start": "19:00",
+      "end": "23:00",
+      "events": [
+        {"content": "晚上吃饭休息", "mood": "满足"},
+        {"content": "做了碗面", "mood": "幸福"},
+        {"content": "追剧", "mood": "放松"}
+      ]
+    },
+    {
+      "start": "23:00",
+      "end": "23:30",
+      "events": [
+        {"content": "上床", "mood": "困倦"}
+      ]
+    }
+  ]
+}
+""");
+
+        return prompt.toString();
+    }
+
+    @Override
+    public RobotDailyPlan generateDailyPlan(Robot robot, LocalDate planDate) {
+        String prompt = buildDailyPlanPrompt(robot, planDate);
+        int maxRetry = 10;
+        Exception lastException = null;
+        for (int i = 0; i < maxRetry; i++) {
+            try {
+                // 1. 调用Dify获取AI结果
+                String aiResult = difyService.callDifyApi(prompt, robot.getId());
+                // 2. 反序列化为RobotDailyPlan对象
+                ObjectMapper mapper = new ObjectMapper();
+                if (aiResult.indexOf("</think>\n") != -1) {
+                    aiResult = aiResult.substring(aiResult.indexOf("</think>\n") + 9);
+                }
+                RobotDailyPlan plan = mapper.readValue(aiResult, RobotDailyPlan.class);
+                // 3. 补充robotId/planDate等必要字段
+                plan.setRobotId(robot.getId());
+                plan.setPlanDate(planDate);
+                plan.setCreatedAt(LocalDateTime.now());
+                plan.setUpdatedAt(LocalDateTime.now());
+                plan.setIsDeleted(false);
+                return plan;
+            } catch (Exception e) {
+                lastException = e;
+                log.error("AI调用失败:", e);
+            }
+        }
+        // 多次失败，抛出异常
+        throw new RuntimeException("AI生成每日计划失败", lastException);
     }
 } 

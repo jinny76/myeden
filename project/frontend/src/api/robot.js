@@ -130,4 +130,31 @@ export function refreshRobotStatus() {
     url: '/robots/status/refresh',
     method: 'post'
   })
+}
+
+/**
+ * 查询机器人每日计划（只读）
+ * @param {Object} params - 查询参数
+ * @returns {Promise}
+ */
+export function getDailyPlanList(params) {
+  return request({
+    url: '/robot/plan/list',
+    method: 'get',
+    params
+  })
+}
+
+export default {
+  getRobotList,
+  getRobotDetail,
+  triggerRobotPost,
+  triggerRobotComment,
+  triggerRobotReply,
+  getRobotDailyStats,
+  resetRobotDailyStats,
+  startBehaviorScheduler,
+  stopBehaviorScheduler,
+  refreshRobotStatus,
+  getDailyPlanList
 } 

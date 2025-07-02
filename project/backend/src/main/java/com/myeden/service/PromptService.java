@@ -2,6 +2,8 @@ package com.myeden.service;
 
 import com.myeden.entity.Robot;
 import java.util.List;
+import java.time.LocalDate;
+import com.myeden.entity.RobotDailyPlan;
 
 /**
  * 提示词服务接口
@@ -145,4 +147,20 @@ public interface PromptService {
     String generateReplyContent(Robot robot, CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail, String context);
 
     String generateInnerThoughts(Robot robot, String situation);
+
+    /**
+     * 构建机器人每日计划AI提示词
+     * @param robot 机器人对象
+     * @param planDate 计划日期
+     * @return AI提示词
+     */
+    String buildDailyPlanPrompt(com.myeden.entity.Robot robot, java.time.LocalDate planDate);
+
+    /**
+     * 调用AI生成机器人每日计划
+     * @param robot 机器人对象
+     * @param planDate 计划日期
+     * @return 生成的RobotDailyPlan对象
+     */
+    RobotDailyPlan generateDailyPlan(Robot robot, java.time.LocalDate planDate);
 }

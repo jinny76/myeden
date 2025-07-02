@@ -35,6 +35,14 @@
 
       <!-- 主要内容 -->
       <div v-else-if="worldStore.isWorldLoaded" class="content-wrapper">
+        <!-- 新增：机器人每日计划入口 -->
+        <div class="daily-plan-entry" style="margin-bottom: 32px; text-align: right;">
+          <el-button type="primary" @click="$router.push('/robot-daily-plan')" size="large" style="border-radius: 24px; font-weight: bold;">
+            <el-icon><Calendar /></el-icon>
+            机器人每日计划
+          </el-button>
+        </div>
+
         <!-- 世界基本信息 -->
         <div class="world-info-section">
           <div class="world-info-card">
@@ -206,7 +214,7 @@ import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
-import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus, Edit } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus, Edit, Calendar } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { 
   createUserRobotLink, 

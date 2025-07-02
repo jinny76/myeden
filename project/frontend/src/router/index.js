@@ -103,6 +103,11 @@ const routes = [
           title: '编辑天使 - 我的伊甸园',
           requiresAuth: true
         }
+      },
+      {
+        path: 'robot-daily-plan',
+        component: () => import('@/views/RobotDailyPlanPage.vue'),
+        meta: { title: '机器人每日计划' }
       }
     ]
   }
