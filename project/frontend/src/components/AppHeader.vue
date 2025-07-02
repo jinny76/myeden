@@ -2,7 +2,7 @@
   <el-header class="header">
     <div class="header-content">
       <!-- Logo区域 -->
-      <div class="logo" @click="navigateTo('/')">
+      <div class="logo">
         <h1>我的伊甸园</h1>
       </div>
       
@@ -13,7 +13,7 @@
           @click="navigateTo('/')"
         >
           <el-icon><House /></el-icon>
-          <span>伊甸园</span>
+          <span>首页</span>
         </div>
         <div class="nav-item" 
           :class="{ active: activeMenu === '/moments' }" 
@@ -27,7 +27,7 @@
           @click="navigateTo('/world')"
         >
           <el-icon><Compass /></el-icon>
-          <span>介绍</span>
+          <span>探索世界</span>
         </div>
       </div>
       
@@ -87,6 +87,13 @@
         >
           <el-icon><ChatDotRound /></el-icon>
           <span>动态</span>
+        </div>
+        <div class="quick-nav-item" 
+          :class="{ active: activeMenu === '/world' }" 
+          @click="navigateTo('/world')"
+        >
+          <el-icon><Compass /></el-icon>
+          <span>世界</span>
         </div>
       </div>
       
@@ -287,11 +294,14 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
+  max-width: 400px;
 }
 
 .desktop-menu {
   display: flex;
+  width: 100%;
+  justify-content: space-between;
 }
 
 .nav-item {
@@ -318,7 +328,6 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(34, 211, 107, 0.1), rgba(74, 222, 128, 0.05));
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -362,7 +371,6 @@ onUnmounted(() => {
   padding: 8px 12px;
   border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.2);
   min-height: 44px;
 }
@@ -444,30 +452,31 @@ onUnmounted(() => {
 .mobile-quick-nav {
   display: none;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
-  justify-content: center;
-  margin: 0 16px;
+  justify-content: space-between;
+  margin: 0 12px;
+  max-width: 280px;
 }
 
 .quick-nav-item {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 12px;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--color-text);
   font-weight: 500;
-  font-size: 12px;
+  font-size: 11px;
   position: relative;
-  min-width: 60px;
-  min-height: 60px;
-  background: rgba(255, 255, 255, 0.8);
+  min-width: 50px;
+  min-height: 50px;
   border: 1px solid rgba(0, 0, 0, 0.1);
+  flex: 1;
 }
 
 .quick-nav-item:hover {
@@ -484,7 +493,7 @@ onUnmounted(() => {
 }
 
 .quick-nav-item .el-icon {
-  font-size: 16px;
+  font-size: 14px;
   transition: transform 0.3s ease;
 }
 
@@ -493,9 +502,10 @@ onUnmounted(() => {
 }
 
 .quick-nav-item span {
-  font-size: 12px;
+  font-size: 10px;
   line-height: 1;
   white-space: nowrap;
+  text-align: center;
 }
 
 /* 移动端用户菜单按钮 */
@@ -711,23 +721,24 @@ onUnmounted(() => {
   }
   
   .mobile-quick-nav {
-    margin: 0 6px;
-    gap: 4px;
+    margin: 0 4px;
+    gap: 3px;
+    max-width: 240px;
   }
   
   .quick-nav-item {
-    padding: 4px 6px;
-    min-width: 44px;
-    min-height: 44px;
-    gap: 4px;
+    padding: 3px 4px;
+    min-width: 40px;
+    min-height: 40px;
+    gap: 2px;
   }
   
   .quick-nav-item .el-icon {
-    font-size: 14px;
+    font-size: 12px;
   }
   
   .quick-nav-item span {
-    font-size: 10px;
+    font-size: 9px;
   }
   
   .mobile-user-menu {
@@ -766,17 +777,40 @@ onUnmounted(() => {
     background: rgba(34, 211, 107, 0.15);
   }
   
+  .user-info {
+    /* 深色主题下整体区域不过亮 */
+    background: transparent;
+    color: #cfd2dc;
+    border-radius: 12px;
+    transition: background 0.2s;
+    align-items: center;
+  }
   .user-avatar {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(30, 32, 36, 0.92) !important; /* 深灰半透明背景 */
+    border: none !important;
+    box-shadow: none !important;
+    color: #cfd2dc !important;
+    padding: 8px 16px !important;
+    transition: background 0.2s;
   }
-  
   .user-avatar:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(50, 54, 60, 0.98) !important; /* 悬浮时略微高亮 */
   }
-  
   .username {
-    color: #e5e5e5;
+    color: #cfd2dc !important; /* 柔和浅灰色字体 */
+    font-size: 15px !important;
+    font-weight: 500 !important;
+  }
+  .dropdown-arrow {
+    color: #8a8fa3 !important; /* 箭头变暗 */
+    font-size: 18px !important;
+    margin-left: 4px;
+  }
+  .user-info:hover {
+    background: rgba(255,255,255,0.04); /* 悬浮时微弱高亮 */
+  }
+  .user-info:hover .dropdown-arrow {
+    color: #cfd2dc;
   }
   
   .mobile-quick-nav .quick-nav-item {

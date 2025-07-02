@@ -67,12 +67,16 @@
           <div class="step-header">
             <h2>基础信息</h2>
             <p>设置天使的基本信息和外观</p>
+            <div class="required-fields-notice">
+              <span class="required-mark">*</span>
+              <span>标记为必填项</span>
+            </div>
           </div>
           
           <div class="form-section">
             <!-- 头像上传 -->
             <div class="avatar-section">
-              <h3>天使头像</h3>
+              <h3>天使头像 *</h3>
               <el-form-item label="头像" prop="avatar">
                 <div class="avatar-upload">
                   <el-upload
@@ -112,15 +116,15 @@
             <div class="basic-info-section">
               <h3>基本信息</h3>
               <div class="form-fields">
-                <el-form-item label="天使名称" prop="name">
+                <el-form-item label="天使名称 *" prop="name">
                   <el-input 
                     v-model="robotData.name" 
-                    placeholder="为你的天使起一个名字"
+                    placeholder="为你的天使起一个名字（必填）"
                     size="large"
                   />
                 </el-form-item>
                 
-                <el-form-item label="性别" prop="gender">
+                <el-form-item label="性别 *" prop="gender">
                   <el-radio-group v-model="robotData.gender" size="large">
                     <el-radio-button label="female">女</el-radio-button>
                     <el-radio-button label="male">男</el-radio-button>
@@ -128,7 +132,7 @@
                   </el-radio-group>
                 </el-form-item>
                 
-                <el-form-item label="年龄" prop="age">
+                <el-form-item label="年龄 *" prop="age">
                   <div class="age-slider-container">
                     <div class="age-display">{{ robotData.age }}岁</div>
                     <el-slider
@@ -142,12 +146,12 @@
                   </div>
                 </el-form-item>
                 
-                <el-form-item label="一句话简介" prop="introduction">
+                <el-form-item label="一句话简介 *" prop="introduction">
                   <el-input 
                     v-model="robotData.introduction" 
                     type="textarea" 
                     :rows="3"
-                    placeholder="用一句话描述这个天使"
+                    placeholder="用一句话描述这个天使（必填）"
                     size="large"
                   />
                 </el-form-item>
@@ -161,17 +165,21 @@
           <div class="step-header">
             <h2>性格设定</h2>
             <p>定义天使的性格特征和行为模式</p>
+            <div class="required-fields-notice">
+              <span class="required-mark">*</span>
+              <span>标记为必填项</span>
+            </div>
           </div>
           
           <div class="form-section">
             <div class="personality-section">
-              <h3>性格描述</h3>
+              <h3>性格描述 *</h3>
               <el-form-item prop="personality">
                 <el-input 
                   v-model="robotData.personality" 
                   type="textarea" 
                   :rows="6"
-                  placeholder="详细描述天使的性格特点、行为习惯、说话方式等"
+                  placeholder="详细描述天使的性格特点、行为习惯、说话方式等（必填）"
                   size="large"
                 />
               </el-form-item>
@@ -251,23 +259,23 @@
               <h3>基本信息</h3>
               <div class="form-fields">
                 <el-form-item label="MBTI" prop="mbti">
-                  <el-select v-model="robotData.mbti" placeholder="选择MBTI类型" size="large" style="width: 100%">
-                    <el-option label="INTJ" value="INTJ" />
-                    <el-option label="INTP" value="INTP" />
-                    <el-option label="ENTJ" value="ENTJ" />
-                    <el-option label="ENTP" value="ENTP" />
-                    <el-option label="INFJ" value="INFJ" />
-                    <el-option label="INFP" value="INFP" />
-                    <el-option label="ENFJ" value="ENFJ" />
-                    <el-option label="ENFP" value="ENFP" />
-                    <el-option label="ISTJ" value="ISTJ" />
-                    <el-option label="ISFJ" value="ISFJ" />
-                    <el-option label="ESTJ" value="ESTJ" />
-                    <el-option label="ESFJ" value="ESFJ" />
-                    <el-option label="ISTP" value="ISTP" />
-                    <el-option label="ISFP" value="ISFP" />
-                    <el-option label="ESTP" value="ESTP" />
-                    <el-option label="ESFP" value="ESFP" />
+                  <el-select v-model="robotData.mbti" placeholder="选择MBTI性格类型（如：INTJ - 建筑师）" size="large" style="width: 100%">
+                    <el-option label="INTJ - 建筑师" value="INTJ" />
+                    <el-option label="INTP - 逻辑学家" value="INTP" />
+                    <el-option label="ENTJ - 指挥官" value="ENTJ" />
+                    <el-option label="ENTP - 辩论家" value="ENTP" />
+                    <el-option label="INFJ - 提倡者" value="INFJ" />
+                    <el-option label="INFP - 调停者" value="INFP" />
+                    <el-option label="ENFJ - 主人公" value="ENFJ" />
+                    <el-option label="ENFP - 竞选者" value="ENFP" />
+                    <el-option label="ISTJ - 物流师" value="ISTJ" />
+                    <el-option label="ISFJ - 守卫者" value="ISFJ" />
+                    <el-option label="ESTJ - 总经理" value="ESTJ" />
+                    <el-option label="ESFJ - 执政官" value="ESFJ" />
+                    <el-option label="ISTP - 鉴赏家" value="ISTP" />
+                    <el-option label="ISFP - 探险家" value="ISFP" />
+                    <el-option label="ESTP - 企业家" value="ESTP" />
+                    <el-option label="ESFP - 表演者" value="ESFP" />
                   </el-select>
                 </el-form-item>
                 
@@ -494,6 +502,29 @@ const avatarUpload = ref(null)
 const avatarPreviewUrl = ref('')
 const currentStep = ref(0)
 
+// 表单验证规则
+const formRules = {
+  name: [
+    { required: true, message: '请输入天使名称', trigger: 'blur' },
+    { min: 2, max: 20, message: '名称长度在 2 到 20 个字符', trigger: 'blur' }
+  ],
+  gender: [
+    { required: true, message: '请选择性别', trigger: 'change' }
+  ],
+  age: [
+    { required: true, message: '请设置年龄', trigger: 'change' },
+    { type: 'number', min: 1, max: 100, message: '年龄必须在 1 到 100 之间', trigger: 'blur' }
+  ],
+  introduction: [
+    { required: true, message: '请输入一句话简介', trigger: 'blur' },
+    { min: 5, max: 100, message: '简介长度在 5 到 100 个字符', trigger: 'blur' }
+  ],
+  personality: [
+    { required: true, message: '请输入性格描述', trigger: 'blur' },
+    { min: 10, max: 500, message: '性格描述长度在 10 到 500 个字符', trigger: 'blur' }
+  ]
+}
+
 // 向导步骤配置
 const steps = [
   {
@@ -691,6 +722,48 @@ const loadRobotData = async () => {
 
 const saveRobot = async () => {
   try {
+    // 验证必填项
+    if (!robotData.name || robotData.name.trim() === '') {
+      ElMessage.error('请输入天使名称')
+      return
+    }
+    
+    if (!robotData.gender) {
+      ElMessage.error('请选择性别')
+      return
+    }
+    
+    if (!robotData.age || robotData.age < 1 || robotData.age > 100) {
+      ElMessage.error('请设置有效的年龄')
+      return
+    }
+    
+    if (!robotData.introduction || robotData.introduction.trim() === '') {
+      ElMessage.error('请输入一句话简介')
+      return
+    }
+    
+    if (!robotData.personality || robotData.personality.trim() === '') {
+      ElMessage.error('请输入性格描述')
+      return
+    }
+    
+    // 验证字段长度
+    if (robotData.name.trim().length < 2 || robotData.name.trim().length > 20) {
+      ElMessage.error('天使名称长度必须在 2 到 20 个字符之间')
+      return
+    }
+    
+    if (robotData.introduction.trim().length < 5 || robotData.introduction.trim().length > 100) {
+      ElMessage.error('一句话简介长度必须在 5 到 100 个字符之间')
+      return
+    }
+    
+    if (robotData.personality.trim().length < 10 || robotData.personality.trim().length > 500) {
+      ElMessage.error('性格描述长度必须在 10 到 500 个字符之间')
+      return
+    }
+    
     saving.value = true
     
     const data = { ...robotData }
@@ -792,7 +865,7 @@ onMounted(() => {
   position: relative;
   z-index: 1;
   max-width: 1200px;
-  margin: 80 auto;
+  margin: 0 auto;
   padding: 20px;
   padding-top: 100px; /* 避免与标题栏重叠 */
 }
@@ -1083,6 +1156,25 @@ onMounted(() => {
   opacity: 0.7;
   font-size: 16px;
   margin: 0;
+}
+
+.required-fields-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(245, 101, 101, 0.1);
+  border: 1px solid rgba(245, 101, 101, 0.2);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.required-mark {
+  color: #f56565;
+  font-weight: bold;
+  font-size: 16px;
 }
 
 .form-section {
@@ -1517,6 +1609,20 @@ onMounted(() => {
   color: var(--color-text);
 }
 
+/* 必填项标识样式 */
+:deep(.el-form-item__label) {
+  position: relative;
+}
+
+/* 必填项标签样式 */
+.form-fields .el-form-item__label {
+  font-weight: 600;
+}
+
+.form-fields .el-form-item__label:has-text('*') {
+  color: #f56565;
+}
+
 :deep(.el-input__wrapper) {
   border-radius: 8px;
   transition: all 0.3s ease;
@@ -1668,7 +1774,9 @@ onMounted(() => {
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .main-content {
+    margin: 0 auto;
     padding: 16px;
+    padding-top: 100px;
   }
   
   .wizard-steps {
@@ -1684,8 +1792,9 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .main-content {
-    margin-top: 80px;
+    margin: 0 auto;
     padding: 12px;
+    padding-top: 100px;
   }
   
   .wizard-header {
@@ -1818,7 +1927,9 @@ onMounted(() => {
 
 @media (max-width: 480px) {
   .main-content {
+    margin: 0 auto;
     padding: 8px;
+    padding-top: 100px;
   }
   
   .wizard-header {
