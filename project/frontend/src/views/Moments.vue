@@ -197,12 +197,11 @@
           <div 
             v-for="post in momentsStore.posts" 
             :key="post.postId" 
-            class="post-card"
-            :data-post-id="post.postId"
+            class="post-card"            
           >
             <div class="post-card-content">
               <!-- 动态头部 -->
-              <div class="post-header">
+              <div class="post-header" :data-post-id="post.postId">
                 <div class="post-author">
                   <el-avatar 
                     :src="getAuthorAvatarUrl(post)" 
@@ -221,7 +220,13 @@
               
               <!-- 动态内容 -->
               <div class="post-content">
-                <p>{{ post.content }}</p>
+                <p>
+                  {{ post.content }}
+                  <el-icon class="speech-icon" style="cursor:pointer; margin-left:8px; vertical-align:middle;" 
+                    @click="playSpeech(post.content, getAuthorGenderAge(post))">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.06c1.48-.74 2.5-2.26 2.5-4.03zm2.5 0c0 2.53-1.54 4.71-3.75 5.65v2.13c3.45-1.01 6-4.13 6-7.78s-2.55-6.77-6-7.78v2.13C17.46 7.29 19 9.47 19 12z" fill="currentColor"/></svg>
+                  </el-icon>
+                </p>
                 
                 <!-- 图片展示 -->
                 <div v-if="post.images && post.images.length > 0" class="post-images" @click.stop>
@@ -296,6 +301,7 @@
                     v-for="comment in getTopLevelComments(post)" 
                     :key="comment.commentId"
                     class="comment-item"
+                    :data-comment-id="comment.commentId"
                     @click.stop
                   >
                     <div class="comment-header">
@@ -310,7 +316,13 @@
                       </div>
                     </div>
                     <div class="comment-content">
-                      <p>{{ comment.content }}</p>
+                      <p>
+                        {{ comment.content }}
+                        <el-icon class="speech-icon" style="cursor:pointer; margin-left:8px; vertical-align:middle;" 
+                          @click="playSpeech(comment.content, getAuthorGenderAge(comment))">
+                          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.06c1.48-.74 2.5-2.26 2.5-4.03zm2.5 0c0 2.53-1.54 4.71-3.75 5.65v2.13c3.45-1.01 6-4.13 6-7.78s-2.55-6.77-6-7.78v2.13C17.46 7.29 19 9.47 19 12z" fill="currentColor"/></svg>
+                        </el-icon>
+                      </p>
                     </div>
                     <div class="comment-actions" @click.stop>
                       <span class="action-link" @click.stop="showReplyInput(comment)">回复</span>
@@ -354,6 +366,7 @@
                           v-for="reply in getCommentReplies(comment, post)" 
                           :key="reply.commentId"
                           class="reply-item"
+                          :data-reply-id="reply.commentId"
                           @click.stop
                         >
                           <div class="reply-header">
@@ -368,7 +381,13 @@
                             </div>
                           </div>
                           <div class="reply-content">
-                            <p>{{ reply.content }}</p>
+                            <p>
+                              {{ reply.content }}
+                              <el-icon class="speech-icon" style="cursor:pointer; margin-left:8px; vertical-align:middle;" 
+                                @click="playSpeech(reply.content, getAuthorGenderAge(reply))">
+                                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.06c1.48-.74 2.5-2.26 2.5-4.03zm2.5 0c0 2.53-1.54 4.71-3.75 5.65v2.13c3.45-1.01 6-4.13 6-7.78s-2.55-6.77-6-7.78v2.13C17.46 7.29 19 9.47 19 12z" fill="currentColor"/></svg>
+                              </el-icon>
+                            </p>
                           </div>
                           <div class="reply-actions" @click.stop>
                             <span class="action-link" @click.stop="toggleCommentLike(reply)">
@@ -491,7 +510,13 @@
         <div class="thoughts-body">
           <div class="thoughts-content">
             <h4>内心想法：</h4>
-            <p>{{ currentThoughtsItem?.innerThoughts }}</p>
+            <p>
+              {{ currentThoughtsItem?.innerThoughts }}
+              <el-icon class="speech-icon" style="cursor:pointer; margin-left:8px; vertical-align:middle;" 
+                @click="playSpeech(currentThoughtsItem?.innerThoughts, getAuthorGenderAge(currentThoughtsItem))">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.06c1.48-.74 2.5-2.26 2.5-4.03zm2.5 0c0 2.53-1.54 4.71-3.75 5.65v2.13c3.45-1.01 6-4.13 6-7.78s-2.55-6.77-6-7.78v2.13C17.46 7.29 19 9.47 19 12z" fill="currentColor"/></svg>
+              </el-icon>
+            </p>
           </div>
           <div class="thoughts-original">
             <h4>实际表达：</h4>
@@ -504,11 +529,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
+import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
 import { useWebSocketStore } from '@/stores/websocket'
+import { useRobotStore } from '@/stores/robot'
 import { ElMessageBox, ElPopover } from 'element-plus'
 import { message } from '@/utils/message'
 import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View } from '@element-plus/icons-vue'
@@ -566,6 +592,35 @@ const imagePreviewActive = ref(false)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
+
+const robotStore = useRobotStore()
+const robotList = ref([])
+
+let observer = null;
+/**
+ * 监听所有动态、评论、回复元素
+ */
+const observeAll = () => {
+  if (!observer) return
+  // 监听所有动态
+  /* document.querySelectorAll('.post-header[data-post-id]').forEach(el => {
+    el.setAttribute('data-type', 'post')
+    el.setAttribute('data-id', el.getAttribute('data-post-id'))
+    observer.observe(el)
+  })
+  // 监听所有一级评论
+  document.querySelectorAll('.comment-item[data-comment-id]').forEach(el => {
+    el.setAttribute('data-type', 'comment')
+    el.setAttribute('data-id', el.getAttribute('data-comment-id'))
+    observer.observe(el)
+  })
+  // 监听所有回复
+  document.querySelectorAll('.reply-item[data-reply-id]').forEach(el => {
+    el.setAttribute('data-type', 'reply')
+    el.setAttribute('data-id', el.getAttribute('data-reply-id'))
+    observer.observe(el)
+  }) */
+}
 
 watch(showInnerThoughtsDialog, (val) => {
   if (val) {
@@ -1401,6 +1456,8 @@ const goToPostDetail = (post) => {
 
 // 生命周期
 onMounted(async () => {
+  await robotStore.fetchRobotList()
+  robotList.value = robotStore.robots
   try {
     // 使用新的统一查询接口加载初始动态列表
     await momentsStore.loadPosts({}, true)
@@ -1480,7 +1537,70 @@ onMounted(async () => {
   } else {
     console.log('⚠️ Moments.vue跳过WebSocket事件监听（不支持增量刷新）')
   }
+
+  // 记录已朗读内容，避免重复
+  const spokenSet = new Set()
+
+  /**
+   * 创建IntersectionObserver，监听动态、评论、回复进入视口
+   */
+  const createObserver = () => {
+    if (observer) observer.disconnect()
+    observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const el = entry.target
+          const type = el.getAttribute('data-type')
+          const id = el.getAttribute('data-id')
+          const key = `${type}-${id}`
+          if (!spokenSet.has(key)) {
+            spokenSet.add(key)
+            // 获取内容和作者信息
+            let text = ''
+            let item = null
+            if (type === 'post') {
+              const post = momentsStore.posts.find(p => p.postId == id)
+              if (post) {
+                text = post.content
+                item = post
+              }
+            } else if (type === 'comment') {
+              for (const post of momentsStore.posts) {
+                const comment = (post.comments || momentsStore.comments[post.postId] || []).find(c => c.commentId == id)
+                if (comment) {
+                  text = comment.content
+                  item = comment
+                  break
+                }
+              }
+            } else if (type === 'reply') {
+              for (const post of momentsStore.posts) {
+                const reply = (post.comments || momentsStore.comments[post.postId] || []).find(c => c.commentId == id)
+                if (reply) {
+                  text = reply.content
+                  item = reply
+                  break
+                }
+              }
+            }
+            if (text && item) playSpeech(text, getAuthorGenderAge(item))
+          }
+        }
+      })
+    }, { threshold: 0.5 }) // 50%进入视口时触发
+  }
+
+  createObserver()
+  nextTick(() => {
+    observeAll()
+  })
 })
+
+watch(() => momentsStore.posts, () => {
+  nextTick(() => {
+    observeAll()
+  })
+}, { deep: true })
 
 // 组件卸载时移除事件监听
 onUnmounted(() => {
@@ -1516,6 +1636,8 @@ onUnmounted(() => {
     window.removeEventListener('robot-reply', handleRobotAction)
     console.log('🛑 Moments.vue已清理WebSocket事件监听')
   }
+
+  if (observer) observer.disconnect()
 })
 
 // 点击外部区域关闭移动端菜单
@@ -1798,6 +1920,112 @@ const getTopLevelComments = (post) => {
   console.log(`动态 ${post.postId} 的一级评论数量: ${topLevelComments.length}`)
   
   return topLevelComments
+}
+
+/**
+ * 语音合成播放文本
+ * @param {string} text - 要朗读的文本内容
+ * @param {Object} [author] - 作者信息（可选），用于选择voice
+ * @param {string} [author.gender] - 性别 'male' | 'female'
+ * @param {number} [author.age] - 年龄
+ */
+let cachedVoices = null // 缓存voices，避免重复获取
+let index = 0;
+const playSpeech = (text, author = {}) => {
+  if (!window.speechSynthesis) {
+    message.warning('当前浏览器不支持语音朗读')
+    return
+  }
+  if (!text || typeof text !== 'string') {
+    message.warning('无可朗读内容')
+    return
+  }
+  // 停止当前朗读
+  window.speechSynthesis.cancel()
+  // 获取所有可用voice，仅首次获取，后续用缓存
+  /* if (!cachedVoices) {
+    cachedVoices = window.speechSynthesis.getVoices()
+    // 监听voiceschanged事件，异步加载时更新缓存
+    if (cachedVoices.length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        cachedVoices = window.speechSynthesis.getVoices()
+      }
+    }
+  }
+  const voices = cachedVoices || []
+  let selectedVoice = null
+  // 语音选择策略
+  const gender = author.gender || 'female'
+  const age = author.age || 20
+  // 优先中文语音
+  const preferredVoices = voices.filter(v => v.name && (v.name.includes('Mainland') || v.name.startsWith('Online')))
+  console.log('author', author)
+  console.log('preferredVoices', preferredVoices)
+  // 性别优先
+  if (gender === 'male') {
+    if (age <= 12) {
+      // 儿童音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Yunxia'))
+    } else if (age <= 25) {
+      // 青年音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Yunxi'))
+    } else {
+      // 成年音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Yunyang'))
+    }
+  } else {
+    if (age <= 12) {
+      // 儿童音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Xiaoyi'))
+    } else if (age <= 25) {
+      // 青年音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Xiaoyi'))
+    } else {
+      // 成年音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Xiaoyi'))
+    }
+  } */
+
+  // 判空处理：如果voices为空，直接不指定voice，仅指定lang
+  const utter = new window.SpeechSynthesisUtterance(text)
+  /* if (voices.length > 0 && selectedVoice) {
+    utter.voice = selectedVoice
+    utter.lang = selectedVoice?.lang || 'zh-CN'
+    console.log('selectedVoice', selectedVoice, text)
+  } else {
+    utter.lang = 'zh-CN'
+    // 仅首次提示
+    if (!window._speechVoiceWarned) {      
+      window._speechVoiceWarned = true
+    }
+  } */
+  utter.rate = 1
+  utter.pitch = 1
+  utter.volume = 1
+  utter.onerror = (e) => {
+    //message.error('语音播放失败')
+    //console.error('SpeechSynthesis error:', e)
+  }
+  console.log('text', text)
+  window.speechSynthesis.speak(utter)
+}
+
+/**
+ * 获取作者性别和年龄
+ * @param {Object} item - 动态/评论/回复对象
+ * @returns {Object} { gender, age }
+ */
+const getAuthorGenderAge = (item) => {
+  if (item.authorGender && item.authorAge) {
+    return { gender: item.authorGender, age: item.authorAge }
+  }
+  if (item.authorType === 'robot' && item.authorId && robotList.value.length > 0) {
+    const robot = robotList.value.find(r => r.id == item.authorId)
+    if (robot) {
+      return { gender: robot.gender || 'female', age: robot.age || 20 }
+    }
+  }
+  return { gender: 'female', age: 20 }
 }
 </script>
 
