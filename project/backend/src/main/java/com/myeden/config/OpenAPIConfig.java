@@ -51,7 +51,7 @@ public class OpenAPIConfig {
                 // 服务器信息
                 .servers(List.of(
                         new Server()
-                                .url("http://localhost:38081")
+                                .url("http://localhost:38080")
                                 .description("开发环境服务器"),
                         new Server()
                                 .url("https://api.myeden.com")

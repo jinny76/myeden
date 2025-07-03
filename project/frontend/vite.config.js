@@ -52,7 +52,7 @@ export default defineConfig({
   
   server: {
     host: '0.0.0.0',
-    port: 35001,
+    port: 35000,
     open: true,
     cors: true,
     // 静态文件服务配置
@@ -67,7 +67,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:38081',
+        target: 'http://localhost:38080',
         changeOrigin: true,
         secure: false,
         ws: true,
@@ -84,12 +84,12 @@ export default defineConfig({
         }
       },
       '/ws': {
-        target: 'ws://localhost:38081',
+        target: 'ws://localhost:38080',
         ws: true,
         changeOrigin: true
       }
     },
-    allowedHosts: ['localhost', '127.0.0.1', '0.0.0.0', 'myeden-dev.kingfisher.live']
+    allowedHosts: ['localhost', '127.0.0.1', '0.0.0.0', 'myeden.kingfisher.live']
   },
   
   build: {
@@ -176,7 +176,7 @@ export default defineConfig({
 
   // 预构建配置
   preview: {
-    port: 35001,
+    port: 35000,
     open: true
   }
 }) 
