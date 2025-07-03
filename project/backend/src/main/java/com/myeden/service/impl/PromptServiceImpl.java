@@ -28,6 +28,8 @@ import com.myeden.service.ExternalDataCacheService;
 import com.myeden.model.external.HotSearchItem;
 import org.springframework.context.annotation.Lazy;
 import com.myeden.model.external.WeatherInfo;
+import com.myeden.entity.ContentGenerationLog;
+import com.myeden.repository.ContentGenerationLogRepository;
 
 /**
  * 提示词服务实现类
@@ -62,6 +64,9 @@ public class PromptServiceImpl implements PromptService {
     @Autowired
     @Lazy
     private ExternalDataCacheService externalDataCacheService;
+    
+    @Autowired
+    private ContentGenerationLogRepository contentGenerationLogRepository;
     
     private final Random random = new Random();
     
@@ -656,6 +661,18 @@ public class PromptServiceImpl implements PromptService {
             String rawContent = difyService.callDifyApi(promptResult.getPrompt(), robot.getRobotId());
             // 使用PromptService处理生成的内容
             String content = processGeneratedContent(rawContent, robot, "post");
+
+            // 保存生成日志
+            ContentGenerationLog log = new ContentGenerationLog(
+                robot, // 完整robot对象
+                promptResult.getPrompt(),
+                rawContent,
+                LocalDateTime.now(),
+                "post",
+                context
+            );
+            contentGenerationLogRepository.save(log);
+
             return new PostContentResult(content, promptResult.getLink());
         } catch (Exception e) {
             log.error("生成机器人动态内容失败: {}", e.getMessage(), e);
@@ -663,17 +680,38 @@ public class PromptServiceImpl implements PromptService {
         }
     }
 
+    /**
+     * 保存内容生成日志
+     * @param robot 机器人对象
+     * @param prompt 生成用的prompt
+     * @param rawContent 生成内容的原始结果
+     * @param type 生成类型（如post, comment, reply, innerThoughts等）
+     * @param context 生成上下文
+     */
+    private void saveContentGenerationLog(Robot robot, String prompt, String rawContent, String type, String context) {
+        ContentGenerationLog log = new ContentGenerationLog(
+            robot,
+            prompt,
+            rawContent,
+            LocalDateTime.now(),
+            type,
+            context
+        );
+        contentGenerationLogRepository.save(log);
+    }
+
     @Override
     public String generateCommentContent(Robot robot, PostService.PostDetail post, String context) {
         try {
             // 使用PromptService构建提示词
             String prompt = buildCommentPrompt(robot, post, context);
-
             // 调用Dify API
             String rawContent = difyService.callDifyApi(prompt, robot.getRobotId());
-
             // 使用PromptService处理生成的内容
-            return processGeneratedContent(rawContent, robot, "comment");
+            String content = processGeneratedContent(rawContent, robot, "comment");
+            // 保存日志
+            saveContentGenerationLog(robot, prompt, rawContent, "comment", context);
+            return content;
         } catch (Exception e) {
             log.error("生成机器人评论内容失败: {}", e.getMessage(), e);
             return generateFallbackComment(robot, post.getContent());
@@ -685,12 +723,13 @@ public class PromptServiceImpl implements PromptService {
         try {
             // 使用PromptService构建提示词
             String prompt = buildReplyPrompt(robot, commentDetail, postDetail, context);
-
             // 调用Dify API
             String rawContent = difyService.callDifyApi(prompt, robot.getRobotId());
-
             // 使用PromptService处理生成的内容
-            return processGeneratedContent(rawContent, robot, "reply");
+            String content = processGeneratedContent(rawContent, robot, "reply");
+            // 保存日志
+            saveContentGenerationLog(robot, prompt, rawContent, "reply", context);
+            return content;
         } catch (Exception e) {
             log.error("生成机器人回复内容失败: {}", e.getMessage(), e);
             return generateFallbackReply(robot, commentDetail.getContent());
@@ -702,12 +741,13 @@ public class PromptServiceImpl implements PromptService {
         try {
             // 使用PromptService构建提示词
             String prompt = buildInnerThoughtsPrompt(robot, situation);
-
             // 调用Dify API
             String rawContent = difyService.callDifyApi(prompt, robot.getRobotId());
-
             // 使用PromptService处理生成的内容
-            return processGeneratedContent(rawContent, robot, "inner_thoughts");
+            String content = processGeneratedContent(rawContent, robot, "inner_thoughts");
+            // 保存日志
+            saveContentGenerationLog(robot, prompt, rawContent, "inner_thoughts", situation);
+            return content;
         } catch (Exception e) {
             log.error("生成机器人内心活动失败: {}", e.getMessage(), e);
             return generateFallbackInnerThoughts(robot, situation);
