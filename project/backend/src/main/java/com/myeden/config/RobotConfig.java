@@ -1,5 +1,8 @@
 package com.myeden.config;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -42,7 +45,7 @@ public class RobotConfig {
         private int maxDailyPosts;
         private int maxDailyComments;
         private int maxDailyReplies;
-        private List<CommonTopic> commonTopic;
+        private List<Topic> commonTopic;
         
         public int getMaxDailyPosts() { return maxDailyPosts; }
         public void setMaxDailyPosts(int maxDailyPosts) { this.maxDailyPosts = maxDailyPosts; }
@@ -53,30 +56,8 @@ public class RobotConfig {
         public int getMaxDailyReplies() { return maxDailyReplies; }
         public void setMaxDailyReplies(int maxDailyReplies) { this.maxDailyReplies = maxDailyReplies; }
         
-        public List<CommonTopic> getCommonTopic() { return commonTopic; }
-        public void setCommonTopic(List<CommonTopic> commonTopic) { this.commonTopic = commonTopic; }
-    }
-    
-    /**
-     * 通用主题配置
-     */
-    public static class CommonTopic {
-        private String name;
-        private int frequency;
-        private String content;
-        private String dataType;
-        
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-        
-        public int getFrequency() { return frequency; }
-        public void setFrequency(int frequency) { this.frequency = frequency; }
-        
-        public String getContent() { return content; }
-        public void setContent(String content) { this.content = content; }
-        
-        public String getDataType() { return dataType; }
-        public void setDataType(String dataType) { this.dataType = dataType; }
+        public List<Topic> getCommonTopic() { return commonTopic; }
+        public void setCommonTopic(List<Topic> commonTopic) { this.commonTopic = commonTopic; }
     }
     
     /**
@@ -192,6 +173,9 @@ public class RobotConfig {
     /**
      * 个人主题配置
      */
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Topic {
         private String name;
         private int frequency;

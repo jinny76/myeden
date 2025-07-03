@@ -410,13 +410,14 @@ public class ConfigServiceImpl implements ConfigService {
         }
 
         if (robotConfig.getTopic() != null) {
-            List<Robot.Topic> topics = new ArrayList<>();
+            List<RobotConfig.Topic> topics = new ArrayList<>();
             for (int i = 0; i < robotConfig.getTopic().size(); i++) {
                 RobotConfig.Topic topic = robotConfig.getTopic().get(i);
-                Robot.Topic newTopic = new Robot.Topic();
+                RobotConfig.Topic newTopic = new RobotConfig.Topic();
                 newTopic.setName(topic.getName());
                 newTopic.setContent(topic.getContent());
                 newTopic.setFrequency(topic.getFrequency());
+                newTopic.setDataType(topic.getDataType());
                 topics.add(newTopic);
             }
             robot.setTopics(topics);

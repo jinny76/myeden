@@ -86,20 +86,22 @@ public class PromptServiceImpl implements PromptService {
         // 获取机器人的详细配置信息
         RobotConfig.RobotInfo robotInfo = getRobotInfo(robot.getName());
         // 构建机器人身份设定
-        String selectedTopic = selectRandomTopic(robot);
+        RobotConfig.Topic selectedTopic = selectRandomTopic(robot);
         prompt.append(String.format("你是%s（昵称：%s），%s。正在看朋友圈, 想发一条%s的动态\n\n",
             robot.getName(), 
             robotInfo != null ? robotInfo.getNickname() : robot.getName(), 
-            robot.getPersonality(), selectedTopic));
+            robot.getPersonality(), selectedTopic.getContent()));
 
         // 新增：根据主题类型插入外部数据背景
-        String dataType = getDataTypeForTopic(robot, selectedTopic);
-        String dataBackground = getDataBackgroundByType(dataType, robot.getLocation());
-        if (dataBackground != null && !dataBackground.isEmpty()) {
-            prompt.append("\n\n## 相关数据参考：\n");
-            prompt.append(dataBackground);
-            // 获取外部数据LinkInfo对象
-            link = getDataLinkInfoByType(dataType);
+        String dataType = selectedTopic.getDataType();
+        if (dataType != null) {
+            String dataBackground = getDataBackgroundByType(dataType);
+            if (dataBackground != null && !dataBackground.isEmpty()) {
+                prompt.append("\n\n## 相关数据参考：\n");
+                prompt.append(dataBackground);
+                // 获取外部数据LinkInfo对象
+                // link = getDataLinkInfoByType(dataType);
+            }
         }
 
         // 添加上下文信息
@@ -783,19 +785,19 @@ public class PromptServiceImpl implements PromptService {
     }
 
     @Override
-    public String selectRandomTopic(Robot robot) {
+    public RobotConfig.Topic selectRandomTopic(Robot robot) {
         try {
             // 获取合并后的主题列表
-            List<TopicItem> mergedTopics = getMergedTopics(robot);
+            List<RobotConfig.Topic> mergedTopics = getMergedTopics(robot);
             
             if (mergedTopics.isEmpty()) {
                 log.warn("机器人 {} 没有可用的主题，使用默认主题", robot.getName());
-                return "分享生活";
+                return new RobotConfig.Topic("分享心情", 1, "分享你的心情", null);
             }
             
             // 根据频次创建权重列表
-            List<TopicItem> weightedTopics = new ArrayList<>();
-            for (TopicItem topic : mergedTopics) {
+            List<RobotConfig.Topic> weightedTopics = new ArrayList<>();
+            for (RobotConfig.Topic topic : mergedTopics) {
                 // 根据频次重复添加主题，实现权重效果
                 for (int i = 0; i < topic.getFrequency(); i++) {
                     weightedTopics.add(topic);
@@ -803,32 +805,27 @@ public class PromptServiceImpl implements PromptService {
             }
             
             // 随机选择一个主题
-            TopicItem selectedTopic = weightedTopics.get(random.nextInt(weightedTopics.size()));
+            RobotConfig.Topic selectedTopic = weightedTopics.get(random.nextInt(weightedTopics.size()));
             
-            log.info("为机器人 {} 选择了主题: {} (来源: {})", 
-                    robot.getName(), selectedTopic.getName(), selectedTopic.getSource());
+            log.info("为机器人 {} 选择了主题: {}",
+                    robot.getName(), selectedTopic.getName());
             
-            return selectedTopic.getContent();
+            return selectedTopic;
         } catch (Exception e) {
             log.error("为机器人 {} 选择主题失败: {}", robot.getName(), e.getMessage(), e);
-            return "分享生活";
+            return new RobotConfig.Topic("分享心情", 1, "分享你的心情", null);
         }
     }
     
     @Override
-    public List<TopicItem> getMergedTopics(Robot robot) {
-        List<TopicItem> mergedTopics = new ArrayList<>();
+    public List<RobotConfig.Topic> getMergedTopics(Robot robot) {
+        List<RobotConfig.Topic> mergedTopics = new ArrayList<>();
         
         try {
             // 获取通用主题
             if (robotConfig.getBaseConfig() != null && robotConfig.getBaseConfig().getCommonTopic() != null) {
-                for (RobotConfig.CommonTopic commonTopic : robotConfig.getBaseConfig().getCommonTopic()) {
-                    mergedTopics.add(new TopicItem(
-                            commonTopic.getName(),
-                            commonTopic.getContent(),
-                            commonTopic.getFrequency(),
-                            "common"
-                    ));
+                for (RobotConfig.Topic commonTopic : robotConfig.getBaseConfig().getCommonTopic()) {
+                    mergedTopics.add(commonTopic);
                 }
             }
             
@@ -836,20 +833,10 @@ public class PromptServiceImpl implements PromptService {
             RobotConfig.RobotInfo robotInfo = findRobotInfo(robot.getRobotId());
             if (robotInfo != null && robotInfo.getTopic() != null) {
                 for (RobotConfig.Topic personalTopic : robotInfo.getTopic()) {
-                    mergedTopics.add(new TopicItem(
-                            personalTopic.getName(),
-                            personalTopic.getContent(),
-                            personalTopic.getFrequency(),
-                            "personal"
-                    ));
+                    mergedTopics.add(personalTopic);
                 }
             }
-            
-            log.debug("机器人 {} 的合并主题列表: {} 个通用主题, {} 个个人主题", 
-                    robot.getName(),
-                    mergedTopics.stream().filter(t -> "common".equals(t.getSource())).count(),
-                    mergedTopics.stream().filter(t -> "personal".equals(t.getSource())).count());
-            
+
         } catch (Exception e) {
             log.error("获取机器人 {} 的合并主题列表失败: {}", robot.getName(), e.getMessage(), e);
         }
@@ -1289,39 +1276,9 @@ public class PromptServiceImpl implements PromptService {
     }
 
     /**
-     * 获取所选主题的dataType
-     */
-    private String getDataTypeForTopic(Robot robot, String selectedTopicContent) {
-        // 合并主题列表，查找content匹配的主题
-        List<TopicItem> mergedTopics = getMergedTopics(robot);
-        for (TopicItem topic : mergedTopics) {
-            if (selectedTopicContent != null && selectedTopicContent.equals(topic.getContent())) {
-                // 兼容老结构
-                if (topic.getSource().equals("common")) {
-                    for (RobotConfig.CommonTopic ct : robotConfig.getBaseConfig().getCommonTopic()) {
-                        if (ct.getContent().equals(selectedTopicContent)) {
-                            return ct.getDataType();
-                        }
-                    }
-                } else if (topic.getSource().equals("personal")) {
-                    RobotConfig.RobotInfo robotInfo = findRobotInfo(robot.getRobotId());
-                    if (robotInfo != null && robotInfo.getTopic() != null) {
-                        for (RobotConfig.Topic pt : robotInfo.getTopic()) {
-                            if (pt.getContent().equals(selectedTopicContent)) {
-                                return pt.getDataType();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
      * 根据dataType获取外部数据背景
      */
-    private String getDataBackgroundByType(String dataType, String location) {
+    private String getDataBackgroundByType(String dataType) {
         if (dataType == null) return "";
         Random rand = new Random();
         switch (dataType) {
@@ -1329,7 +1286,7 @@ public class PromptServiceImpl implements PromptService {
                 List<com.myeden.model.external.NewsItem> news = externalDataCacheService.getNews();
                 if (news != null && !news.isEmpty()) {
                     com.myeden.model.external.NewsItem item = news.get(rand.nextInt(news.size()));
-                    return item.getTitle() + "：" + item.getSummary();
+                    return "新闻: " + item.getTitle() + (item.getSummary() != null ? "：" + item.getSummary() : "");
                 }
                 return "";
             case "hot_search":
@@ -1339,17 +1296,11 @@ public class PromptServiceImpl implements PromptService {
                     return "今日热搜：" + item.getTitle() + (item.getSummary() != null ? "：" + item.getSummary() : "");
                 }
                 return "";
-            case "weather":
-                if (externalDataCacheService.getWeatherMap() != null) {
-                    com.myeden.model.external.WeatherInfo weather = externalDataCacheService.getWeatherMap().getOrDefault(location, null);
-                    return weather != null ? weather.getCity() + "天气：" + weather.getDescription() + ", " + weather.getTemperature() : "";
-                }
-                return "";
             case "music":
                 List<com.myeden.model.external.MusicItem> music = externalDataCacheService.getMusic();
                 if (music != null && !music.isEmpty()) {
                     com.myeden.model.external.MusicItem item = music.get(rand.nextInt(music.size()));
-                    return "推荐歌曲：" + item.getTitle() + " - " + item.getArtist();
+                    return "推荐歌曲：" + item.getTitle() + (item.getArtist() != null ? " - " + item.getArtist() : "");
                 }
                 return "";
             case "movie":

@@ -181,6 +181,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: flex-start;
   margin-bottom: 32px;
+  margin-top: 80px;
 }
 .page-header h1 {
   font-size: 2.2rem;
@@ -300,10 +301,8 @@ onMounted(() => {
   min-width: 100px;
 }
 .event-item {
-  background: var(--color-primary-bg-light);
   color: var(--color-primary);
-  border-radius: 12px;
-  padding: 2px 10px;
+  padding: 2px 0px 2px 0px;
   font-size: 0.98em;
   margin-right: 0;
   margin-bottom: 2px;
@@ -313,7 +312,6 @@ onMounted(() => {
     color: #86efac;
   }
   .event-item {
-    background: rgba(34,211,107,0.13);
     color: #b2e5c7;
   }
 }

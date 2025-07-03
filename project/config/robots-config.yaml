@@ -10,10 +10,10 @@ robots:
     max_daily_replies: 20
     common_topic:
       - name: "发感叹"
-        frequency: 10
+        frequency: 1
         content: "随便发点感叹, 简短的"
       - name: "吐槽"
-        frequency: 5
+        frequency: 1
         content: "随便吐槽点什么, 简短的"
       - name: "分享日常"
         frequency: 1
@@ -43,14 +43,21 @@ robots:
         frequency: 1
         content: "分享自己最近的读书感受"
       - name: "分享影视"
-        frequency: 1
+        frequency: 10
         content: "分享自己最近的影视感受"
+        dataType: "movie"
       - name: "分享新闻"
-        frequency: 1
+        frequency: 10
         content: "分享自己最近看到的新闻"
+        dataType: "news"
       - name: "分享热搜"
-        frequency: 1
+        frequency: 10
         content: "分享自己最近看到的热搜"
+        dataType: "hot_search"
+      - name: "分享音乐"
+        frequency: 10
+        content: "分享自己喜欢的音乐，或者自己写的音乐"
+        dataType: "music"
       - name: "分享糗事"
         frequency: 1
         content: "分享自己最近遇到的糗事"
@@ -119,9 +126,6 @@ robots:
         - name: "分享诗歌"
           frequency: 1  
           content: "分享自己喜欢的诗歌，或者自己写的诗歌"
-        - name: "分享音乐"
-          frequency: 1
-          content: "分享自己喜欢的音乐，或者自己写的音乐"
         - name: "分享咖啡"
           frequency: 1
           content: "分享自己喜欢的咖啡，或者自己做的咖啡"      
@@ -551,9 +555,6 @@ robots:
         - name: "分享学习"
           frequency: 1
           content: "分享自己最近的学习心得"
-        - name: "分享音乐"
-          frequency: 1
-          content: "分享自己喜欢的音乐，或者自己写的音乐"
         
       active_hours:
         - start: "07:00"

@@ -1,5 +1,6 @@
 package com.myeden.dto;
 
+import com.myeden.config.RobotConfig;
 import com.myeden.entity.Robot;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -90,7 +91,7 @@ public class RobotEditRequest {
     private List<Robot.ActiveHours> activeHours;
     
     @Schema(description = "个人主题列表")
-    private List<Robot.Topic> topics;
+    private List<RobotConfig.Topic> topics;
     
     @Schema(description = "是否激活", example = "true")
     private Boolean isActive;
@@ -170,8 +171,8 @@ public class RobotEditRequest {
     public List<Robot.ActiveHours> getActiveHours() { return activeHours; }
     public void setActiveHours(List<Robot.ActiveHours> activeHours) { this.activeHours = activeHours; }
     
-    public List<Robot.Topic> getTopics() { return topics; }
-    public void setTopics(List<Robot.Topic> topics) { this.topics = topics; }
+    public List<RobotConfig.Topic> getTopics() { return topics; }
+    public void setTopics(List<RobotConfig.Topic> topics) { this.topics = topics; }
     
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }

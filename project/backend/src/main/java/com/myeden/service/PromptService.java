@@ -1,5 +1,6 @@
 package com.myeden.service;
 
+import com.myeden.config.RobotConfig;
 import com.myeden.entity.Robot;
 import java.util.List;
 import java.time.LocalDate;
@@ -107,7 +108,7 @@ public interface PromptService {
      * @param robot 机器人信息
      * @return 选中的主题内容
      */
-    String selectRandomTopic(Robot robot);
+    RobotConfig.Topic selectRandomTopic(Robot robot);
     
     /**
      * 获取合并后的主题列表
@@ -116,30 +117,7 @@ public interface PromptService {
      * @param robot 机器人信息
      * @return 合并后的主题列表
      */
-    List<TopicItem> getMergedTopics(Robot robot);
-    
-    /**
-     * 主题项类
-     */
-    class TopicItem {
-        private String name;
-        private String content;
-        private int frequency;
-        private String source; // "common" 或 "personal"
-        
-        public TopicItem(String name, String content, int frequency, String source) {
-            this.name = name;
-            this.content = content;
-            this.frequency = frequency;
-            this.source = source;
-        }
-        
-        // Getter方法
-        public String getName() { return name; }
-        public String getContent() { return content; }
-        public int getFrequency() { return frequency; }
-        public String getSource() { return source; }
-    }
+    List<RobotConfig.Topic> getMergedTopics(Robot robot);
 
     /**
      * 生成机器人动态内容
