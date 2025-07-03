@@ -27,14 +27,27 @@
           </div>
           <div class="plan-diary">{{ plan.diary }}</div>
           <div class="plan-slots">
-            <div v-for="slot in plan.slots" :key="slot.start + '-' + slot.end" class="slot-item">
-              <span class="slot-time">{{ slot.start }} - {{ slot.end }}</span>
-              <span class="slot-events">
-                <span v-for="event in slot.events" :key="event.content" class="event-item">
-                  {{ event.content }}<span v-if="event.mood">（{{ event.mood }}）</span>
+            <template v-for="slot in plan.slots" :key="slot && slot.start ? slot.start + '-' + slot.end : Math.random()">
+              <div
+                v-if="slot && slot.start && shouldShowSlot(plan.planDate, slot.start)"
+                class="slot-item"
+              >
+                <span class="slot-time">
+                  {{ slot.start }} -
+                  <template v-if="isLastStartedSlot(plan, slot)">
+                    {{ currentTimeStr }}
+                  </template>
+                  <template v-else>
+                    {{ slot.end }}
+                  </template>
                 </span>
-              </span>
-            </div>
+                <span class="slot-events">
+                  <span v-for="event in (slot.events || [])" :key="event.content" class="event-item">
+                    {{ event.content }}<span v-if="event.mood">（{{ event.mood }}）</span>
+                  </span>
+                </span>
+              </div>
+            </template>
           </div>
         </el-card>
       </div>
@@ -43,7 +56,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/api/robot' // 假设有robot相关API
 import dayjs from 'dayjs'
@@ -52,24 +65,55 @@ const robotList = ref([])
 const selectedRobotId = ref()
 const dateRange = ref([])
 const plans = ref([])
+const currentTimeStr = computed(() => dayjs().format('HH:mm'))
 
+/**
+ * 获取机器人名称
+ * @param {string} robotId 机器人ID
+ * @returns {string} 机器人名称
+ */
 function getRobotName(robotId) {
   const robot = robotList.value.find(r => r.id === robotId)
   return robot ? robot.name : robotId
 }
 
+/**
+ * 判断某个slot是否应显示（当天只要已开始就显示）
+ * @param {string} planDate 计划日期（YYYY-MM-DD）
+ * @param {string} slotStart slot开始时间（HH:mm）
+ * @returns {boolean} 是否显示
+ */
+function shouldShowSlot(planDate, slotStart) {
+  if (!slotStart) return false
+  const todayStr = dayjs().format('YYYY-MM-DD')
+  if (planDate !== todayStr) return true
+  const slotStartTime = dayjs(`${planDate} ${slotStart}`)
+  return slotStartTime.isBefore(dayjs())
+}
+
+/**
+ * 获取机器人列表
+ */
 async function fetchRobots() {
-  // 获取机器人列表
   const res = await api.getRobotList()
   robotList.value = res.data || []
 }
 
+/**
+ * 获取计划列表。如果未选择日期范围，默认最近三天（含今天）。
+ */
 async function fetchPlans() {
   try {
+    // 如果未选择日期范围，默认最近三天（含今天）
+    if (!dateRange.value || dateRange.value.length !== 2) {
+      const today = dayjs()
+      const twoDaysAgo = today.subtract(2, 'day')
+      dateRange.value = [twoDaysAgo.toDate(), today.toDate()]
+    }
     const params = {
       robotId: selectedRobotId.value,
-      startDate: dateRange.value?.[0] ? dayjs(dateRange.value[0]).format('YYYY-MM-DD') : undefined,
-      endDate: dateRange.value?.[1] ? dayjs(dateRange.value[1]).format('YYYY-MM-DD') : undefined,
+      startDate: dayjs(dateRange.value[0]).format('YYYY-MM-DD'),
+      endDate: dayjs(dateRange.value[1]).format('YYYY-MM-DD'),
       page: 0,
       size: 20
     }
@@ -78,6 +122,41 @@ async function fetchPlans() {
   } catch (e) {
     ElMessage.error('获取计划失败')
   }
+}
+
+/**
+ * 获取当天最后一个已开始slot的start时间
+ * @param {Array} slots slot数组
+ * @param {string} planDate 计划日期
+ * @returns {string|null} 最后一个已开始slot的start时间
+ */
+function getLastStartedSlotStart(slots, planDate) {
+  if (!Array.isArray(slots)) return null
+  const now = dayjs()
+  const todayStr = now.format('YYYY-MM-DD')
+  if (planDate !== todayStr) return null
+  // 过滤出已开始的slot
+  const startedSlots = slots.filter(slot => {
+    if (!slot || !slot.start) return false
+    return dayjs(`${planDate} ${slot.start}`).isBefore(now) || dayjs(`${planDate} ${slot.start}`).isSame(now)
+  })
+  if (startedSlots.length === 0) return null
+  // 找到start最大的slot
+  const lastSlot = startedSlots.reduce((a, b) => {
+    return dayjs(`${planDate} ${a.start}`).isAfter(dayjs(`${planDate} ${b.start}`)) ? a : b
+  })
+  return lastSlot.start
+}
+
+/**
+ * 判断当前slot是否为当天最后一个已开始slot
+ * @param {object} plan 当前计划
+ * @param {object} slot 当前slot
+ * @returns {boolean}
+ */
+function isLastStartedSlot(plan, slot) {
+  const lastStart = getLastStartedSlotStart(plan.slots, plan.planDate)
+  return slot && slot.start === lastStart
 }
 
 onMounted(() => {
@@ -214,24 +293,15 @@ onMounted(() => {
   font-size: 15px;
   margin-bottom: 2px;
 }
+/* 柔和绿色主色，浅色模式下更舒适 */
 .slot-time {
-  color: #22d36b;
+  color: var(--color-primary);
   font-weight: 600;
   min-width: 100px;
 }
-@media (prefers-color-scheme: dark) {
-  .slot-time {
-    color: #4ade80;
-  }
-}
-.slot-events {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 .event-item {
-  background: rgba(34,211,107,0.08);
-  color: #22d36b;
+  background: var(--color-primary-bg-light);
+  color: var(--color-primary);
   border-radius: 12px;
   padding: 2px 10px;
   font-size: 0.98em;
@@ -239,6 +309,9 @@ onMounted(() => {
   margin-bottom: 2px;
 }
 @media (prefers-color-scheme: dark) {
+  .slot-time {
+    color: #86efac;
+  }
   .event-item {
     background: rgba(34,211,107,0.13);
     color: #b2e5c7;
