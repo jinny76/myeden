@@ -90,6 +90,34 @@ public class Post {
      */
     private LocalDateTime updatedAt;
     
+    /**
+     * 外部数据链接信息（如新闻、音乐、影视等原始url及相关元数据）
+     */
+    private LinkInfo link;
+    
+    /**
+     * 外部数据链接对象
+     */
+    public static class LinkInfo {
+        /** 链接URL */
+        private String url;
+        /** 链接标题 */
+        private String title;
+        /** 数据类型（如news/music/movie等） */
+        private String dataType;
+        /** 图片URL（如有） */
+        private String image;
+
+        public String getUrl() { return url; }
+        public void setUrl(String url) { this.url = url; }
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+        public String getDataType() { return dataType; }
+        public void setDataType(String dataType) { this.dataType = dataType; }
+        public String getImage() { return image; }
+        public void setImage(String image) { this.image = image; }
+    }
+    
     // 构造函数
     public Post() {
         this.createdAt = LocalDateTime.now();
@@ -207,6 +235,14 @@ public class Post {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    
+    public LinkInfo getLink() {
+        return link;
+    }
+    
+    public void setLink(LinkInfo link) {
+        this.link = link;
     }
     
     /**

@@ -3,6 +3,7 @@ package com.myeden.service;
 import com.myeden.model.external.NewsItem;
 import com.myeden.model.external.WeatherInfo;
 import com.myeden.model.external.MusicItem;
+import com.myeden.model.external.HotSearchItem;
 import com.myeden.model.external.MovieItem;
 import java.util.List;
 
@@ -26,7 +27,7 @@ public interface ExternalDataService {
      * 获取最新热搜关键词
      * @return 热搜关键词列表，按热度降序，最多返回10条
      */
-    List<String> getHotSearches();
+    List<HotSearchItem> getHotSearches();
 
     /**
      * 获取指定城市的天气信息

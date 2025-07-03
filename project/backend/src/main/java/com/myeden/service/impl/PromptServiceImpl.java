@@ -23,6 +23,11 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.myeden.entity.Post;
+import com.myeden.service.ExternalDataCacheService;
+import com.myeden.model.external.HotSearchItem;
+import org.springframework.context.annotation.Lazy;
+import com.myeden.model.external.WeatherInfo;
 
 /**
  * 提示词服务实现类
@@ -55,17 +60,31 @@ public class PromptServiceImpl implements PromptService {
     private DifyService difyService;
     
     @Autowired
+    @Lazy
     private ExternalDataCacheService externalDataCacheService;
     
     private final Random random = new Random();
     
+    /**
+     * 封装动态生成提示词和外部数据链接的结果对象
+     */
+    public static class PostPromptResult {
+        private String prompt;
+        private Post.LinkInfo link;
+        public PostPromptResult(String prompt, Post.LinkInfo link) {
+            this.prompt = prompt;
+            this.link = link;
+        }
+        public String getPrompt() { return prompt; }
+        public Post.LinkInfo getLink() { return link; }
+    }
+
     @Override
-    public String buildPostPrompt(Robot robot, String context) {
+    public PostPromptResult buildPostPrompt(Robot robot, String context) {
         StringBuilder prompt = new StringBuilder();
-        
+        Post.LinkInfo link = null;
         // 获取机器人的详细配置信息
         RobotConfig.RobotInfo robotInfo = getRobotInfo(robot.getName());
-        
         // 构建机器人身份设定
         String selectedTopic = selectRandomTopic(robot);
         prompt.append(String.format("你是%s（昵称：%s），%s。正在看朋友圈, 想发一条%s的动态\n\n",
@@ -79,6 +98,8 @@ public class PromptServiceImpl implements PromptService {
         if (dataBackground != null && !dataBackground.isEmpty()) {
             prompt.append("\n\n## 相关数据参考：\n");
             prompt.append(dataBackground);
+            // 获取外部数据LinkInfo对象
+            link = getDataLinkInfoByType(dataType);
         }
 
         // 添加上下文信息
@@ -109,7 +130,7 @@ public class PromptServiceImpl implements PromptService {
 
         log.info("生成的动态提示词: {}", prompt.toString());
         
-        return prompt.toString();
+        return new PostPromptResult(prompt.toString(), link);
     }
     
     @Override
@@ -293,8 +314,10 @@ public class PromptServiceImpl implements PromptService {
         context.append(String.format("，%s", timeSlot));
         
         // 添加天气信息（模拟）
-        String weather = getRandomWeather();
-        context.append(String.format("，天气%s", weather));
+        WeatherInfo weatherInfo = getWeather(robot);
+        String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
+        String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
+        context.append(String.format("，天气%s, 温度%s", weather, temperature));
         
         return context.toString();
     }
@@ -608,20 +631,33 @@ public class PromptServiceImpl implements PromptService {
         return authorInfo.toString();
     }
 
+    /**
+     * 封装最终生成内容和link的结果对象
+     */
+    public static class PostContentResult {
+        private String content;
+        private Post.LinkInfo link;
+        public PostContentResult(String content, Post.LinkInfo link) {
+            this.content = content;
+            this.link = link;
+        }
+        public String getContent() { return content; }
+        public Post.LinkInfo getLink() { return link; }
+    }
+
     @Override
-    public String generatePostContent(Robot robot, String context) {
+    public PostContentResult generatePostContent(Robot robot, String context) {
         try {
-            // 使用PromptService构建提示词
-            String prompt = buildPostPrompt(robot, context);
-
+            // 使用PromptService构建提示词和link
+            PostPromptResult promptResult = buildPostPrompt(robot, context);
             // 调用Dify API
-            String rawContent = difyService.callDifyApi(prompt, robot.getRobotId());
-
+            String rawContent = difyService.callDifyApi(promptResult.getPrompt(), robot.getRobotId());
             // 使用PromptService处理生成的内容
-            return processGeneratedContent(rawContent, robot, "post");
+            String content = processGeneratedContent(rawContent, robot, "post");
+            return new PostContentResult(content, promptResult.getLink());
         } catch (Exception e) {
             log.error("生成机器人动态内容失败: {}", e.getMessage(), e);
-            return generateFallbackPost(robot, context);
+            return new PostContentResult(generateFallbackPost(robot, context), null);
         }
     }
 
@@ -700,9 +736,34 @@ public class PromptServiceImpl implements PromptService {
         else return "深夜";
     }
     
-    private String getRandomWeather() {
-        String[] weathers = {"晴朗", "多云", "阴天", "小雨", "微风"};
-        return weathers[random.nextInt(weathers.length)];
+    /**
+     * 获取机器人所在城市的天气信息（优先缓存，缺失则随机一个）
+     *
+     * @param robot 机器人实体，需包含location字段
+     * @return WeatherInfo 天气信息对象，若无则返回null
+     */
+    private WeatherInfo getWeather(Robot robot) {
+        // 获取缓存中的天气Map
+        Map<String, WeatherInfo> weatherMap = externalDataCacheService.getWeatherMap();
+        if (weatherMap != null) {
+            String location = robot.getLocation();
+            if (location != null && !location.trim().isEmpty()) {
+                WeatherInfo info = weatherMap.get(location.trim());
+                if (info != null) {
+                    // 找到对应城市天气
+                    return info;
+                }
+            }
+
+            // 未找到，随机返回一个已有城市的天气
+            List<WeatherInfo> allWeather = new java.util.ArrayList<>(weatherMap.values());
+            if (!allWeather.isEmpty()) {
+                int idx = (int) (Math.random() * allWeather.size());
+                return allWeather.get(idx);
+            }
+        }
+        
+        return null;
     }
 
     private String generateFallbackPost(Robot robot, String context) {
@@ -1235,10 +1296,6 @@ public class PromptServiceImpl implements PromptService {
         List<TopicItem> mergedTopics = getMergedTopics(robot);
         for (TopicItem topic : mergedTopics) {
             if (selectedTopicContent != null && selectedTopicContent.equals(topic.getContent())) {
-                // 需扩展TopicItem支持dataType
-                if (topic instanceof DataTypeTopicItem) {
-                    return ((DataTypeTopicItem) topic).getDataType();
-                }
                 // 兼容老结构
                 if (topic.getSource().equals("common")) {
                     for (RobotConfig.CommonTopic ct : robotConfig.getBaseConfig().getCommonTopic()) {
@@ -1266,13 +1323,22 @@ public class PromptServiceImpl implements PromptService {
      */
     private String getDataBackgroundByType(String dataType, String location) {
         if (dataType == null) return "";
+        Random rand = new Random();
         switch (dataType) {
             case "news":
                 List<com.myeden.model.external.NewsItem> news = externalDataCacheService.getNews();
-                return news != null && !news.isEmpty() ? news.get(0).getTitle() + "：" + news.get(0).getSummary() : "";
+                if (news != null && !news.isEmpty()) {
+                    com.myeden.model.external.NewsItem item = news.get(rand.nextInt(news.size()));
+                    return item.getTitle() + "：" + item.getSummary();
+                }
+                return "";
             case "hot_search":
-                List<String> hot = externalDataCacheService.getHotSearches();
-                return hot != null && !hot.isEmpty() ? "今日热搜：" + hot.get(0) : "";
+                List<HotSearchItem> hot = externalDataCacheService.getHotSearchItems();
+                if (hot != null && !hot.isEmpty()) {
+                    HotSearchItem item = hot.get(rand.nextInt(hot.size()));
+                    return "今日热搜：" + item.getTitle() + (item.getSummary() != null ? "：" + item.getSummary() : "");
+                }
+                return "";
             case "weather":
                 if (externalDataCacheService.getWeatherMap() != null) {
                     com.myeden.model.external.WeatherInfo weather = externalDataCacheService.getWeatherMap().getOrDefault(location, null);
@@ -1281,12 +1347,90 @@ public class PromptServiceImpl implements PromptService {
                 return "";
             case "music":
                 List<com.myeden.model.external.MusicItem> music = externalDataCacheService.getMusic();
-                return music != null && !music.isEmpty() ? "推荐歌曲：" + music.get(0).getTitle() + " - " + music.get(0).getArtist() : "";
+                if (music != null && !music.isEmpty()) {
+                    com.myeden.model.external.MusicItem item = music.get(rand.nextInt(music.size()));
+                    return "推荐歌曲：" + item.getTitle() + " - " + item.getArtist();
+                }
+                return "";
             case "movie":
                 List<com.myeden.model.external.MovieItem> movies = externalDataCacheService.getMovies();
-                return movies != null && !movies.isEmpty() ? "推荐影视：" + movies.get(0).getTitle() : "";
+                if (movies != null && !movies.isEmpty()) {
+                    com.myeden.model.external.MovieItem item = movies.get(rand.nextInt(movies.size()));
+                    return "推荐影视：" + item.getTitle();
+                }
+                return "";
             default:
                 return "";
         }
+    }
+
+    /**
+     * 根据dataType获取外部数据url
+     */
+    private String getDataUrlByType(String dataType) {
+        if (dataType == null) return null;
+        switch (dataType) {
+            case "news":
+                List<com.myeden.model.external.NewsItem> news = externalDataCacheService.getNews();
+                return news != null && !news.isEmpty() ? news.get(0).getUrl() : null;
+            case "music":
+                List<com.myeden.model.external.MusicItem> music = externalDataCacheService.getMusic();
+                return music != null && !music.isEmpty() ? music.get(0).getUrl() : null;
+            case "movie":
+                List<com.myeden.model.external.MovieItem> movies = externalDataCacheService.getMovies();
+                return movies != null && !movies.isEmpty() ? movies.get(0).getUrl() : null;
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * 根据dataType获取外部数据LinkInfo对象
+     */
+    private Post.LinkInfo getDataLinkInfoByType(String dataType) {
+        if (dataType == null) return null;
+        Post.LinkInfo link = new Post.LinkInfo();
+        link.setDataType(dataType);
+        switch (dataType) {
+            case "news":
+                List<com.myeden.model.external.NewsItem> news = externalDataCacheService.getNews();
+                if (news != null && !news.isEmpty()) {
+                    com.myeden.model.external.NewsItem item = news.get(0);
+                    link.setUrl(item.getUrl());
+                    link.setTitle(item.getTitle());
+                    link.setImage(item.getImage());
+                }
+                break;
+            case "hot_search":
+                List<HotSearchItem> hot = externalDataCacheService.getHotSearchItems();
+                if (hot != null && !hot.isEmpty()) {
+                    HotSearchItem item = hot.get(0);
+                    link.setUrl(item.getUrl());
+                    link.setTitle(item.getTitle());
+                    link.setImage(item.getImage());
+                }
+                break;
+            case "music":
+                List<com.myeden.model.external.MusicItem> music = externalDataCacheService.getMusic();
+                if (music != null && !music.isEmpty()) {
+                    com.myeden.model.external.MusicItem item = music.get(0);
+                    link.setUrl(item.getUrl());
+                    link.setTitle(item.getTitle());
+                    link.setImage(item.getImage());
+                }
+                break;
+            case "movie":
+                List<com.myeden.model.external.MovieItem> movies = externalDataCacheService.getMovies();
+                if (movies != null && !movies.isEmpty()) {
+                    com.myeden.model.external.MovieItem item = movies.get(0);
+                    link.setUrl(item.getUrl());
+                    link.setTitle(item.getTitle());
+                    // 可扩展图片字段
+                }
+                break;
+            default:
+                return null;
+        }
+        return (link.getUrl() != null) ? link : null;
     }
 } 

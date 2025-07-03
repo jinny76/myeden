@@ -4,6 +4,7 @@ import com.myeden.entity.Robot;
 import java.util.List;
 import java.time.LocalDate;
 import com.myeden.entity.RobotDailyPlan;
+import com.myeden.service.impl.PromptServiceImpl;
 
 /**
  * 提示词服务接口
@@ -22,9 +23,9 @@ public interface PromptService {
      * 
      * @param robot 机器人信息
      * @param context 上下文信息（如当前时间、天气、最近事件等）
-     * @return 构建的提示词
+     * @return 构建的提示词和外部数据链接
      */
-    String buildPostPrompt(Robot robot, String context);
+    PromptServiceImpl.PostPromptResult buildPostPrompt(Robot robot, String context);
     
     /**
      * 构建机器人评论生成提示词
@@ -140,7 +141,13 @@ public interface PromptService {
         public String getSource() { return source; }
     }
 
-    String generatePostContent(Robot robot, String context);
+    /**
+     * 生成机器人动态内容
+     * @param robot 机器人信息
+     * @param context 上下文
+     * @return 生成内容和link
+     */
+    PromptServiceImpl.PostContentResult generatePostContent(Robot robot, String context);
 
     String generateCommentContent(Robot robot, PostService.PostDetail post, String context);
 

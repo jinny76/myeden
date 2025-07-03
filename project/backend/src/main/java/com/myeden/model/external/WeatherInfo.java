@@ -1,5 +1,7 @@
 package com.myeden.model.external;
 
+import lombok.Data;
+
 /**
  * 天气信息实体类
  * 用于存储城市天气的描述和温度等信息
@@ -8,6 +10,7 @@ package com.myeden.model.external;
  * @version 1.0
  * @since 2024-07-03
  */
+@Data
 public class WeatherInfo {
     /** 城市名称 */
     private String city;

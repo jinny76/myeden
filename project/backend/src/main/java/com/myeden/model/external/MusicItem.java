@@ -1,5 +1,7 @@
 package com.myeden.model.external;
 
+import lombok.Data;
+
 /**
  * 音乐条目实体类
  * 用于存储音乐的标题、歌手和链接等信息
@@ -8,6 +10,7 @@ package com.myeden.model.external;
  * @version 1.0
  * @since 2024-07-03
  */
+@Data
 public class MusicItem {
     /** 歌曲标题 */
     private String title;
@@ -15,6 +18,8 @@ public class MusicItem {
     private String artist;
     /** 歌曲链接 */
     private String url;
+    /** 歌曲图片URL */
+    private String image;
 
     /**
      * 获取歌曲标题
@@ -62,5 +67,21 @@ public class MusicItem {
      */
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    /**
+     * 获取歌曲图片URL
+     * @return 图片URL
+     */
+    public String getImage() {
+        return image;
+    }
+
+    /**
+     * 设置歌曲图片URL
+     * @param image 图片URL
+     */
+    public void setImage(String image) {
+        this.image = image;
     }
 } 

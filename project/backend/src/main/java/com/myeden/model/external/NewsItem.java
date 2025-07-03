@@ -15,6 +15,8 @@ public class NewsItem {
     private String summary;
     /** 新闻原文链接 */
     private String url;
+    /** 新闻图片URL */
+    private String image;
 
     /**
      * 获取新闻标题
@@ -62,5 +64,21 @@ public class NewsItem {
      */
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    /**
+     * 获取新闻图片URL
+     * @return 图片URL
+     */
+    public String getImage() {
+        return image;
+    }
+
+    /**
+     * 设置新闻图片URL
+     * @param image 图片URL
+     */
+    public void setImage(String image) {
+        this.image = image;
     }
 } 

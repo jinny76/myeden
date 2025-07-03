@@ -5,6 +5,7 @@ import javax.annotation.PostConstruct;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
 
 /**
  * 外部数据缓存，支持本地持久化
@@ -20,25 +21,29 @@ public class ExternalDataCache {
     /** 新闻列表 */
     private List<NewsItem> news;
     /** 热搜关键词列表 */
-    private List<String> hotSearches;
+    private List<HotSearchItem> hotSearchItems;
     /** 城市-天气映射 */
     private Map<String, WeatherInfo> weatherMap;
     /** 音乐推荐列表 */
     private List<MusicItem> music;
     /** 影视推荐列表 */
     private List<MovieItem> movies;
+    /** 缓存日期，格式yyyy-MM-dd */
+    private String cacheDate;
 
     // 标准getter/setter
     public List<NewsItem> getNews() { return news; }
     public void setNews(List<NewsItem> news) { this.news = news; }
-    public List<String> getHotSearches() { return hotSearches; }
-    public void setHotSearches(List<String> hotSearches) { this.hotSearches = hotSearches; }
+    public List<HotSearchItem> getHotSearchItems() { return hotSearchItems; }
+    public void setHotSearchItems(List<HotSearchItem> hotSearchItems) { this.hotSearchItems = hotSearchItems; }
     public Map<String, WeatherInfo> getWeatherMap() { return weatherMap; }
     public void setWeatherMap(Map<String, WeatherInfo> weatherMap) { this.weatherMap = weatherMap; }
     public List<MusicItem> getMusic() { return music; }
     public void setMusic(List<MusicItem> music) { this.music = music; }
     public List<MovieItem> getMovies() { return movies; }
     public void setMovies(List<MovieItem> movies) { this.movies = movies; }
+    public String getCacheDate() { return cacheDate; }
+    public void setCacheDate(String cacheDate) { this.cacheDate = cacheDate; }
 
     /**
      * 服务启动时自动加载本地缓存
@@ -51,10 +56,11 @@ public class ExternalDataCache {
                 ObjectMapper mapper = new ObjectMapper();
                 ExternalDataCache cache = mapper.readValue(file, ExternalDataCache.class);
                 this.news = cache.news;
-                this.hotSearches = cache.hotSearches;
+                this.hotSearchItems = cache.hotSearchItems;
                 this.weatherMap = cache.weatherMap;
                 this.music = cache.music;
                 this.movies = cache.movies;
+                this.cacheDate = cache.cacheDate;
             }
         } catch (Exception e) {
             // 日志记录，首次启动或文件损坏时自动忽略

@@ -5,10 +5,14 @@ import com.myeden.model.external.NewsItem;
 import com.myeden.model.external.WeatherInfo;
 import com.myeden.model.external.MusicItem;
 import com.myeden.model.external.MovieItem;
+import com.myeden.model.external.HotSearchItem;
 import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import java.time.LocalDate;
 
 /**
  * 外部数据缓存服务
@@ -30,6 +34,7 @@ public class ExternalDataCacheService {
     public void init() {
         synchronized (cache) {
             cache.loadCacheFromFile();
+            // 启动时只加载本地缓存，不主动采集，彻底消除循环依赖
         }
     }
 
@@ -38,6 +43,7 @@ public class ExternalDataCacheService {
      */
     public void save() {
         synchronized (cache) {
+            cache.setCacheDate(LocalDate.now().toString());
             cache.saveCacheToFile();
         }
     }
@@ -49,11 +55,11 @@ public class ExternalDataCacheService {
     public void setNews(List<NewsItem> news) {
         synchronized (cache) { cache.setNews(news); }
     }
-    public List<String> getHotSearches() {
-        synchronized (cache) { return cache.getHotSearches(); }
+    public List<HotSearchItem> getHotSearchItems() {
+        synchronized (cache) { return cache.getHotSearchItems(); }
     }
-    public void setHotSearches(List<String> hotSearches) {
-        synchronized (cache) { cache.setHotSearches(hotSearches); }
+    public void setHotSearchItems(List<HotSearchItem> hotSearchItems) {
+        synchronized (cache) { cache.setHotSearchItems(hotSearchItems); }
     }
     public Map<String, WeatherInfo> getWeatherMap() {
         synchronized (cache) { return cache.getWeatherMap(); }

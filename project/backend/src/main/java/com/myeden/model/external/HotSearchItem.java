@@ -3,26 +3,26 @@ package com.myeden.model.external;
 import lombok.Data;
 
 /**
- * 影视条目实体类
- * 用于存储影视的标题、简介和链接等信息
+ * 热搜条目实体类
+ * 用于存储热搜的标题、摘要、链接和图片等信息
  *
  * @author MyEden Team
  * @version 1.0
  * @since 2024-07-03
  */
 @Data
-public class MovieItem {
-    /** 影视标题 */
+public class HotSearchItem {
+    /** 热搜标题 */
     private String title;
-    /** 影视简介 */
-    private String description;
-    /** 影视链接 */
+    /** 热搜摘要 */
+    private String summary;
+    /** 热搜原文链接 */
     private String url;
-    /** 影视图片URL */
+    /** 热搜图片URL */
     private String image;
 
     /**
-     * 获取影视标题
+     * 获取热搜标题
      * @return 标题
      */
     public String getTitle() {
@@ -30,7 +30,7 @@ public class MovieItem {
     }
 
     /**
-     * 设置影视标题
+     * 设置热搜标题
      * @param title 标题
      */
     public void setTitle(String title) {
@@ -38,23 +38,23 @@ public class MovieItem {
     }
 
     /**
-     * 获取影视简介
-     * @return 简介
+     * 获取热搜摘要
+     * @return 摘要
      */
-    public String getDescription() {
-        return description;
+    public String getSummary() {
+        return summary;
     }
 
     /**
-     * 设置影视简介
-     * @param description 简介
+     * 设置热搜摘要
+     * @param summary 摘要
      */
-    public void setDescription(String description) {
-        this.description = description;
+    public void setSummary(String summary) {
+        this.summary = summary;
     }
 
     /**
-     * 获取影视链接
+     * 获取热搜原文链接
      * @return 链接
      */
     public String getUrl() {
@@ -62,7 +62,7 @@ public class MovieItem {
     }
 
     /**
-     * 设置影视链接
+     * 设置热搜原文链接
      * @param url 链接
      */
     public void setUrl(String url) {
@@ -70,7 +70,7 @@ public class MovieItem {
     }
 
     /**
-     * 获取影视图片URL
+     * 获取热搜图片URL
      * @return 图片URL
      */
     public String getImage() {
@@ -78,7 +78,7 @@ public class MovieItem {
     }
 
     /**
-     * 设置影视图片URL
+     * 设置热搜图片URL
      * @param image 图片URL
      */
     public void setImage(String image) {

@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.Optional;
 import java.util.Objects;
+import com.myeden.service.impl.PromptServiceImpl;
 
 /**
  * 机器人行为管理服务实现类
@@ -182,7 +183,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             
             // 生成动态内容
             String context = buildPostContext();
-            String content = promptService.generatePostContent(robot, context);
+            PromptServiceImpl.PostContentResult postResult = promptService.generatePostContent(robot, context);
+            String content = postResult.getContent();
             String innerThoughts = promptService.generateInnerThoughts(robot, "发布动态: " + content);
             
             // 直接创建动态实体，避免调用postService.createPost
@@ -198,6 +200,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             post.setIsDeleted(false);
             post.setCreatedAt(LocalDateTime.now());
             post.setUpdatedAt(LocalDateTime.now());
+            post.setLink(postResult.getLink());
             
             // 保存到数据库
             Post savedPost = postRepository.save(post);
