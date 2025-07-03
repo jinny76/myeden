@@ -54,6 +54,9 @@ public class PromptServiceImpl implements PromptService {
     @Autowired
     private DifyService difyService;
     
+    @Autowired
+    private ExternalDataCacheService externalDataCacheService;
+    
     private final Random random = new Random();
     
     @Override
@@ -69,6 +72,14 @@ public class PromptServiceImpl implements PromptService {
             robot.getName(), 
             robotInfo != null ? robotInfo.getNickname() : robot.getName(), 
             robot.getPersonality(), selectedTopic));
+
+        // 新增：根据主题类型插入外部数据背景
+        String dataType = getDataTypeForTopic(robot, selectedTopic);
+        String dataBackground = getDataBackgroundByType(dataType, robot.getLocation());
+        if (dataBackground != null && !dataBackground.isEmpty()) {
+            prompt.append("\n\n## 相关数据参考：\n");
+            prompt.append(dataBackground);
+        }
 
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
@@ -1214,5 +1225,68 @@ public class PromptServiceImpl implements PromptService {
         }
         // 多次失败，抛出异常
         throw new RuntimeException("AI生成每日计划失败", lastException);
+    }
+
+    /**
+     * 获取所选主题的dataType
+     */
+    private String getDataTypeForTopic(Robot robot, String selectedTopicContent) {
+        // 合并主题列表，查找content匹配的主题
+        List<TopicItem> mergedTopics = getMergedTopics(robot);
+        for (TopicItem topic : mergedTopics) {
+            if (selectedTopicContent != null && selectedTopicContent.equals(topic.getContent())) {
+                // 需扩展TopicItem支持dataType
+                if (topic instanceof DataTypeTopicItem) {
+                    return ((DataTypeTopicItem) topic).getDataType();
+                }
+                // 兼容老结构
+                if (topic.getSource().equals("common")) {
+                    for (RobotConfig.CommonTopic ct : robotConfig.getBaseConfig().getCommonTopic()) {
+                        if (ct.getContent().equals(selectedTopicContent)) {
+                            return ct.getDataType();
+                        }
+                    }
+                } else if (topic.getSource().equals("personal")) {
+                    RobotConfig.RobotInfo robotInfo = findRobotInfo(robot.getRobotId());
+                    if (robotInfo != null && robotInfo.getTopic() != null) {
+                        for (RobotConfig.Topic pt : robotInfo.getTopic()) {
+                            if (pt.getContent().equals(selectedTopicContent)) {
+                                return pt.getDataType();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据dataType获取外部数据背景
+     */
+    private String getDataBackgroundByType(String dataType, String location) {
+        if (dataType == null) return "";
+        switch (dataType) {
+            case "news":
+                List<com.myeden.model.external.NewsItem> news = externalDataCacheService.getNews();
+                return news != null && !news.isEmpty() ? news.get(0).getTitle() + "：" + news.get(0).getSummary() : "";
+            case "hot_search":
+                List<String> hot = externalDataCacheService.getHotSearches();
+                return hot != null && !hot.isEmpty() ? "今日热搜：" + hot.get(0) : "";
+            case "weather":
+                if (externalDataCacheService.getWeatherMap() != null) {
+                    com.myeden.model.external.WeatherInfo weather = externalDataCacheService.getWeatherMap().getOrDefault(location, null);
+                    return weather != null ? weather.getCity() + "天气：" + weather.getDescription() + ", " + weather.getTemperature() : "";
+                }
+                return "";
+            case "music":
+                List<com.myeden.model.external.MusicItem> music = externalDataCacheService.getMusic();
+                return music != null && !music.isEmpty() ? "推荐歌曲：" + music.get(0).getTitle() + " - " + music.get(0).getArtist() : "";
+            case "movie":
+                List<com.myeden.model.external.MovieItem> movies = externalDataCacheService.getMovies();
+                return movies != null && !movies.isEmpty() ? "推荐影视：" + movies.get(0).getTitle() : "";
+            default:
+                return "";
+        }
     }
 } 

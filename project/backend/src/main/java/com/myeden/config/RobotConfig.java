@@ -64,6 +64,7 @@ public class RobotConfig {
         private String name;
         private int frequency;
         private String content;
+        private String dataType;
         
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -73,6 +74,9 @@ public class RobotConfig {
         
         public String getContent() { return content; }
         public void setContent(String content) { this.content = content; }
+        
+        public String getDataType() { return dataType; }
+        public void setDataType(String dataType) { this.dataType = dataType; }
     }
     
     /**
@@ -192,6 +196,7 @@ public class RobotConfig {
         private String name;
         private int frequency;
         private String content;
+        private String dataType;
         
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -201,6 +206,9 @@ public class RobotConfig {
         
         public String getContent() { return content; }
         public void setContent(String content) { this.content = content; }
+        
+        public String getDataType() { return dataType; }
+        public void setDataType(String dataType) { this.dataType = dataType; }
     }
     
     /**
