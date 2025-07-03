@@ -75,6 +75,7 @@ public class RobotDailyPlanServiceImpl implements RobotDailyPlanService {
         // 3. 先插入PENDING计划
         RobotDailyPlan plan = new RobotDailyPlan();
         plan.setRobotId(robotId);
+        plan.setRobotName(robot.getName());
         plan.setPlanDate(planDate);
         plan.setDiary("生成中...");
         plan.setStatus("PENDING");
@@ -106,6 +107,9 @@ public class RobotDailyPlanServiceImpl implements RobotDailyPlanService {
     @Override
     public List<RobotDailyPlan> batchGenerateAllRobotsPlanByAI(LocalDate planDate) {
         List<Robot> robots = robotRepository.findAll();
+        robots = robots.stream()
+                .filter(r -> r.getIsDeleted() == null || !r.getIsDeleted())
+                .collect(java.util.stream.Collectors.toList());
         List<RobotDailyPlan> result = new ArrayList<>();
         Semaphore semaphore = new Semaphore(2); // 最多2个并发
 
@@ -115,6 +119,7 @@ public class RobotDailyPlanServiceImpl implements RobotDailyPlanService {
 
             RobotDailyPlan plan = new RobotDailyPlan();
             plan.setRobotId(robot.getRobotId());
+            plan.setRobotName(robot.getName());
             plan.setPlanDate(planDate);
             plan.setDiary("生成中...");
             plan.setStatus("PENDING");

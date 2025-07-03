@@ -145,9 +145,9 @@
                   </div>
                   <div class="robot-quick-info">
                     <h3>{{ robot.name }}</h3>
-                    <div class="robot-personality">
+                    <!-- <div class="robot-personality">
                       <el-tag size="small" type="info" style="width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ robot.personality }}</el-tag>
-                    </div>
+                    </div> -->
                   </div>
                 </div>
                 <div class="robot-details">
@@ -961,7 +961,7 @@ const isMyRobot = (robotId) => {
 
 .robot-details {
   flex: 1;
-  min-width: 0;
+  min-width: 200px;
 }
 
 .robot-intro {

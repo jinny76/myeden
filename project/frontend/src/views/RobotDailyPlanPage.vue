@@ -22,7 +22,7 @@
       <div v-else>
         <el-card v-for="plan in plans" :key="plan.id" class="plan-card">
           <div class="plan-header">
-            <span class="robot-name">{{ getRobotName(plan.robotId) }}</span>
+            <span class="robot-name">{{ getRobotName(plan) }}</span>
             <span class="plan-date">{{ plan.planDate }}</span>
           </div>
           <div class="plan-diary">{{ plan.diary }}</div>
@@ -72,9 +72,8 @@ const currentTimeStr = computed(() => dayjs().format('HH:mm'))
  * @param {string} robotId 机器人ID
  * @returns {string} 机器人名称
  */
-function getRobotName(robotId) {
-  const robot = robotList.value.find(r => r.id === robotId)
-  return robot ? robot.name : robotId
+function getRobotName(plan) {
+  return plan.robotName || robotList.value.find(r => r.id === plan.robotId)?.name || plan.robotId
 }
 
 /**

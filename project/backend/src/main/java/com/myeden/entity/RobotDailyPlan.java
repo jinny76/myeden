@@ -17,6 +17,8 @@ public class RobotDailyPlan {
     private String id;
     /** 关联机器人ID */
     private String robotId;
+    /** 关联机器人名称 */
+    private String robotName;
     /** 日记内容 */
     private String diary;
     /** 计划日期 */
@@ -36,8 +38,17 @@ public class RobotDailyPlan {
 
     public RobotDailyPlan() {}
 
-    public RobotDailyPlan(String robotId, String diary, LocalDate planDate, List<PlanSlot> slots) {
+    /**
+     * 构造方法，支持设置robotName
+     * @param robotId 机器人ID
+     * @param robotName 机器人名称
+     * @param diary 日记内容
+     * @param planDate 计划日期
+     * @param slots 时间段安排
+     */
+    public RobotDailyPlan(String robotId, String robotName, String diary, LocalDate planDate, List<PlanSlot> slots) {
         this.robotId = robotId;
+        this.robotName = robotName;
         this.diary = diary;
         this.planDate = planDate;
         this.slots = slots;
@@ -45,12 +56,23 @@ public class RobotDailyPlan {
         this.updatedAt = LocalDateTime.now();
         this.isDeleted = false;
     }
+    // 兼容旧构造方法
+    public RobotDailyPlan(String robotId, String diary, LocalDate planDate, List<PlanSlot> slots) {
+        this(robotId, null, diary, planDate, slots);
+    }
 
     // Getter/Setter
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getRobotId() { return robotId; }
     public void setRobotId(String robotId) { this.robotId = robotId; }
+    public String getRobotName() {
+        return robotName;
+    }
+
+    public void setRobotName(String robotName) {
+        this.robotName = robotName;
+    }
     public String getDiary() { return diary; }
     public void setDiary(String diary) { this.diary = diary; }
     public LocalDate getPlanDate() { return planDate; }
