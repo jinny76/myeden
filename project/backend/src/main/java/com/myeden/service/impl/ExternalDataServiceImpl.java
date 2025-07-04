@@ -103,7 +103,7 @@ public class ExternalDataServiceImpl implements ExternalDataService {
             Thread.sleep(1000L);
         } catch (Exception e) {
             info.setCity(city == null ? "北京" : city);
-            info.setDescription("获取失败");
+            info.setDescription("");
             info.setTemperature("");
         }
         return info;

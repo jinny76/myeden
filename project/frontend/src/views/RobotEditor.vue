@@ -55,458 +55,503 @@
       <!-- 向导内容区域 -->
       <div class="wizard-content">
         <!-- 步骤1：基础信息 -->
-        <div v-show="currentStep === 0" class="step-content">
-          <div class="step-header">
-            <h2>基础信息</h2>
-            <p>设置天使的基本信息和外观</p>
-            <div class="required-fields-notice">
-              <span class="required-mark">*</span>
-              <span>标记为必填项</span>
+        <el-form
+          v-if="currentStep === 0"
+          ref="formRef0"
+          :model="robotData"
+          :rules="formRules[0]"
+          label-width="100px"
+          status-icon
+        >
+          <div class="step-content">
+            <div class="step-header">
+              <h2>基础信息</h2>
+              <p>设置天使的基本信息和外观</p>
+              <div class="required-fields-notice">
+                <span class="required-mark">*</span>
+                <span>标记为必填项</span>
+              </div>
+            </div>
+            
+            <div class="form-section">
+              <!-- 头像上传 -->
+              <div class="avatar-section">
+                <h3>天使头像 *</h3>
+                <el-form-item label="头像" prop="avatar">
+                  <div class="avatar-upload">
+                    <el-upload
+                      ref="avatarUpload"
+                      :show-file-list="false"
+                      :before-upload="beforeAvatarUpload"
+                      :http-request="handleAvatarUpload"
+                      accept="image/jpeg,image/png,image/gif"
+                      class="avatar-uploader"
+                    >
+                      <div class="avatar-container">
+                        <img v-if="avatarPreviewUrl" :src="avatarPreviewUrl" class="avatar" @error="handleAvatarError" />
+                        <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+                        <div class="avatar-overlay">
+                          <el-icon><Camera /></el-icon>
+                          <span>更换头像</span>
+                        </div>
+                      </div>
+                    </el-upload>
+                    <div class="avatar-controls">
+                      <el-button 
+                        v-if="avatarPreviewUrl" 
+                        type="danger" 
+                        size="large"
+                        @click="removeAvatar"
+                      >
+                        <el-icon><Delete /></el-icon>
+                        删除头像
+                      </el-button>
+                    </div>
+                    <p class="upload-tip">点击上传头像，支持JPG、PNG格式</p>
+                  </div>
+                </el-form-item>
+              </div>
+
+              <!-- 基本信息 -->
+              <div class="basic-info-section">
+                <h3>基本信息</h3>
+                <div class="form-fields">
+                  <el-form-item label="天使名称 *" prop="name">
+                    <el-input 
+                      v-model="robotData.name" 
+                      placeholder="为你的天使起一个名字（必填）"
+                      size="large"
+                    />
+                  </el-form-item>
+                  
+                  <el-form-item label="性别 *" prop="gender">
+                    <el-radio-group v-model="robotData.gender" size="large">
+                      <el-radio-button :value="'female'">女</el-radio-button>
+                      <el-radio-button :value="'male'">男</el-radio-button>
+                      <el-radio-button :value="'other'">其他</el-radio-button>
+                    </el-radio-group>
+                  </el-form-item>
+                  
+                  <el-form-item label="年龄 *" prop="age">
+                    <div class="age-slider-container">
+                      <div class="age-display">{{ robotData.age }}岁</div>
+                      <el-slider
+                        v-model="robotData.age"
+                        :min="1"
+                        :max="100"
+                        :marks="{1: '1岁', 25: '25岁', 50: '50岁', 75: '75岁', 100: '100岁'}"
+                        show-stops
+                        size="large"
+                      />
+                    </div>
+                  </el-form-item>
+                  
+                  <el-form-item label="背景设定 *" prop="description">
+                    <el-input 
+                      v-model="robotData.description" 
+                      type="textarea" 
+                      :rows="3"
+                      placeholder="这个天使的背景设定（提示词, 必填）"
+                      size="large"
+                    />
+                  </el-form-item>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <div class="form-section">
-            <!-- 头像上传 -->
-            <div class="avatar-section">
-              <h3>天使头像 *</h3>
-              <el-form-item label="头像" prop="avatar">
-                <div class="avatar-upload">
-                  <el-upload
-                    ref="avatarUpload"
-                    :show-file-list="false"
-                    :before-upload="beforeAvatarUpload"
-                    :http-request="handleAvatarUpload"
-                    accept="image/jpeg,image/png,image/gif"
-                    class="avatar-uploader"
-                  >
-                    <div class="avatar-container">
-                      <img v-if="avatarPreviewUrl" :src="avatarPreviewUrl" class="avatar" @error="handleAvatarError" />
-                      <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-                      <div class="avatar-overlay">
-                        <el-icon><Camera /></el-icon>
-                        <span>更换头像</span>
-                      </div>
-                    </div>
-                  </el-upload>
-                  <div class="avatar-controls">
-                    <el-button 
-                      v-if="avatarPreviewUrl" 
-                      type="danger" 
-                      size="large"
-                      @click="removeAvatar"
-                    >
-                      <el-icon><Delete /></el-icon>
-                      删除头像
-                    </el-button>
-                  </div>
-                  <p class="upload-tip">点击上传头像，支持JPG、PNG格式</p>
-                </div>
-              </el-form-item>
-            </div>
+        </el-form>
 
-            <!-- 基本信息 -->
-            <div class="basic-info-section">
-              <h3>基本信息</h3>
-              <div class="form-fields">
-                <el-form-item label="天使名称 *" prop="name">
+        <!-- 步骤2：性格设定 -->
+        <el-form
+          v-if="currentStep === 1"
+          ref="formRef1"
+          :model="robotData"
+          :rules="formRules[1]"
+          label-width="100px"
+          status-icon
+        >
+          <div class="step-content">
+            <div class="step-header">
+              <h2>性格设定</h2>
+              <p>定义天使的性格特征和行为模式</p>
+              <div class="required-fields-notice">
+                <span class="required-mark">*</span>
+                <span>标记为必填项</span>
+              </div>
+            </div>
+            
+            <div class="form-section">
+              <div class="personality-section">
+                <h3>性格描述 *</h3>
+                <el-form-item prop="personality">
                   <el-input 
-                    v-model="robotData.name" 
-                    placeholder="为你的天使起一个名字（必填）"
+                    v-model="robotData.personality" 
+                    type="textarea" 
+                    :rows="6"
+                    placeholder="详细描述天使的性格特点、行为习惯、说话方式等（必填）"
+                    size="large"
+                  />
+                </el-form-item>
+              </div>
+
+              <div class="traits-section">
+                <h3>性格特征</h3>
+                <div class="traits-container">
+                  <el-tag
+                    v-for="(trait, index) in robotData.traits"
+                    :key="index"
+                    closable
+                    @close="removeTrait(index)"
+                    class="trait-tag"
+                    size="large"
+                  >
+                    {{ trait }}
+                  </el-tag>
+                  <el-input
+                    v-if="showTraitInput"
+                    ref="traitInput"
+                    v-model="newTrait"
+                    size="large"
+                    @keyup.enter="addTrait"
+                    @blur="addTrait"
+                    placeholder="输入后点击屏幕保存"
+                    style="width: 200px"
+                  />
+                  <el-button v-else size="large" @click="focusTraitInput" type="default">
+                    <el-icon><Plus /></el-icon>
+                    添加特征
+                  </el-button>
+                </div>
+              </div>
+
+              <div class="interests-section">
+                <h3>兴趣爱好</h3>
+                <div class="interests-container">
+                  <el-tag
+                    v-for="(interest, index) in robotData.interests"
+                    :key="index"
+                    closable
+                    @close="removeInterest(index)"
+                    class="interest-tag"
+                    size="large"
+                  >
+                    {{ interest }}
+                  </el-tag>
+                  <el-input
+                    v-if="showInterestInput"
+                    ref="interestInput"
+                    v-model="newInterest"
+                    size="large"
+                    @keyup.enter="addInterest"
+                    @blur="addInterest"
+                    placeholder="输入后点击屏幕保存"
+                    style="width: 200px"
+                  />
+                  <el-button v-else size="large" @click="focusInterestInput" type="default">
+                    <el-icon><Plus /></el-icon>
+                    添加兴趣
+                  </el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-form>
+
+        <!-- 步骤3：个人信息 -->
+        <el-form
+          v-if="currentStep === 2"
+          ref="formRef2"
+          :model="robotData"
+          :rules="formRules[2]"
+          label-width="100px"
+          status-icon
+        >
+          <div class="step-content">
+            <div class="step-header">
+              <h2>个人信息</h2>
+              <p>完善天使的个人背景和详细信息</p>
+            </div>
+            
+            <div class="form-section">
+              <div class="personal-info-section">
+                <h3>基本信息</h3>
+                <div class="form-fields">
+                  <el-form-item label="MBTI" prop="mbti">
+                    <el-select v-model="robotData.mbti" placeholder="选择MBTI性格类型（如：INTJ - 建筑师）" size="large" style="width: 100%">
+                      <el-option label="INTJ - 建筑师" value="INTJ" />
+                      <el-option label="INTP - 逻辑学家" value="INTP" />
+                      <el-option label="ENTJ - 指挥官" value="ENTJ" />
+                      <el-option label="ENTP - 辩论家" value="ENTP" />
+                      <el-option label="INFJ - 提倡者" value="INFJ" />
+                      <el-option label="INFP - 调停者" value="INFP" />
+                      <el-option label="ENFJ - 主人公" value="ENFJ" />
+                      <el-option label="ENFP - 竞选者" value="ENFP" />
+                      <el-option label="ISTJ - 物流师" value="ISTJ" />
+                      <el-option label="ISFJ - 守卫者" value="ISFJ" />
+                      <el-option label="ESTJ - 总经理" value="ESTJ" />
+                      <el-option label="ESFJ - 执政官" value="ESFJ" />
+                      <el-option label="ISTP - 鉴赏家" value="ISTP" />
+                      <el-option label="ISFP - 探险家" value="ISFP" />
+                      <el-option label="ESTP - 企业家" value="ESTP" />
+                      <el-option label="ESFP - 表演者" value="ESFP" />
+                    </el-select>
+                  </el-form-item>
+                  
+                  <el-form-item label="血型" prop="bloodType">
+                    <el-select v-model="robotData.bloodType" placeholder="选择血型" size="large" style="width: 100%">
+                      <el-option label="A型" value="A" />
+                      <el-option label="B型" value="B" />
+                      <el-option label="O型" value="O" />
+                      <el-option label="AB型" value="AB" />
+                    </el-select>
+                  </el-form-item>
+                  
+                  <el-form-item label="星座" prop="zodiac">
+                    <el-select v-model="robotData.zodiac" placeholder="选择星座" size="large" style="width: 100%">
+                      <el-option label="白羊座" value="白羊座" />
+                      <el-option label="金牛座" value="金牛座" />
+                      <el-option label="双子座" value="双子座" />
+                      <el-option label="巨蟹座" value="巨蟹座" />
+                      <el-option label="狮子座" value="狮子座" />
+                      <el-option label="处女座" value="处女座" />
+                      <el-option label="天秤座" value="天秤座" />
+                      <el-option label="天蝎座" value="天蝎座" />
+                      <el-option label="射手座" value="射手座" />
+                      <el-option label="摩羯座" value="摩羯座" />
+                      <el-option label="水瓶座" value="水瓶座" />
+                      <el-option label="双鱼座" value="双鱼座" />
+                    </el-select>
+                  </el-form-item>
+                  
+                  <el-form-item label="所在地" prop="location">
+                    <el-input v-model="robotData.location" placeholder="所在城市" size="large" />
+                  </el-form-item>
+                  
+                  <el-form-item label="职业" prop="occupation">
+                    <el-input v-model="robotData.occupation" placeholder="职业" size="large" />
+                  </el-form-item>
+                  
+                  <el-form-item label="学历" prop="education">
+                    <el-select v-model="robotData.education" placeholder="选择学历" size="large" style="width: 100%">
+                      <el-option label="高中" value="高中" />
+                      <el-option label="大专" value="大专" />
+                      <el-option label="本科" value="本科" />
+                      <el-option label="硕士" value="硕士" />
+                      <el-option label="博士" value="博士" />
+                    </el-select>
+                  </el-form-item>
+                  
+                  <el-form-item label="感情状态" prop="relationship">
+                    <el-select v-model="robotData.relationship" placeholder="选择感情状态" size="large" style="width: 100%">
+                      <el-option label="单身" value="single" />
+                      <el-option label="恋爱中" value="in_relationship" />
+                      <el-option label="已婚" value="married" />
+                      <el-option label="离异" value="divorced" />
+                    </el-select>
+                  </el-form-item>
+                </div>
+              </div>
+
+              <div class="background-section">
+                <h3>背景故事</h3>
+                <el-form-item prop="background">
+                  <el-input 
+                    v-model="robotData.background" 
+                    type="textarea" 
+                    :rows="8"
+                    placeholder="详细描述天使的背景故事、成长经历、重要事件等"
                     size="large"
                   />
                 </el-form-item>
                 
-                <el-form-item label="性别 *" prop="gender">
-                  <el-radio-group v-model="robotData.gender" size="large">
-                    <el-radio-button label="female">女</el-radio-button>
-                    <el-radio-button label="male">男</el-radio-button>
-                    <el-radio-button label="other">其他</el-radio-button>
-                  </el-radio-group>
+                <h3>家庭背景</h3>
+                <el-form-item prop="family">
+                  <el-input 
+                    v-model="robotData.family" 
+                    type="textarea" 
+                    :rows="4"
+                    placeholder="描述家庭背景、家庭成员等"
+                    size="large"
+                  />
                 </el-form-item>
-                
-                <el-form-item label="年龄 *" prop="age">
-                  <div class="age-slider-container">
-                    <div class="age-display">{{ robotData.age }}岁</div>
+              </div>
+            </div>
+          </div>
+        </el-form>
+
+        <!-- 步骤4：行为设置 -->
+        <el-form
+          v-if="currentStep === 3"
+          ref="formRef3"
+          :model="robotData"
+          :rules="formRules[3]"
+          label-width="100px"
+          status-icon
+        >
+          <div class="step-content">
+            <div class="step-header">
+              <h2>行为设置</h2>
+              <p>配置天使的互动行为参数</p>
+            </div>
+            
+            <div class="form-section">
+              <div class="behavior-section">
+                <h3>互动参数</h3>
+                <div class="slider-group">
+                  <div class="slider-item">
+                    <label>回复速度</label>
                     <el-slider
-                      v-model="robotData.age"
-                      :min="1"
-                      :max="100"
-                      :marks="{1: '1岁', 25: '25岁', 50: '50岁', 75: '75岁', 100: '100岁'}"
+                      v-model="robotData.replySpeed"
+                      :min="0"
+                      :max="1"
+                      :step="0.1"
+                      :marks="{0: '慢', 0.5: '中等', 1: '快'}"
                       show-stops
                       size="large"
                     />
                   </div>
-                </el-form-item>
-                
-                <el-form-item label="背景设定 *" prop="description">
-                  <el-input 
-                    v-model="robotData.description" 
-                    type="textarea" 
-                    :rows="3"
-                    placeholder="这个天使的背景设定（提示词, 必填）"
-                    size="large"
-                  />
-                </el-form-item>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 步骤2：性格设定 -->
-        <div v-show="currentStep === 1" class="step-content">
-          <div class="step-header">
-            <h2>性格设定</h2>
-            <p>定义天使的性格特征和行为模式</p>
-            <div class="required-fields-notice">
-              <span class="required-mark">*</span>
-              <span>标记为必填项</span>
-            </div>
-          </div>
-          
-          <div class="form-section">
-            <div class="personality-section">
-              <h3>性格描述 *</h3>
-              <el-form-item prop="personality">
-                <el-input 
-                  v-model="robotData.personality" 
-                  type="textarea" 
-                  :rows="6"
-                  placeholder="详细描述天使的性格特点、行为习惯、说话方式等（必填）"
-                  size="large"
-                />
-              </el-form-item>
-            </div>
-
-            <div class="traits-section">
-              <h3>性格特征</h3>
-              <div class="traits-container">
-                <el-tag
-                  v-for="(trait, index) in robotData.traits"
-                  :key="index"
-                  closable
-                  @close="removeTrait(index)"
-                  class="trait-tag"
-                  size="large"
-                >
-                  {{ trait }}
-                </el-tag>
-                <el-input
-                  v-if="showTraitInput"
-                  ref="traitInput"
-                  v-model="newTrait"
-                  size="large"
-                  @keyup.enter="addTrait"
-                  @blur="addTrait"
-                  placeholder="输入特征后按回车"
-                  style="width: 200px"
-                />
-                <el-button v-else size="large" @click="focusTraitInput" type="dashed">
-                  <el-icon><Plus /></el-icon>
-                  添加特征
-                </el-button>
-              </div>
-            </div>
-
-            <div class="interests-section">
-              <h3>兴趣爱好</h3>
-              <div class="interests-container">
-                <el-tag
-                  v-for="(interest, index) in robotData.interests"
-                  :key="index"
-                  closable
-                  @close="removeInterest(index)"
-                  class="interest-tag"
-                  size="large"
-                >
-                  {{ interest }}
-                </el-tag>
-                <el-input
-                  v-if="showInterestInput"
-                  ref="interestInput"
-                  v-model="newInterest"
-                  size="large"
-                  @keyup.enter="addInterest"
-                  @blur="addInterest"
-                  placeholder="输入兴趣后按回车"
-                  style="width: 200px"
-                />
-                <el-button v-else size="large" @click="focusInterestInput" type="dashed">
-                  <el-icon><Plus /></el-icon>
-                  添加兴趣
-                </el-button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 步骤3：个人信息 -->
-        <div v-show="currentStep === 2" class="step-content">
-          <div class="step-header">
-            <h2>个人信息</h2>
-            <p>完善天使的个人背景和详细信息</p>
-          </div>
-          
-          <div class="form-section">
-            <div class="personal-info-section">
-              <h3>基本信息</h3>
-              <div class="form-fields">
-                <el-form-item label="MBTI" prop="mbti">
-                  <el-select v-model="robotData.mbti" placeholder="选择MBTI性格类型（如：INTJ - 建筑师）" size="large" style="width: 100%">
-                    <el-option label="INTJ - 建筑师" value="INTJ" />
-                    <el-option label="INTP - 逻辑学家" value="INTP" />
-                    <el-option label="ENTJ - 指挥官" value="ENTJ" />
-                    <el-option label="ENTP - 辩论家" value="ENTP" />
-                    <el-option label="INFJ - 提倡者" value="INFJ" />
-                    <el-option label="INFP - 调停者" value="INFP" />
-                    <el-option label="ENFJ - 主人公" value="ENFJ" />
-                    <el-option label="ENFP - 竞选者" value="ENFP" />
-                    <el-option label="ISTJ - 物流师" value="ISTJ" />
-                    <el-option label="ISFJ - 守卫者" value="ISFJ" />
-                    <el-option label="ESTJ - 总经理" value="ESTJ" />
-                    <el-option label="ESFJ - 执政官" value="ESFJ" />
-                    <el-option label="ISTP - 鉴赏家" value="ISTP" />
-                    <el-option label="ISFP - 探险家" value="ISFP" />
-                    <el-option label="ESTP - 企业家" value="ESTP" />
-                    <el-option label="ESFP - 表演者" value="ESFP" />
-                  </el-select>
-                </el-form-item>
-                
-                <el-form-item label="血型" prop="bloodType">
-                  <el-select v-model="robotData.bloodType" placeholder="选择血型" size="large" style="width: 100%">
-                    <el-option label="A型" value="A" />
-                    <el-option label="B型" value="B" />
-                    <el-option label="O型" value="O" />
-                    <el-option label="AB型" value="AB" />
-                  </el-select>
-                </el-form-item>
-                
-                <el-form-item label="星座" prop="zodiac">
-                  <el-select v-model="robotData.zodiac" placeholder="选择星座" size="large" style="width: 100%">
-                    <el-option label="白羊座" value="白羊座" />
-                    <el-option label="金牛座" value="金牛座" />
-                    <el-option label="双子座" value="双子座" />
-                    <el-option label="巨蟹座" value="巨蟹座" />
-                    <el-option label="狮子座" value="狮子座" />
-                    <el-option label="处女座" value="处女座" />
-                    <el-option label="天秤座" value="天秤座" />
-                    <el-option label="天蝎座" value="天蝎座" />
-                    <el-option label="射手座" value="射手座" />
-                    <el-option label="摩羯座" value="摩羯座" />
-                    <el-option label="水瓶座" value="水瓶座" />
-                    <el-option label="双鱼座" value="双鱼座" />
-                  </el-select>
-                </el-form-item>
-                
-                <el-form-item label="所在地" prop="location">
-                  <el-input v-model="robotData.location" placeholder="所在城市" size="large" />
-                </el-form-item>
-                
-                <el-form-item label="职业" prop="occupation">
-                  <el-input v-model="robotData.occupation" placeholder="职业" size="large" />
-                </el-form-item>
-                
-                <el-form-item label="学历" prop="education">
-                  <el-select v-model="robotData.education" placeholder="选择学历" size="large" style="width: 100%">
-                    <el-option label="高中" value="高中" />
-                    <el-option label="大专" value="大专" />
-                    <el-option label="本科" value="本科" />
-                    <el-option label="硕士" value="硕士" />
-                    <el-option label="博士" value="博士" />
-                  </el-select>
-                </el-form-item>
-                
-                <el-form-item label="感情状态" prop="relationship">
-                  <el-select v-model="robotData.relationship" placeholder="选择感情状态" size="large" style="width: 100%">
-                    <el-option label="单身" value="single" />
-                    <el-option label="恋爱中" value="in_relationship" />
-                    <el-option label="已婚" value="married" />
-                    <el-option label="离异" value="divorced" />
-                  </el-select>
-                </el-form-item>
-              </div>
-            </div>
-
-            <div class="background-section">
-              <h3>背景故事</h3>
-              <el-form-item prop="background">
-                <el-input 
-                  v-model="robotData.background" 
-                  type="textarea" 
-                  :rows="8"
-                  placeholder="详细描述天使的背景故事、成长经历、重要事件等"
-                  size="large"
-                />
-              </el-form-item>
-              
-              <h3>家庭背景</h3>
-              <el-form-item prop="family">
-                <el-input 
-                  v-model="robotData.family" 
-                  type="textarea" 
-                  :rows="4"
-                  placeholder="描述家庭背景、家庭成员等"
-                  size="large"
-                />
-              </el-form-item>
-            </div>
-          </div>
-        </div>
-
-        <!-- 步骤4：行为设置 -->
-        <div v-show="currentStep === 3" class="step-content">
-          <div class="step-header">
-            <h2>行为设置</h2>
-            <p>配置天使的互动行为参数</p>
-          </div>
-          
-          <div class="form-section">
-            <div class="behavior-section">
-              <h3>互动参数</h3>
-              <div class="slider-group">
-                <div class="slider-item">
-                  <label>回复速度</label>
-                  <el-slider
-                    v-model="robotData.replySpeed"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                    :marks="{0: '慢', 0.5: '中等', 1: '快'}"
-                    show-stops
-                    size="large"
-                  />
-                </div>
-                
-                <div class="slider-item">
-                  <label>回复频度</label>
-                  <el-slider
-                    v-model="robotData.replyFrequency"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                    :marks="{0: '低', 0.5: '中等', 1: '高'}"
-                    show-stops
-                    size="large"
-                  />
-                </div>
-                
-                <div class="slider-item">
-                  <label>分享频度</label>
-                  <el-slider
-                    v-model="robotData.shareFrequency"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                    :marks="{0: '低', 0.5: '中等', 1: '高'}"
-                    show-stops
-                    size="large"
-                  />
-                </div>
-              </div>
-            </div>            
-          </div>
-        </div>
-
-        <!-- 步骤5：活跃时间段和个人主题 -->
-        <div v-show="currentStep === 4" class="step-content">
-          <div class="step-header">
-            <h2>活跃时间段与个人主题</h2>
-            <p>设置天使的活跃时间和喜欢的话题</p>
-          </div>
-          <div class="form-section">
-            <!-- 移动端适配：活跃时间段 -->
-            <div class="card-block-mobile">
-              <div class="card-block-title">活跃时间段</div>
-              <div class="active-time-list-mobile">
-                <template v-if="robotData.activeHours.length > 0">
-                  <div v-for="(range, idx) in robotData.activeHours" :key="idx" class="active-time-item-mobile">
-                    <span class="active-time-range">{{ range.start }}:00 - {{ range.end }}:00</span>
-                    <span class="probability-label">发动态/回复概率:</span>
-                    <span class="probability-value">{{ range.probability }}</span>
-                    <el-button type="danger" size="small" @click="removeActiveHour(idx)" circle :icon="Delete" />
+                  
+                  <div class="slider-item">
+                    <label>回复频度</label>
+                    <el-slider
+                      v-model="robotData.replyFrequency"
+                      :min="0"
+                      :max="1"
+                      :step="0.1"
+                      :marks="{0: '低', 0.5: '中等', 1: '高'}"
+                      show-stops
+                      size="large"
+                    />
                   </div>
-                </template>
-                <template v-else>
-                  <div class="empty-tip">暂无活跃时间段</div>
-                </template>
-              </div>
-              <div class="add-btn-row">
-                <el-button type="primary" class="add-btn-mobile" @click="showActiveHourDrawer = true" :icon="Plus" size="medium">添加活跃时间段</el-button>
-              </div>
-            </div>
-            <!-- 活跃时间段添加浮层 -->
-            <div v-if="showActiveHourDrawer" class="simple-modal-mask" @click.self="showActiveHourDrawer = false">
-              <div class="simple-modal-card">
-                <div class="modal-title">添加活跃时间段</div>
-                <el-select v-model="newActiveTime.start" placeholder="开始小时" size="large" style="width: 100%; margin-bottom: 12px;">
-                  <el-option v-for="h in hourOptions" :key="h" :label="h + ':00'" :value="h.toString().padStart(2, '0')" :disabled="robotData.activeHours.length > 0 && h < nextStartHour" />
-                </el-select>
-                <el-select v-model="newActiveTime.end" placeholder="结束小时" size="large" style="width: 100%; margin-bottom: 12px;">
-                  <el-option v-for="h in endHourOptions" :key="h" :label="h + ':00'" :value="h.toString().padStart(2, '0')" />
-                </el-select>
-                <el-input v-model.number="newActiveTime.probability" type="number" :min="0" :max="1" step="0.01" placeholder="发动态/回复概率(0~1)" size="large" style="width: 100%; margin-bottom: 18px;" />
-                <div class="modal-footer-row">
-                  <el-button @click="showActiveHourDrawer = false" size="medium">取消</el-button>
-                  <el-button type="primary" @click="addActiveHourAndClose" size="medium">确认添加</el-button>
+                  
+                  <div class="slider-item">
+                    <label>分享频度</label>
+                    <el-slider
+                      v-model="robotData.shareFrequency"
+                      :min="0"
+                      :max="1"
+                      :step="0.1"
+                      :marks="{0: '低', 0.5: '中等', 1: '高'}"
+                      show-stops
+                      size="large"
+                    />
+                  </div>
                 </div>
-              </div>
+              </div>            
             </div>
-            <!-- 移动端适配：个人主题 -->
-            <div class="card-block-mobile">
-              <div class="card-block-title">个人主题</div>
-              <div class="topic-list-mobile">
-                <template v-if="robotData.topics.length > 0">
-                  <el-card v-for="(topic, idx) in robotData.topics" :key="idx" class="topic-card-mobile">
-                    <div class="topic-title-mobile">{{ topic.name }}
+          </div>
+        </el-form>
+
+        <!-- 步骤5：活跃与主题 -->
+        <el-form
+          v-if="currentStep === 4"
+          ref="formRef4"
+          :model="robotData"
+          :rules="formRules[4]"
+          label-width="100px"
+          status-icon
+        >
+          <div class="step-content">
+            <div class="step-header">
+              <h2>活跃与主题</h2>
+              <p>设置天使的活跃时间和喜欢的话题</p>
+            </div>
+            <div class="form-section">
+              <!-- 移动端适配：活跃时间段 -->
+              <div class="card-block-mobile">
+                <div class="card-block-title">活跃时间段</div>
+                <div class="active-time-list-mobile">
+                  <template v-if="robotData.activeHours.length > 0">
+                    <div v-for="(range, idx) in robotData.activeHours" :key="idx" class="active-time-item-mobile">
+                      <span class="active-time-range">{{ range.start }}:00 - {{ range.end }}:00</span>
                       <span class="probability-label">发动态/回复概率:</span>
-                      <span class="probability-value">{{ topic.frequency }}</span>
+                      <span class="probability-value">{{ range.probability }}</span>
+                      <el-button type="danger" size="small" @click="removeActiveHour(idx)" circle :icon="Delete" />
                     </div>
-                    <div class="topic-content-mobile">{{ topic.content }}</div>
-                    <el-button type="danger" size="small" @click="removeTopic(idx)" circle :icon="Delete" style="position:absolute;top:8px;right:8px;" />
-                  </el-card>
-                </template>
-                <template v-else>
-                  <div class="empty-tip">暂无个人主题</div>
-                </template>
-              </div>
-              <div class="add-btn-row">
-                <el-button type="primary" class="add-btn-mobile" @click="showTopicDrawer = true" :icon="Plus" size="medium">添加主题</el-button>
-              </div>
-            </div>
-            <!-- 个人主题添加浮层 -->
-            <div v-if="showTopicDrawer" class="simple-modal-mask" @click.self="showTopicDrawer = false">
-              <div class="simple-modal-card">
-                <div class="modal-title">添加个人主题</div>
-                <el-input v-model="newTopic.name" placeholder="主题名称" size="large" style="margin-bottom: 12px;" />
-                <el-input v-model.number="newTopic.frequency" type="number" :min="0" :max="1" step="0.01" placeholder="发动态/回复概率(0~1)" size="large" style="margin-bottom: 12px; width: 100%;" />
-                <el-input v-model="newTopic.content" type="textarea" :rows="4" placeholder="主题内容" size="large" style="margin-bottom: 12px;" />
-                <div class="modal-footer-row">
-                  <el-button @click="showTopicDrawer = false" size="medium">取消</el-button>
-                  <el-button type="primary" @click="addTopicAndClose" size="medium">确认添加</el-button>
+                  </template>
+                  <template v-else>
+                    <div class="empty-tip">暂无活跃时间段</div>
+                  </template>
+                </div>
+                <div class="add-btn-row">
+                  <el-button type="primary" class="add-btn-mobile" @click="showActiveHourDrawer = true" :icon="Plus" size="medium">添加活跃时间段</el-button>
                 </div>
               </div>
-            </div>
-          </div>
-          <div class="activation-section">
-              <h3>激活状态</h3>
-              <div class="activation-card">
-                <div class="activation-info">
-                  <el-icon size="24" :class="{ 'active': robotData.isActive }">
-                    <component :is="robotData.isActive ? 'CircleCheck' : 'CircleClose'" />
-                  </el-icon>
-                  <div class="activation-text">
-                    <h4>{{ robotData.isActive ? '天使已激活' : '天使未激活' }}</h4>
-                    <p>{{ robotData.isActive ? '天使将开始活跃并与其他用户互动' : '天使暂时处于休眠状态' }}</p>
+              <!-- 活跃时间段添加浮层 -->
+              <div v-if="showActiveHourDrawer" class="simple-modal-mask" @click.self="showActiveHourDrawer = false">
+                <div class="simple-modal-card">
+                  <div class="modal-title">添加活跃时间段</div>
+                  <el-select v-model="newActiveTime.start" placeholder="开始小时" size="large" style="width: 100%; margin-bottom: 12px;">
+                    <el-option v-for="h in hourOptions" :key="h" :label="h + ':00'" :value="h.toString().padStart(2, '0')" :disabled="robotData.activeHours.length > 0 && h < nextStartHour" />
+                  </el-select>
+                  <el-select v-model="newActiveTime.end" placeholder="结束小时" size="large" style="width: 100%; margin-bottom: 12px;">
+                    <el-option v-for="h in endHourOptions" :key="h" :label="h + ':00'" :value="h.toString().padStart(2, '0')" />
+                  </el-select>
+                  <el-input v-model.number="newActiveTime.probability" type="number" :min="0" :max="1" step="0.01" placeholder="发动态/回复概率(0~1)" size="large" style="width: 100%; margin-bottom: 18px;" />
+                  <div class="modal-footer-row">
+                    <el-button @click="showActiveHourDrawer = false" size="medium">取消</el-button>
+                    <el-button type="primary" @click="addActiveHourAndClose" size="medium">确认添加</el-button>
                   </div>
                 </div>
-                <el-switch 
-                  v-model="robotData.isActive" 
-                  size="large"
-                  active-text="激活"
-                  inactive-text="休眠"
-                />
+              </div>
+              <!-- 移动端适配：个人主题 -->
+              <div class="card-block-mobile">
+                <div class="card-block-title">个人主题</div>
+                <div class="topic-list-mobile">
+                  <template v-if="robotData.topics.length > 0">
+                    <el-card v-for="(topic, idx) in robotData.topics" :key="idx" class="topic-card-mobile">
+                      <div class="topic-title-mobile">{{ topic.name }}
+                        <span class="probability-label">发动态/回复概率:</span>
+                        <span class="probability-value">{{ topic.frequency }}</span>
+                      </div>
+                      <div class="topic-content-mobile">{{ topic.content }}</div>
+                      <el-button type="danger" size="small" @click="removeTopic(idx)" circle :icon="Delete" style="position:absolute;top:8px;right:8px;" />
+                    </el-card>
+                  </template>
+                  <template v-else>
+                    <div class="empty-tip">暂无个人主题</div>
+                  </template>
+                </div>
+                <div class="add-btn-row">
+                  <el-button type="primary" class="add-btn-mobile" @click="showTopicDrawer = true" :icon="Plus" size="medium">添加主题</el-button>
+                </div>
+              </div>
+              <!-- 个人主题添加浮层 -->
+              <div v-if="showTopicDrawer" class="simple-modal-mask" @click.self="showTopicDrawer = false">
+                <div class="simple-modal-card">
+                  <div class="modal-title">添加个人主题</div>
+                  <el-input v-model="newTopic.name" placeholder="主题名称" size="large" style="margin-bottom: 12px;" />
+                  <el-input v-model.number="newTopic.frequency" type="number" :min="0" :max="1" step="0.01" placeholder="发动态/回复概率(0~1)" size="large" style="margin-bottom: 12px; width: 100%;" />
+                  <el-input v-model="newTopic.content" type="textarea" :rows="4" placeholder="主题内容" size="large" style="margin-bottom: 12px;" />
+                  <div class="modal-footer-row">
+                    <el-button @click="showTopicDrawer = false" size="medium">取消</el-button>
+                    <el-button type="primary" @click="addTopicAndClose" size="medium">确认添加</el-button>
+                  </div>
+                </div>
               </div>
             </div>
-        </div>
+            <div class="activation-section">
+                <h3>激活状态</h3>
+                <div class="activation-card">
+                  <div class="activation-info">
+                    <el-icon size="24" :class="{ 'active': robotData.isActive }">
+                      <component :is="robotData.isActive ? 'CircleCheck' : 'CircleClose'" />
+                    </el-icon>
+                    <div class="activation-text">
+                      <h4>{{ robotData.isActive ? '天使已激活' : '天使未激活' }}</h4>
+                      <p>{{ robotData.isActive ? '天使将开始活跃并与其他用户互动' : '天使暂时处于休眠状态' }}</p>
+                    </div>
+                  </div>
+                  <el-switch 
+                    v-model="robotData.isActive" 
+                    size="large"
+                    active-text="激活"
+                    inactive-text="休眠"
+                  />
+                </div>
+              </div>
+          </div>
+        </el-form>
       </div>
 
       <!-- 向导底部导航 -->
@@ -600,27 +645,71 @@ const nextStartHour = computed(() => {
 })
 
 // 表单验证规则
-const formRules = {
-  name: [
-    { required: true, message: '请输入天使名称', trigger: 'blur' },
-    { min: 2, max: 20, message: '名称长度在 2 到 20 个字符', trigger: 'blur' }
-  ],
-  gender: [
-    { required: true, message: '请选择性别', trigger: 'change' }
-  ],
-  age: [
-    { required: true, message: '请设置年龄', trigger: 'change' },
-    { type: 'number', min: 1, max: 100, message: '年龄必须在 1 到 100 之间', trigger: 'blur' }
-  ],
-  description: [
-    { required: true, message: '请输入一句话简介', trigger: 'blur' },
-    { min: 5, max: 100, message: '简介长度在 5 到 100 个字符', trigger: 'blur' }
-  ],
-  personality: [
-    { required: true, message: '请输入性格描述', trigger: 'blur' },
-    { min: 10, max: 500, message: '性格描述长度在 10 到 500 个字符', trigger: 'blur' }
-  ]
-}
+const formRules = [
+  // 步骤1：基础信息
+  {
+    name: [
+      { required: true, message: '请输入天使名称', trigger: 'blur' },
+      { min: 2, max: 20, message: '名称长度在 2 到 20 个字符', trigger: 'blur' }
+    ],
+    gender: [
+      { required: true, message: '请选择性别', trigger: 'change' }
+    ],
+    age: [
+      { required: true, message: '请设置年龄', trigger: 'change' },
+      { type: 'number', min: 1, max: 100, message: '年龄必须在 1 到 100 之间', trigger: 'blur' }
+    ],
+    description: [
+      { required: true, message: '请输入一句话简介', trigger: 'blur' },
+      { min: 5, max: 100, message: '简介长度在 5 到 100 个字符', trigger: 'blur' }
+    ],
+    avatar: [
+      { required: true, message: '请上传头像', trigger: 'change' }
+    ]
+  },
+  // 步骤2：性格设定
+  {
+    personality: [
+      { required: true, message: '请输入性格描述', trigger: 'blur' },
+      { min: 10, max: 500, message: '性格描述长度在 10 到 500 个字符', trigger: 'blur' }
+    ]
+    // 可扩展traits/interests等自定义校验
+  },
+  // 步骤3：个人信息
+  {
+    mbti: [
+      { required: true, message: '请选择MBTI类型', trigger: 'change' }
+    ],
+    bloodType: [
+      { required: true, message: '请选择血型', trigger: 'change' }
+    ],
+    zodiac: [
+      { required: true, message: '请选择星座', trigger: 'change' }
+    ],
+    location: [
+      { required: true, message: '请输入所在地', trigger: 'blur' }
+    ],
+    occupation: [
+      { required: true, message: '请输入职业', trigger: 'blur' }
+    ],
+    education: [
+      { required: true, message: '请选择学历', trigger: 'change' }
+    ],
+    relationship: [
+      { required: true, message: '请选择感情状态', trigger: 'change' }
+    ],
+    background: [
+      { required: true, message: '请输入背景故事', trigger: 'blur' }
+    ],
+    family: [
+      { required: true, message: '请输入家庭背景', trigger: 'blur' }
+    ]
+  },
+  // 步骤4：行为设置（如有必填项可补充）
+  {},
+  // 步骤5：活跃与主题（如有必填项可补充）
+  {}
+]
 
 // 向导步骤配置
 const steps = [
@@ -645,6 +734,12 @@ const steps = [
     description: '设置活跃时间和个人主题'
   }
 ]
+
+const formRef0 = ref(null)
+const formRef1 = ref(null)
+const formRef2 = ref(null)
+const formRef3 = ref(null)
+const formRef4 = ref(null)
 
 // 机器人数据
 const robotData = reactive({
@@ -683,13 +778,28 @@ const goBack = () => {
 }
 
 const goToStep = (stepIndex) => {
-  if (stepIndex <= currentStep.value) {
-    currentStep.value = stepIndex
-  }
+currentStep.value = stepIndex
 }
 
 const nextStep = () => {
-  if (currentStep.value < steps.length - 1) {
+  let formRef = null
+  if (currentStep.value === 0) formRef = formRef0.value
+  if (currentStep.value === 1) formRef = formRef1.value
+  if (currentStep.value === 2) formRef = formRef2.value
+  if (currentStep.value === 3) formRef = formRef3.value
+  if (currentStep.value === 4) formRef = formRef4.value
+  if (formRef) {
+    formRef.validate((valid) => {
+      if (valid) {
+        currentStep.value++
+      } else {
+        nextTick(() => {
+          const errorInput = document.querySelector('.is-error input, .is-error textarea')
+          if (errorInput) errorInput.focus()
+        })
+      }
+    })
+  } else {
     currentStep.value++
   }
 }

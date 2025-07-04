@@ -34,7 +34,7 @@ export const useConfigStore = defineStore('config', () => {
     
     // 主题设置
     theme: {
-      mode: 'auto', // light, dark, auto
+      mode: 'dark', // light, dark, auto
     }
   })
 
@@ -96,7 +96,7 @@ export const useConfigStore = defineStore('config', () => {
             publicPosts: userSetting.publicPosts || false,
           },
           theme: {
-            mode: userSetting.themeMode || 'auto',
+            mode: userSetting.themeMode || 'dark',
           }
         }
         
@@ -250,7 +250,7 @@ export const useConfigStore = defineStore('config', () => {
         publicPosts: false,
       },
       theme: {
-        mode: 'auto',
+        mode: 'dark',
       }
     }
     applyTheme()

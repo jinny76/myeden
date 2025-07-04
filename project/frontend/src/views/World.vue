@@ -192,6 +192,7 @@
                         <span>编辑</span>
                       </button>
                       <button
+                        v-if="isRobotLinkCreated(robot.id)"
                         class="edit-btn"
                         @click="openImpressionPanel(robot)"
                       >

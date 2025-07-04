@@ -3,6 +3,7 @@ package com.myeden.service.impl;
 import com.myeden.entity.Robot;
 import com.myeden.entity.Post;
 import com.myeden.entity.Comment;
+import com.myeden.model.external.WeatherInfo;
 import com.myeden.repository.RobotRepository;
 import com.myeden.repository.PostRepository;
 import com.myeden.repository.CommentRepository;
@@ -66,6 +67,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     
     @Autowired
     private UserRobotLinkService userRobotLinkService;
+
+    @Autowired
+    private ExternalDataCacheService externalDataCacheService;
     
     private final Random random = new Random();
     private final ConcurrentHashMap<String, RobotDailyStats> dailyStats = new ConcurrentHashMap<>();
@@ -182,7 +186,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
              */
             
             // 生成动态内容
-            String context = buildPostContext();
+            String context = buildPostContext(robot);
             PromptServiceImpl.PostContentResult postResult = promptService.generatePostContent(robot, context);
             String content = postResult.getContent();
             String innerThoughts = promptService.generateInnerThoughts(robot, "发布动态: " + content);
@@ -350,15 +354,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         try {
             // 检查今日评论数量限制
             RobotDailyStats stats = getDailyStats(robot.getRobotId());
-            /*
-             * if (stats.getCommentCount() >= 20) { // 每日最多20条评论
-             * logger.info("机器人评论超限: 每天最多20次 {}", robot.getRobotId());
-             * return false;
-             * }
-             */
 
             String postContent = postDetail.getContent();
-            String context = buildCommentContext(postContent);
+            String context = buildCommentContext(postContent, robot);
             String content = promptService.generateCommentContent(robot, postDetail, context);
             String innerThoughts = promptService.generateInnerThoughts(robot, "评论动态: " + postContent);
             
@@ -417,7 +415,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             }*/
 
             String commentContent = commentDetail.getContent();
-            String context = buildReplyContext(commentContent);
+            String context = buildReplyContext(commentContent, robot);
             
             // 生成回复内容和内心活动
             String content = promptService.generateReplyContent(robot, commentDetail, postDetail, context);
@@ -644,10 +642,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     if (randomValue < 0.25) {
                         triggerRobotPost(robot.getRobotId());
                     } else if (randomValue < 0.5) {
-                        // 随机选择一个近三天的动态进行评论
+                        // 随机选择一个今天的动态进行评论
                         triggerRobotCommentOnRecentPosts(robot.getRobotId());
                     } else if (randomValue < 0.75) {
-                        // 随机选择一个近三天的评论进行回复
+                        // 随机选择一个斤天的评论进行回复
                         triggerRobotReplyOnRecentComments(robot.getRobotId());
                     }
                 }
@@ -675,22 +673,14 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return;
             }
             
-            // 检查今日评论数量限制
-            RobotDailyStats stats = getDailyStats(robotId);
-            /*
-             * if (stats.getCommentCount() >= 20) { // 每日最多20条评论
-             * return;
-             * }
-             */
-            
             // 获取与机器人有链接的用户ID列表
             List<String> linkedUserIds = userRobotLinkService.getRobotActiveLinks(robotId)
                 .stream()
                 .map(UserRobotLinkService.LinkSummary::getUserId)
                 .collect(Collectors.toList());
             
-            // 获取近三天的帖子，按时间倒序排列（最新的在前）
-            LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
+            // 获取今日的帖子，按时间倒序排列（最新的在前）
+            LocalDateTime todayStart = LocalDateTime.now().with(LocalTime.MIN);
             // 获取所有机器人ID，作为 connectedRobotIds 传入，currentUserId 传 null
             List<String> allRobotIds = robotRepository.findAll().stream()
                 .map(Robot::getRobotId)
@@ -699,10 +689,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             allRobotIds.addAll(linkedUserIds);
 
             List<Post> recentPosts = postRepository
-                    .findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(oneDayAgo, null, allRobotIds);
+                    .findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(todayStart, null, allRobotIds);
             
             if (recentPosts.isEmpty()) {
-                logger.debug("机器人 {} 没有找到近1天的帖子", robot.getName());
+                logger.debug("机器人 {} 没有找到今日的帖子", robot.getName());
                 return;
             }
             
@@ -788,12 +778,12 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 .map(UserRobotLinkService.LinkSummary::getUserId)
                 .collect(Collectors.toList());
             
-            // 获取近三天的评论，按时间倒序排列（最新的在前）
-            LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(1);
-            List<Comment> recentComments = commentService.findRecentComments(threeDaysAgo);
+            // 获取今日的评论，按时间倒序排列（最新的在前）
+            LocalDateTime todayStart = LocalDateTime.now().with(LocalTime.MIN);
+            List<Comment> recentComments = commentService.findRecentComments(todayStart);
             
             if (recentComments.isEmpty()) {
-                logger.debug("机器人 {} 没有找到近三天的评论", robot.getName());
+                logger.debug("机器人 {} 没有找到今日的评论", robot.getName());
                 return;
             }
             
@@ -865,12 +855,15 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         return dailyStats.computeIfAbsent(robotId, k -> new RobotDailyStats());
     }
     
-    private String buildPostContext() {
+    private String buildPostContext(Robot robot) {
         LocalDateTime now = LocalDateTime.now();
         LocalTime time = now.toLocalTime();
         String weekDay = now.getDayOfWeek().toString();
         String timeOfDay = getTimeOfDay(time);
-        String weather = getWeather();
+        WeatherInfo weatherInfo = getWeather(robot);
+        String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
+        String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
+        weather = String.format("，天气%s, 温度%s", weather, temperature);
         String mood = getMood();
         String activity = getRandomActivity(timeOfDay);
         
@@ -884,12 +877,15 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 activity);
     }
     
-    private String buildCommentContext(String postContent) {
+    private String buildCommentContext(String postContent, Robot robot) {
         LocalDateTime now = LocalDateTime.now();
         LocalTime time = now.toLocalTime();
         String weekDay = now.getDayOfWeek().toString();
         String timeOfDay = getTimeOfDay(time);
-        String weather = getWeather();
+        WeatherInfo weatherInfo = getWeather(robot);
+        String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
+        String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
+        weather = String.format("，天气%s, 温度%s", weather, temperature);
         String mood = getMood();
         String activity = getRandomActivity(timeOfDay);
 
@@ -899,12 +895,15 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 activity, postContent);
     }
     
-    private String buildReplyContext(String commentContent) {
+    private String buildReplyContext(String commentContent, Robot robot) {
         LocalDateTime now = LocalDateTime.now();
         LocalTime time = now.toLocalTime();
         String weekDay = now.getDayOfWeek().toString();
         String timeOfDay = getTimeOfDay(time);
-        String weather = getWeather();
+        WeatherInfo weatherInfo = getWeather(robot);
+        String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
+        String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
+        weather = String.format("，天气%s, 温度%s", weather, temperature);
         String mood = getMood();
         String activity = getRandomActivity(timeOfDay);
 
@@ -938,18 +937,28 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     /**
      * 获取随机天气
      */
-    private String getWeather() {
-        String[] weathers = {
-            "阳光明媚，心情舒畅",
-            "微风轻拂，很舒服",
-            "阴天多云，适合思考",
-            "小雨绵绵，很有诗意",
-            "天气不错，适合出门",
-            "今天天气很好呢",
-            "阳光正好，微风不燥",
-            "天气有点阴，但心情不错"
-        };
-        return weathers[random.nextInt(weathers.length)];
+    private WeatherInfo getWeather(Robot robot) {
+        // 获取缓存中的天气Map
+        Map<String, WeatherInfo> weatherMap = externalDataCacheService.getWeatherMap();
+        if (weatherMap != null) {
+            String location = robot.getLocation();
+            if (location != null && !location.trim().isEmpty()) {
+                WeatherInfo info = weatherMap.get(location.trim());
+                if (info != null) {
+                    // 找到对应城市天气
+                    return info;
+                }
+            }
+
+            // 未找到，随机返回一个已有城市的天气
+            List<WeatherInfo> allWeather = new java.util.ArrayList<>(weatherMap.values());
+            if (!allWeather.isEmpty()) {
+                int idx = (int) (Math.random() * allWeather.size());
+                return allWeather.get(idx);
+            }
+        }
+
+        return null;
     }
     
     /**
