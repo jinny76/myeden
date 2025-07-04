@@ -1,6 +1,8 @@
 package com.myeden.service;
 
+import com.myeden.entity.UserRobotLink;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 用户机器人链接服务接口
@@ -168,6 +170,21 @@ public interface UserRobotLinkService {
     List<String> getAllRobotIds();
     
     /**
+     * 根据用户ID和机器人ID获取连接对象
+     * @param userId 用户ID
+     * @param robotId 机器人ID
+     * @return 连接对象Optional
+     */
+    Optional<UserRobotLink> getLink(String userId, String robotId);
+    
+    /**
+     * 保存用户-机器人连接对象
+     * @param link 连接对象
+     * @return 保存后的对象
+     */
+    UserRobotLink save(UserRobotLink link);
+    
+    /**
      * 链接结果类
      */
     class LinkResult {
@@ -210,9 +227,10 @@ public interface UserRobotLinkService {
         private String strengthLevel;
         private Integer interactionCount;
         private String lastInteractionTime;
+        private String impression;
         
         public LinkSummary(String linkId, String userId, String robotId, String robotName, String robotAvatar,
-                          String status, Integer strength, String strengthLevel, Integer interactionCount, String lastInteractionTime) {
+                          String status, Integer strength, String strengthLevel, Integer interactionCount, String lastInteractionTime, String impression) {
             this.linkId = linkId;
             this.userId = userId;
             this.robotId = robotId;
@@ -223,6 +241,7 @@ public interface UserRobotLinkService {
             this.strengthLevel = strengthLevel;
             this.interactionCount = interactionCount;
             this.lastInteractionTime = lastInteractionTime;
+            this.impression = impression;
         }
         
         // Getter方法
@@ -236,6 +255,7 @@ public interface UserRobotLinkService {
         public String getStrengthLevel() { return strengthLevel; }
         public Integer getInteractionCount() { return interactionCount; }
         public String getLastInteractionTime() { return lastInteractionTime; }
+        public String getImpression() { return impression; }
     }
     
     /**

@@ -111,3 +111,17 @@ export function updateUserRobotLinkStrength(robotId, strength) {
     data: { strength }
   })
 } 
+
+/**
+ * 更新用户-机器人连接对象（如impression等字段）
+ * @param {Object} link - 用户机器人连接对象，需包含robotId等唯一标识
+ * @returns {Promise}
+ */
+export function updateUserRobotLink(link) {
+  // 假设后端API为 PUT /api/v1/user-robot-links/:robotId
+  return request({
+    url: `/user-robot-links/${link.robotId}`,
+    method: 'PUT',
+    data: link
+  })
+} 

@@ -2,9 +2,7 @@ package com.myeden.service.impl;
 
 import ch.qos.logback.core.testUtil.RandomUtil;
 import com.myeden.config.WorldConfig;
-import com.myeden.entity.Robot;
-import com.myeden.entity.RobotDailyPlan;
-import com.myeden.entity.User;
+import com.myeden.entity.*;
 import com.myeden.repository.RobotDailyPlanRepository;
 import com.myeden.repository.RobotRepository;
 import com.myeden.repository.UserRepository;
@@ -23,13 +21,13 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.myeden.entity.Post;
+
 import com.myeden.service.ExternalDataCacheService;
 import com.myeden.model.external.HotSearchItem;
 import org.springframework.context.annotation.Lazy;
 import com.myeden.model.external.WeatherInfo;
-import com.myeden.entity.ContentGenerationLog;
 import com.myeden.repository.ContentGenerationLogRepository;
+import com.myeden.repository.UserRobotLinkRepository;
 
 /**
  * 提示词服务实现类
@@ -67,6 +65,9 @@ public class PromptServiceImpl implements PromptService {
     
     @Autowired
     private ContentGenerationLogRepository contentGenerationLogRepository;
+    
+    @Autowired
+    private UserRobotLinkRepository userRobotLinkRepository;
     
     private final Random random = new Random();
     
@@ -163,6 +164,13 @@ public class PromptServiceImpl implements PromptService {
         if (context != null && !context.trim().isEmpty()) {
             prompt.append(String.format("\n\n当前情况：%s", context));
         }
+        // 新增：注入用户印象
+        String userId = post.getAuthorId();
+        String impression = getUserImpression(userId, robot.getRobotId());
+        if (impression != null && !impression.trim().isEmpty()) {
+            prompt.append("\n\n## 你对动态作者的印象：\n");
+            prompt.append(impression);
+        }
 
         // 添加评论生成要求
         prompt.append("\n\n请根据一下发帖要求，加上你的性格和先前你看到的动态内容，生成一条纯文本的，自然、真实的评论, 仅返回动态本身, 不包含任何标题。");
@@ -205,6 +213,13 @@ public class PromptServiceImpl implements PromptService {
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
             prompt.append(String.format("\n\n当前的情况：%s", context));
+        }
+        // 新增：注入用户印象
+        String userId = commentDetail.getAuthorId();
+        String impression = getUserImpression(userId, robot.getRobotId());
+        if (impression != null && !impression.trim().isEmpty()) {
+            prompt.append("\n\n## 你对评论作者的印象：\n");
+            prompt.append(impression);
         }
 
         // 添加动态和评论信息
@@ -1423,5 +1438,22 @@ public class PromptServiceImpl implements PromptService {
                 return null;
         }
         return (link.getUrl() != null) ? link : null;
+    }
+
+    /**
+     * 获取用户对机器人的印象内容
+     * @param userId 用户ID
+     * @param robotId 机器人ID
+     * @return 印象内容，若无则返回null
+     */
+    private String getUserImpression(String userId, String robotId) {
+        try {
+            Optional<UserRobotLink> byUserIdAndRobotId = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
+            return byUserIdAndRobotId
+                .map(link -> link.getImpression() != null && link.getImpression().length() > 500 ? link.getImpression().substring(0, 500) : link.getImpression())
+                .orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
     }
 } 

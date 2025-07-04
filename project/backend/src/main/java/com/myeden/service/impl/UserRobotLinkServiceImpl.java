@@ -369,6 +369,11 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
     }
     
     @Override
+    public Optional<UserRobotLink> getLink(String userId, String robotId) {
+        return userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
+    }
+    
+    @Override
     public LinkSummary getStrongestLink(String userId) {
         try {
             logger.info("获取用户最强链接，用户ID: {}", userId);
@@ -479,6 +484,11 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
         return robotRepository.findAll().stream().map(r -> r.getRobotId()).toList();
     }
     
+    @Override
+    public UserRobotLink save(UserRobotLink link) {
+        return userRobotLinkRepository.save(link);
+    }
+    
     /**
      * 转换为链接摘要
      */
@@ -503,7 +513,8 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
             link.getStrength(),
             link.getStrengthLevel(),
             link.getInteractionCount(),
-            link.getLastInteractionTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            link.getLastInteractionTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+            link.getImpression()
         );
     }
     

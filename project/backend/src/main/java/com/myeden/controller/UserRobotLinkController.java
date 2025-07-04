@@ -10,6 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
+import com.myeden.entity.UserRobotLink;
 
 /**
  * 用户机器人链接管理控制器
@@ -237,6 +239,40 @@ public class UserRobotLinkController {
                 "更新链接强度失败: " + e.getMessage(),
                 null
             ));
+        }
+    }
+    
+    /**
+     * 更新用户-机器人连接对象（如impression字段）
+     * @param robotId 机器人ID
+     * @param updateData 前端传递的部分更新数据
+     * @return 更新结果
+     */
+    @PutMapping("/{robotId}")
+    public ResponseEntity<EventResponse> updateUserRobotLink(
+            @PathVariable String robotId,
+            @RequestBody UserRobotLink updateData) {
+        try {
+            // 获取当前用户ID
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+
+            // 查询现有连接
+            Optional<UserRobotLink> linkOpt = userRobotLinkService.getLink(currentUserId, robotId);
+            if (linkOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(new EventResponse(404, "连接不存在", null));
+            }
+            UserRobotLink link = linkOpt.get();
+
+            // 只允许更新impression字段
+            link.setImpression(updateData.getImpression());
+            // 可根据需要同步更新时间等
+
+            userRobotLinkService.save(link);
+
+            return ResponseEntity.ok(new EventResponse(200, "更新成功", link));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new EventResponse(500, "更新失败: " + e.getMessage(), null));
         }
     }
     

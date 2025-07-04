@@ -191,7 +191,14 @@
                         <el-icon><Edit /></el-icon>
                         <span>编辑</span>
                       </button>
-                    </div>                  
+                      <button
+                        class="edit-btn"
+                        @click="openImpressionPanel(robot)"
+                      >
+                        <el-icon><ChatLineRound /></el-icon>
+                        印象
+                      </button>
+                    </div>                                      
                   </div>
                 </div>
               </div>
@@ -199,6 +206,34 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 印象编辑弹层 -->
+  <div
+    v-if="impressionPanelVisible"
+    class="impression-overlay"
+    @click.self="closeImpressionPanel"
+  >
+    <div
+      class="impression-panel"
+      :class="{ mobile: isMobile }"
+    >
+      <div class="impression-header">
+        <span>编辑机器人对我的印象</span>
+        <button class="close-btn" @click="closeImpressionPanel">×</button>
+      </div>
+      <textarea
+        v-model="impressionText"
+        rows="6"
+        maxlength="500"
+        class="impression-textarea"
+        placeholder="请输入你希望机器人对你的印象（如性格、习惯、兴趣等）"
+      ></textarea>
+      <div class="impression-footer">
+        <span class="word-limit">{{ impressionText.length }}/500</span>
+        <button class="save-btn" @click="saveImpression">保存</button>
       </div>
     </div>
   </div>
@@ -211,14 +246,15 @@ import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
-import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus, Edit, Calendar } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus, Edit, Calendar, ChatLineRound } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { 
   createUserRobotLink, 
   deleteUserRobotLink, 
   activateUserRobotLink, 
   deactivateUserRobotLink,
-  getUserRobotLinks 
+  getUserRobotLinks,
+  updateUserRobotLink
 } from '@/api/userRobotLink'
 import { getMyRobots } from '@/api/robotEditor'
 
@@ -239,6 +275,12 @@ const myRobots = ref(new Set()) // 存储用户拥有的机器人ID集合
 // 过滤相关状态
 const searchKeyword = ref('')
 const statusFilter = ref('all')
+
+// 印象相关状态
+const impressionPanelVisible = ref(false)
+const impressionText = ref('')
+const editingRobotId = ref(null)
+const isMobile = computed(() => window.innerWidth <= 600)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -449,6 +491,24 @@ const editRobot = (robotId) => {
 // 检查机器人是否为用户拥有
 const isMyRobot = (robotId) => {
   return myRobots.value.has(robotId)
+}
+
+function openImpressionPanel(robot) {
+  editingRobotId.value = robot.id
+  impressionText.value = userRobotLinks.value.get(robot.id)?.impression || ''
+  impressionPanelVisible.value = true
+}
+function closeImpressionPanel() {
+  impressionPanelVisible.value = false
+}
+async function saveImpression() {
+  const link = userRobotLinks.value.get(editingRobotId.value)
+  if (link) {
+    link.impression = impressionText.value
+    await updateUserRobotLink(link)
+    impressionPanelVisible.value = false
+    message.success('印象已保存')
+  }
 }
 </script>
 
@@ -1145,6 +1205,130 @@ const isMyRobot = (robotId) => {
 .link-toggle-btn.linked .loading-spinner-small {
   border-color: rgba(255, 77, 79, 0.2);
   border-top-color: #ff4d4f;
+}
+
+.impression-btn {
+  background: linear-gradient(135deg, #22d36b, #4ade80);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 18px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-left: 8px;
+  box-shadow: 0 2px 8px rgba(34,211,107,0.08);
+  transition: background 0.2s;
+}
+.impression-btn:hover {
+  background: linear-gradient(135deg, #16a34a, #22d36b);
+}
+.impression-overlay {
+  position: fixed;
+  z-index: 2000;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.impression-panel {
+  background: var(--color-bg, rgba(255,255,255,0.95));
+  color: var(--color-text, #222);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  padding: 28px 24px 18px;
+  min-width: 340px;
+  max-width: 90vw;
+  width: 400px;
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.2s;
+}
+.impression-panel.mobile {
+  width: 100vw;
+  max-width: 100vw;
+  min-width: 0;
+  border-radius: 18px 18px 0 0;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  top: auto;
+  padding: 24px 12px 12px;
+}
+.impression-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--color-text, #222);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.close-btn:hover { opacity: 1; }
+.impression-textarea {
+  width: 100%;
+  min-height: 90px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e0e0e0);
+  background: var(--color-bg, rgba(255,255,255,0.95));
+  color: var(--color-text, #222);
+  font-size: 1rem;
+  padding: 12px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  transition: border 0.2s;
+}
+.impression-textarea:focus {
+  border-color: #22d36b;
+}
+.impression-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+.word-limit {
+  font-size: 0.9rem;
+  color: var(--color-text, #888);
+  opacity: 0.7;
+}
+.save-btn {
+  background: linear-gradient(135deg, #22d36b, #4ade80);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 22px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(34,211,107,0.08);
+  transition: background 0.2s;
+}
+.save-btn:hover {
+  background: linear-gradient(135deg, #16a34a, #22d36b);
+}
+@media (max-width: 600px) {
+  .impression-panel {
+    width: 100vw;
+    max-width: 100vw;
+    min-width: 0;
+    border-radius: 18px 18px 0 0;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    top: auto;
+    padding: 24px 12px 12px;
+  }
 }
 
 /* 响应式设计 */

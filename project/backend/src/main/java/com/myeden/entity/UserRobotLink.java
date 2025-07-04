@@ -1,5 +1,6 @@
 package com.myeden.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
  * @version 1.0.1
  * @since 2025-01-27
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Document(collection = "user_robot_links")
 @CompoundIndexes({
     @CompoundIndex(name = "userId_robotId_unique", def = "{'userId': 1, 'robotId': 1}", unique = true)
@@ -69,6 +71,11 @@ public class UserRobotLink {
      * 互动次数
      */
     private Integer interactionCount = 0;
+    
+    /**
+     * 用户自定义印象内容，影响机器人对用户的评论和回复，支持多行文本，最大建议500字
+     */
+    private String impression;
     
     /**
      * 创建时间
@@ -159,6 +166,15 @@ public class UserRobotLink {
     
     public void setInteractionCount(Integer interactionCount) {
         this.interactionCount = interactionCount;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    public String getImpression() {
+        return impression;
+    }
+
+    public void setImpression(String impression) {
+        this.impression = impression;
         this.updatedAt = LocalDateTime.now();
     }
     
