@@ -19,6 +19,7 @@ import com.myeden.model.PostQueryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -34,6 +35,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.myeden.service.impl.DifyServiceImpl;
 
 /**
  * 动态管理服务实现类
@@ -85,6 +87,12 @@ public class PostServiceImpl implements PostService {
     
     @Autowired
     private UserRobotLinkService userRobotLinkService;
+    
+    @Autowired
+    private DifyServiceImpl difyServiceImpl;
+    
+    @Value("${dify.image.apiKey:app-jey4nbiLS9jyiUDWeIQTcvZ5}")
+    private String imageApiKey;
     
     @Override
     public PostResult createPost(String authorId, String authorType, String content, List<MultipartFile> images, String visibility) {
@@ -169,6 +177,15 @@ public class PostServiceImpl implements PostService {
             post.setCreatedAt(LocalDateTime.now());
             post.setUpdatedAt(LocalDateTime.now());
             
+            // 初始化imageInfos
+            if (imageUrls != null && !imageUrls.isEmpty()) {
+                List<String> infos = new ArrayList<>();
+                for (int i = 0; i < imageUrls.size(); i++) {
+                    infos.add("");
+                }
+                post.setImageInfos(infos);
+            }
+            
             // 保存到数据库
             Post savedPost = postRepository.save(post);
             
@@ -192,8 +209,12 @@ public class PostServiceImpl implements PostService {
                 logger.warn("WebSocket消息推送失败", e);
             }
             
-            // 触发AI机器人评论（异步执行，避免阻塞主流程）
-            triggerRobotCommentsAsync(savedPost.getPostId(), content);
+            // 新增：如有图片，异步识别图片内容，全部完成后再触发机器人评论
+            if (imageUrls != null && !imageUrls.isEmpty()) {
+                asyncOcrAndRobotComment(savedPost, content);
+            } else {
+                triggerRobotCommentsAsync(savedPost.getPostId(), content);
+            }
             
             return new PostResult(
                 savedPost.getPostId(),
@@ -354,6 +375,7 @@ public class PostServiceImpl implements PostService {
                 authorAvatar,
                 post.getContent(),
                 post.getImages(),
+                post.getImageInfos(),
                 post.getLikeCount(),
                 post.getCommentCount(),
                 isLiked,
@@ -968,6 +990,65 @@ public class PostServiceImpl implements PostService {
         } catch (Exception e) {
             logger.error("加载动态评论和回复失败，动态ID: {}", postId, e);
             return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 异步识别图片内容，全部完成后再触发机器人评论
+     */
+    @Async("aiTaskExecutor")
+    public void asyncOcrAndRobotComment(Post post, String content) {
+        try {
+            List<String> images = post.getImages();
+            List<String> infos = post.getImageInfos();
+
+            for (int i = 0; i < images.size(); i++) {
+                String imageUrl = images.get(i);
+                String localPath = copyImageToTemp(imageUrl);
+                if (localPath != null) {
+                    // 这里需补充apiKey、userId、variableName参数，建议从配置或上下文获取                    
+                    String userId = UUID.randomUUID().toString();
+                    String variableName = "image";
+                    DifyImageResult ocrResult = difyServiceImpl.recognizeImageByWorkflow(localPath, imageApiKey, userId, variableName);
+                    if (ocrResult.isSuccess()) {
+                        infos.set(i, ocrResult.getText());
+                    }
+                    new java.io.File(localPath).delete();
+                }
+            }
+
+            post.setImageInfos(infos);
+            post.setUpdatedAt(LocalDateTime.now());
+            postRepository.save(post);
+
+            // 全部识别完成后，触发机器人评论
+            triggerRobotCommentsAsync(post.getPostId(), content);
+        } catch (Exception e) {
+            logger.error("图片OCR识别或机器人评论触发失败", e);
+        }
+    }
+
+    /**
+     * 复制图片到本地临时文件，返回本地路径
+     */
+    private String copyImageToTemp(String imagePath) {
+        try {
+
+            String ext = imagePath.contains(".") ? imagePath.substring(imagePath.lastIndexOf('.')) : ".jpg";
+            String tempFileName = "ocr_" + java.util.UUID.randomUUID() + ext;
+            java.io.File tempFile = new java.io.File(System.getProperty("java.io.tmpdir"), tempFileName);
+            //copy image to temp file
+            java.io.FileInputStream in = new java.io.FileInputStream(imagePath.substring(1));
+            java.io.FileOutputStream out = new java.io.FileOutputStream(tempFile);
+            byte[] buffer = new byte[8192];
+            int len;
+            while ((len = in.read(buffer)) != -1) {
+                out.write(buffer, 0, len);
+            }
+            return tempFile.getAbsolutePath();
+        } catch (Exception e) {
+            logger.error("下载图片到本地失败: {}", imagePath, e);
+            return null;
         }
     }
 } 

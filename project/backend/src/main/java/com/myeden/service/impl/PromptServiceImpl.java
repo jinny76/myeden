@@ -175,6 +175,14 @@ public class PromptServiceImpl implements PromptService {
         prompt.append(String.format("\n这条动态的作者信息是：%s", getAuthorInfo(post)));
         if (post.getImages() != null && !post.getImages().isEmpty()) {
             prompt.append(String.format("\n动态有%s张图片", post.getImages().size()));
+            if (post.getImageInfos() != null && !post.getImageInfos().isEmpty()) {
+                prompt.append(", 图片内容有：");
+                for (int i = 0; i < post.getImageInfos().size(); i++) {
+                    String imageInfo = post.getImageInfos().get(i);
+                    prompt.append(imageInfo + "，");
+                }
+
+            }
         }
         
         // 添加上下文信息

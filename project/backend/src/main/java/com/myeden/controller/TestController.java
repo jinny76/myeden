@@ -17,7 +17,24 @@ import java.util.Map;
 import com.myeden.service.ExternalDataService;
 import com.myeden.service.ExternalDataCacheService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.File;
+import java.io.IOException;
+import com.myeden.service.impl.DifyServiceImpl;
 
+import io.swagger.v3.oas.models.media.MediaType;
+
+import com.myeden.service.impl.DifyImageResult;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
+import java.util.UUID;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Encoding;
 /**
  * 测试控制器
  * 
@@ -44,6 +61,9 @@ public class TestController {
     @Autowired
     private RobotRepository robotRepository;
     
+    @Autowired
+    private DifyServiceImpl difyServiceImpl;
+
     /**
      * 公开测试接口
      * @return 测试响应
@@ -224,5 +244,50 @@ public class TestController {
         return response;
     }
 
+    /**
+     * 图片识别（OCR）测试接口
+     * 上传图片，保存到临时目录后调用Dify图片识别方法
+     * @param image 图片文件（必填）
+     * @param apiKey Dify API Key（必填）
+     * @param variableName Dify App定义的inputs变量名（必填）
+     * @param userId 用户唯一标识（可选，默认UUID）
+     * @return 识别结果Map
+     */
+    @Operation(summary = "图片识别（OCR）测试接口")
+    @PostMapping("/image-ocr")
+    public Map<String, Object> imageOcrTest(
+        @Parameter(description = "图片文件", required = true, content = @Content(mediaType = "multipart/form-data"))
+        @RequestParam("image") MultipartFile image,
+        @RequestParam("apiKey") String apiKey,
+        @RequestParam("variableName") String variableName,
+        @RequestParam(value = "userId", required = false) String userId)  {
+        Map<String, Object> response = new HashMap<>();
+        String tempDir = System.getProperty("java.io.tmpdir");
+        String originalFilename = StringUtils.cleanPath(image.getOriginalFilename());
+        String ext = originalFilename.contains(".") ? originalFilename.substring(originalFilename.lastIndexOf('.')) : "";
+        String tempFileName = "ocr_" + UUID.randomUUID() + ext;
+        File tempFile = new File(tempDir, tempFileName);
+        try {
+            image.transferTo(tempFile);
+            if (userId == null || userId.trim().isEmpty()) {
+                userId = UUID.randomUUID().toString();
+            }
+            DifyImageResult result = difyServiceImpl.recognizeImageByWorkflow(tempFile.getAbsolutePath(), apiKey, userId, variableName);
+            response.put("success", result.isSuccess());
+            response.put("text", result.getText());
+            response.put("error", result.getError());
+            response.put("workflowRunId", result.getWorkflowRunId());
+            response.put("taskId", result.getTaskId());
+            response.put("imagePath", tempFile.getAbsolutePath());
+        } catch (IOException e) {
+            response.put("success", false);
+            response.put("error", "图片保存失败: " + e.getMessage());
+        } finally {
+            // 可选：删除临时文件，或保留用于调试
+            // tempFile.delete();
+        }
+        response.put("timestamp", System.currentTimeMillis());
+        return response;
+    }
     
 } 

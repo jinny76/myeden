@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Random;
+import java.util.UUID;
 import java.util.List;
 
 /**
@@ -145,6 +146,76 @@ public class DifyServiceImpl implements DifyService {
             logger.error("Dify API调用异常: {}", e.getMessage(), e);
             return generateFallbackContent(operation);
         }
+    }
+
+    /**
+     * 调用Dify工作流识别图片内容，返回识别文字结果
+     * @param imagePath 本地图片路径
+     * @param apiKey Dify API Key
+     * @param userId 用户唯一标识
+     * @param variableName App定义的inputs变量名
+     * @return DifyImageResult 识别结果对象
+     */
+    public DifyImageResult recognizeImageByWorkflow(String imagePath, String apiKey, String userId, String variableName) {
+        DifyImageResult result = new DifyImageResult();
+        try {
+            // 1. 上传图片文件，获取upload_file_id
+            String uploadUrl = difyConfig.getUrl() + "/files/upload";
+            HttpHeaders uploadHeaders = new HttpHeaders();
+            uploadHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
+            uploadHeaders.set("Authorization", "Bearer " + apiKey);
+            org.springframework.util.MultiValueMap<String, Object> uploadBody = new org.springframework.util.LinkedMultiValueMap<>();
+            uploadBody.add("file", new org.springframework.core.io.FileSystemResource(imagePath));
+            uploadBody.add("user", userId);
+            HttpEntity<org.springframework.util.MultiValueMap<String, Object>> uploadRequest = new HttpEntity<>(uploadBody, uploadHeaders);
+            ResponseEntity<java.util.Map> uploadResp = restTemplate.postForEntity(uploadUrl, uploadRequest, java.util.Map.class);
+            if (uploadResp.getStatusCode() != HttpStatus.CREATED || uploadResp.getBody() == null || uploadResp.getBody().get("id") == null) {
+                result.setSuccess(false);
+                result.setError("文件上传失败: " + (uploadResp.getBody() != null ? uploadResp.getBody().toString() : "无返回"));
+                return result;
+            }
+            String uploadFileId = uploadResp.getBody().get("id").toString();
+
+            // 2. 调用workflow/run接口
+            String workflowUrl = difyConfig.getUrl() + "/workflows/run";
+            HttpHeaders wfHeaders = new HttpHeaders();
+            wfHeaders.setContentType(MediaType.APPLICATION_JSON);
+            wfHeaders.set("Authorization", "Bearer " + apiKey);
+            java.util.Map<String, Object> fileInput = new java.util.HashMap<>();
+            fileInput.put("transfer_method", "local_file");
+            fileInput.put("upload_file_id", uploadFileId);
+            fileInput.put("type", "image");
+            java.util.Map<String, Object> inputs = new java.util.HashMap<>();
+            inputs.put(variableName, fileInput);
+            java.util.Map<String, Object> wfBody = new java.util.HashMap<>();
+            wfBody.put("inputs", inputs);
+            wfBody.put("response_mode", "blocking");
+            wfBody.put("user", userId);
+            HttpEntity<java.util.Map<String, Object>> wfRequest = new HttpEntity<>(wfBody, wfHeaders);
+            ResponseEntity<java.util.Map> wfResp = restTemplate.postForEntity(workflowUrl, wfRequest, java.util.Map.class);
+            if (wfResp.getStatusCode() == HttpStatus.OK && wfResp.getBody() != null) {
+                java.util.Map data = (java.util.Map) wfResp.getBody().get("data");
+                if (data != null && "succeeded".equals(data.get("status"))) {
+                    java.util.Map outputs = (java.util.Map) data.get("outputs");
+                    String text = outputs != null && outputs.get("text") != null ? outputs.get("text").toString() : "";
+                    result.setSuccess(true);
+                    result.setText(text);
+                    result.setWorkflowRunId((String) wfResp.getBody().get("workflow_run_id"));
+                    result.setTaskId((String) wfResp.getBody().get("task_id"));
+                } else {
+                    result.setSuccess(false);
+                    result.setError("识别失败: " + (data != null ? data.get("error") : "无详细信息"));
+                }
+            } else {
+                result.setSuccess(false);
+                result.setError("workflow调用失败: " + (wfResp.getBody() != null ? wfResp.getBody().toString() : "无返回"));
+            }
+        } catch (Exception e) {
+            result.setSuccess(false);
+            result.setError("图片识别异常: " + e.getMessage());
+            logger.error("Dify图片识别异常: {}", e.getMessage(), e);
+        }
+        return result;
     }
 
     // 备用内容生成方法

@@ -218,6 +218,7 @@ public interface PostService {
         private String authorAvatar;
         private String content;
         private List<String> images;
+        private List<String> imageInfos;
         private int likeCount;
         private int commentCount;
         private boolean isLiked;
@@ -227,7 +228,7 @@ public interface PostService {
         private String updatedAt;
         
         public PostDetail(String postId, String authorId, String authorType, String authorName, 
-                         String authorAvatar, String content, List<String> images, int likeCount, 
+                         String authorAvatar, String content, List<String> images, List<String> imageInfos, int likeCount, 
                          int commentCount, boolean isLiked, List<LikeDetail> likes, 
                          List<CommentSummary> comments, String createdAt, String updatedAt) {
             this.postId = postId;
@@ -237,6 +238,7 @@ public interface PostService {
             this.authorAvatar = authorAvatar;
             this.content = content;
             this.images = images;
+            this.imageInfos = imageInfos;
             this.likeCount = likeCount;
             this.commentCount = commentCount;
             this.isLiked = isLiked;
@@ -254,6 +256,7 @@ public interface PostService {
         public String getAuthorAvatar() { return authorAvatar; }
         public String getContent() { return content; }
         public List<String> getImages() { return images; }
+        public List<String> getImageInfos() { return imageInfos; }
         public int getLikeCount() { return likeCount; }
         public int getCommentCount() { return commentCount; }
         public boolean isLiked() { return isLiked; }

@@ -61,6 +61,11 @@ public class Post {
     private List<String> images = new ArrayList<>();
     
     /**
+     * 每张图片的OCR识别结果，与images一一对应
+     */
+    private List<String> imageInfos = new ArrayList<>();
+    
+    /**
      * 点赞数
      */
     private Integer likeCount = 0;
@@ -187,6 +192,14 @@ public class Post {
     
     public void setImages(List<String> images) {
         this.images = images;
+    }
+    
+    public List<String> getImageInfos() {
+        return imageInfos;
+    }
+
+    public void setImageInfos(List<String> imageInfos) {
+        this.imageInfos = imageInfos;
     }
     
     public Integer getLikeCount() {
