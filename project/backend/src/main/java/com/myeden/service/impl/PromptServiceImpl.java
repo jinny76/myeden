@@ -28,6 +28,7 @@ import org.springframework.context.annotation.Lazy;
 import com.myeden.model.external.WeatherInfo;
 import com.myeden.repository.ContentGenerationLogRepository;
 import com.myeden.repository.UserRobotLinkRepository;
+import com.myeden.repository.PostRepository;
 
 /**
  * 提示词服务实现类
@@ -69,6 +70,9 @@ public class PromptServiceImpl implements PromptService {
     @Autowired
     private UserRobotLinkRepository userRobotLinkRepository;
     
+    @Autowired
+    private PostRepository postRepository;
+    
     private final Random random = new Random();
     
     /**
@@ -98,6 +102,15 @@ public class PromptServiceImpl implements PromptService {
             robotInfo != null ? robotInfo.getNickname() : robot.getName(), 
             robot.getPersonality(), selectedTopic.getContent()));
 
+        // 新增：插入今日本人已发帖内容作为历史参考
+        List<String> todayPosts = getTodayPostsContent(robot);
+        if (!todayPosts.isEmpty()) {
+            prompt.append("\n\n## 你今天已发的内容（请避免重复、冲突、矛盾）：\n");
+            for (String content : todayPosts) {
+                prompt.append("- ").append(content).append("\n");
+            }
+        }
+
         // 新增：根据主题类型插入外部数据背景
         String dataType = selectedTopic.getDataType();
         if (dataType != null) {
@@ -124,6 +137,8 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n- 必须围绕指定的主题进行创作");
         prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
         prompt.append("\n- 后面的背景信息可以作为参考");
+        // 新增：要求新内容不得与今日已发内容冲突、矛盾或重复
+        prompt.append("\n- 新内容不得与你今天已发的内容冲突、矛盾或重复");
 
         prompt.append("\n\n## 你的背景资料");
         
@@ -135,6 +150,8 @@ public class PromptServiceImpl implements PromptService {
 
         // 今日安排
         prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
+
+        
 
         log.info("生成的动态提示词: {}", prompt.toString());
         
@@ -223,9 +240,9 @@ public class PromptServiceImpl implements PromptService {
         }
 
         // 添加动态和评论信息
-        prompt.append(String.format("\n你正在查看朋友圈内容：%s", postDetail.getContent()));
+        prompt.append(String.format("\n你正在查看朋友圈内容：\"%s\"", postDetail.getContent()));
         prompt.append(String.format("\n这条动态的作者信息是：%s", getAuthorInfo(postDetail)));
-        prompt.append(String.format("\n你朋友圈下面你看到有条的评论内容：%s", commentDetail.getContent()));
+        prompt.append(String.format("\n你朋友圈下面你看到有条的评论内容：\"%s\"", commentDetail.getContent()));
         prompt.append(String.format("\n这条评论的评论者是：%s, 请注意, 他这条评论是对 %s 说的", getCommentAuthorInfo(commentDetail), postDetail.getAuthorName()));
 
         // 添加回复生成要求
@@ -540,7 +557,7 @@ public class PromptServiceImpl implements PromptService {
                 // 查询机器人详细信息
                 Robot robot = robotRepository.findByRobotId(post.getAuthorId()).orElse(null);
                 if (robot != null) {
-                    authorInfo.append(String.format("机器人：%s", robot.getName()));
+                    authorInfo.append(String.format("%s", robot.getName()));
                     
                     // 添加机器人详细信息
                     if (robot.getAge() != null) {
@@ -556,13 +573,13 @@ public class PromptServiceImpl implements PromptService {
                         authorInfo.append(String.format("，来自%s", robot.getLocation()));
                     }
                 } else {
-                    authorInfo.append(String.format("机器人：%s", post.getAuthorName() != null ? post.getAuthorName() : "未知"));
+                    authorInfo.append(String.format("%s", post.getAuthorName() != null ? post.getAuthorName() : "未知"));
                 }
             } else {
                 // 查询用户详细信息
                 User user = userRepository.findByUserId(post.getAuthorId()).orElse(null);
                 if (user != null) {
-                    authorInfo.append(String.format("用户：%s", user.getNickname() != null ? user.getNickname() : "未知"));
+                    authorInfo.append(String.format("%s", user.getNickname() != null ? user.getNickname() : "未知"));
                     
                     // 添加用户详细信息
                     if (user.getAge() != null) {
@@ -578,7 +595,7 @@ public class PromptServiceImpl implements PromptService {
                         authorInfo.append(String.format("，%s", user.getIntroduction()));
                     }
                 } else {
-                    authorInfo.append(String.format("用户：%s", post.getAuthorName() != null ? post.getAuthorName() : "未知"));
+                    authorInfo.append(String.format("%s", post.getAuthorName() != null ? post.getAuthorName() : "未知"));
                 }
             }
         } catch (Exception e) {
@@ -1455,5 +1472,19 @@ public class PromptServiceImpl implements PromptService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * 获取机器人今日已发的所有帖子内容
+     */
+    private List<String> getTodayPostsContent(Robot robot) {
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        List<Post> todayPosts = postRepository.findByAuthorIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
+            robot.getRobotId(), todayStart);
+        return todayPosts.stream()
+            .map(Post::getContent)
+            .filter(Objects::nonNull)
+            .filter(s -> !s.trim().isEmpty())
+            .collect(Collectors.toList());
     }
 } 

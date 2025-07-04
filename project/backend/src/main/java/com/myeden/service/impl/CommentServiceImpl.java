@@ -824,7 +824,7 @@ public class CommentServiceImpl implements CommentService {
             //logger.debug("检查机器人 {} 是否已回复过评论 {}", robotId, commentId);
             
             // 查询该机器人对指定评论的回复数量
-            long replyCount = commentRepository.countByReplyToIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(
+            long replyCount = commentRepository.countByParentIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(
                 commentId, robotId, "robot");
             
             boolean hasReplied = replyCount > 0;

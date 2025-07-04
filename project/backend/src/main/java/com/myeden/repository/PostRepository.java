@@ -190,5 +190,13 @@ public interface PostRepository extends MongoRepository<Post, String> {
     @Query("{'createdAt': {$gte: ?0}, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}")
     List<Post> findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(LocalDateTime createdAt, String currentUserId, List<String> connectedRobotIds);
     
+    /**
+     * 查找指定作者在指定时间之后的未删除动态，按创建时间倒序排列
+     * @param authorId 作者ID
+     * @param createdAt 创建时间
+     * @return 动态列表
+     */
+    List<Post> findByAuthorIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(String authorId, LocalDateTime createdAt);
+    
 
 } 

@@ -399,8 +399,8 @@ public interface CommentRepository extends MongoRepository<Comment, String> {
      * @param authorType 作者类型
      * @return 回复数量
      */
-    @Query(value = "{'replyToId': ?0, 'authorId': ?1, 'authorType': ?2, 'isDeleted': false}", count = true)
-    long countByReplyToIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(String replyToId, String authorId, String authorType);
+    @Query(value = "{'parentId': ?0, 'authorId': ?1, 'authorType': ?2, 'isDeleted': false}", count = true)
+    long countByParentIdAndAuthorIdAndAuthorTypeAndIsDeletedFalse(String replyToId, String authorId, String authorType);
     
     /**
      * 根据内容模糊查询评论（分页）

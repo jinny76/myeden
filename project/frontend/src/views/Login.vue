@@ -146,8 +146,8 @@ const handleLogin = async () => {
     
     // 使用store的login方法
     const response = await userStore.login({
-      phone: formData.phone,
-      password: formData.password
+      phone: formData.phone.trim(),
+      password: formData.password.trim()
     })
     
     if (response.code === 200) {

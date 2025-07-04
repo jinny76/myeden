@@ -864,17 +864,13 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
         String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
         weather = String.format("，天气%s, 温度%s", weather, temperature);
-        String mood = getMood();
-        String activity = getRandomActivity(timeOfDay);
         
         return String.format(
-                "现在是%s，%s，%s，%s, %s, %s",
+                "现在是%s，%s，%s，%s",
             now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
                 weekDay,
             timeOfDay,
-            weather,
-            mood,
-                activity);
+            weather);
     }
     
     private String buildCommentContext(String postContent, Robot robot) {
@@ -886,13 +882,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
         String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
         weather = String.format("，天气%s, 温度%s", weather, temperature);
-        String mood = getMood();
-        String activity = getRandomActivity(timeOfDay);
 
-        return String.format("现在是%s，%s，%s，%s, 你感到 %s, 你正在 %s, 你看到一条朋友圈动态：%s",
+        return String.format("现在是%s，%s，%s，%s",
                 now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
-                weekDay, timeOfDay, weather, mood,
-                activity, postContent);
+                weekDay, timeOfDay, weather);
     }
     
     private String buildReplyContext(String commentContent, Robot robot) {
@@ -904,13 +897,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
         String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
         weather = String.format("，天气%s, 温度%s", weather, temperature);
-        String mood = getMood();
-        String activity = getRandomActivity(timeOfDay);
 
-        return String.format("现在是%s，%s，%s，%s, 你感到 %s, 你正在 %s,你看到有人评论了： %s",
+        return String.format("现在是%s，%s，%s，%s",
                 now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
-                weekDay, timeOfDay, weather, mood,
-                activity, commentContent);
+                weekDay, timeOfDay, weather);
     }
     
     /**
@@ -959,33 +949,6 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         }
 
         return null;
-    }
-    
-    /**
-     * 获取随机心情
-     */
-    private String getMood() {
-        String[] moods = {
-            "心情很愉快",
-            "感觉还不错",
-            "心情平静",
-                "略显焦虑",
-                "略显疲惫",
-                "略显无聊",
-                "略显迷茫",
-                "略显伤心",
-                "略显恐惧",
-                "略显愤怒",
-                "略显疯狂"
-        };
-        return moods[random.nextInt(moods.length)];
-    }
-    
-    /**
-     * 获取随机活动
-     */
-    private String getRandomActivity(String timeOfDay) {
-        return "看手机朋友圈";
     }
     
     /**

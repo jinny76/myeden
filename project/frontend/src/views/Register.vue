@@ -179,8 +179,8 @@ const handleRegister = async () => {
     
     // 使用store的register方法
     const response = await userStore.register({
-      phone: formData.phone,
-      password: formData.password
+      phone: formData.phone.trim(),
+      password: formData.password.trim()
     })
     
     if (response.code === 200) {

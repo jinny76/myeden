@@ -875,33 +875,29 @@ const loadMorePosts = async () => {
 }
 
 const publishPost = async () => {
-  if (!newPost.value.content.trim()) {
+  // 去除内容前后空格
+  const content = newPost.value.content.trim()
+  if (!content) {
     message.warning('请输入动态内容')
     return
   }
-  
   // 检查图片总大小
   if (newPost.value.images && newPost.value.images.length > 0) {
     const totalSize = newPost.value.images.reduce((total, fileObj) => {
       return total + (fileObj.raw ? fileObj.raw.size : 0)
     }, 0)
     const totalSizeMB = totalSize / 1024 / 1024
-    
     if (totalSizeMB > 90) {
       message.error(`图片总大小不能超过 90MB，当前总大小: ${totalSizeMB.toFixed(1)}MB`)
       return
     }
-    
     console.log(`准备发布动态，包含 ${newPost.value.images.length} 张图片，总大小: ${totalSizeMB.toFixed(1)}MB`)
   }
-  
   try {
     publishing.value = true
-    
     // 创建FormData，包含内容和图片
     const formData = new FormData()
-    formData.append('content', newPost.value.content)
-    
+    formData.append('content', content)
     // 添加图片文件，从文件对象中提取原始文件
     if (newPost.value.images && newPost.value.images.length > 0) {
       newPost.value.images.forEach((fileObj, index) => {
@@ -910,14 +906,11 @@ const publishPost = async () => {
         }
       })
     }
-    
     // 直接调用API发布动态
     const response = await createPost(formData)
-    
     if (response.code === 200) {
       // 将新动态添加到列表开头，确保数据结构一致
       const newPostData = response.data
-      
       // 构造与列表API一致的数据结构
       const postData = {
         postId: newPostData.postId,
@@ -935,12 +928,9 @@ const publishPost = async () => {
         updatedAt: newPostData.createdAt,
         showComments: true // 设置评论区域为展开状态
       }
-      
       momentsStore.posts.unshift(postData)
-      
       // 为新发布的动态加载评论和回复
       await loadPostWithComments(postData)
-      
       // 清空表单
       newPost.value.content = ''
       // 清理URL对象并清空图片列表
@@ -952,7 +942,6 @@ const publishPost = async () => {
         })
       }
       newPost.value.images = []
-      
       message.success('动态发布成功')
     }
   } catch (error) {
@@ -973,33 +962,29 @@ const publishPost = async () => {
  * 移动端发布动态
  */
 const publishPostMobile = async () => {
-  if (!newPost.value.content.trim()) {
+  // 去除内容前后空格
+  const content = newPost.value.content.trim()
+  if (!content) {
     message.warning('请输入动态内容')
     return
   }
-  
   // 检查图片总大小
   if (newPost.value.images && newPost.value.images.length > 0) {
     const totalSize = newPost.value.images.reduce((total, fileObj) => {
       return total + (fileObj.raw ? fileObj.raw.size : 0)
     }, 0)
     const totalSizeMB = totalSize / 1024 / 1024
-    
     if (totalSizeMB > 90) {
       message.error(`图片总大小不能超过 90MB，当前总大小: ${totalSizeMB.toFixed(1)}MB`)
       return
     }
-    
     console.log(`准备发布动态，包含 ${newPost.value.images.length} 张图片，总大小: ${totalSizeMB.toFixed(1)}MB`)
   }
-  
   try {
     publishing.value = true
-    
     // 创建FormData，包含内容和图片
     const formData = new FormData()
-    formData.append('content', newPost.value.content)
-    
+    formData.append('content', content)
     // 添加图片文件，从文件对象中提取原始文件
     if (newPost.value.images && newPost.value.images.length > 0) {
       newPost.value.images.forEach((fileObj, index) => {
@@ -1008,14 +993,11 @@ const publishPostMobile = async () => {
         }
       })
     }
-    
     // 直接调用API发布动态
     const response = await createPost(formData)
-    
     if (response.code === 200) {
       // 将新动态添加到列表开头，确保数据结构一致
       const newPostData = response.data
-      
       // 构造与列表API一致的数据结构
       const postData = {
         postId: newPostData.postId,
@@ -1033,12 +1015,9 @@ const publishPostMobile = async () => {
         updatedAt: newPostData.createdAt,
         showComments: true // 设置评论区域为展开状态
       }
-      
       momentsStore.posts.unshift(postData)
-      
       // 为新发布的动态加载评论和回复
       await loadPostWithComments(postData)
-    
       // 清空表单
       newPost.value.content = ''
       // 清理URL对象并清空图片列表
@@ -1050,10 +1029,8 @@ const publishPostMobile = async () => {
         })
       }
       newPost.value.images = []
-      
       // 关闭移动端编辑器
       showMobileEditor.value = false
-      
       message.success('动态发布成功')
     }
   } catch (error) {
@@ -1164,24 +1141,22 @@ const showComments = async (post) => {
 
 
 const submitComment = async (post) => {
-  if (!post.newComment.trim()) {
+  // 去除评论内容前后空格
+  const commentContent = post.newComment.trim()
+  if (!commentContent) {
     message.warning('请输入评论内容')
     return
   }
-  
   // 防止重复提交
   if (post.submittingComment) {
     return
   }
-  
   try {
     post.submittingComment = true
-    await momentsStore.publishComment(post.postId, { content: post.newComment })
+    await momentsStore.publishComment(post.postId, { content: commentContent })
     post.newComment = ''
-    
     // 重新加载动态详情以获取最新的评论列表
     await loadPostWithComments(post)
-    
     message.success('评论发表成功')
   } catch (error) {
     message.error('评论发表失败')
@@ -1198,21 +1173,20 @@ const showReplyInput = (comment) => {
 }
 
 const submitReply = async (comment) => {
-  if (!comment.replyContent.trim()) {
+  // 去除回复内容前后空格
+  const replyContent = comment.replyContent.trim()
+  if (!replyContent) {
     message.warning('请输入回复内容')
     return
   }
-  
   // 防止重复提交
   if (comment.submittingReply) {
     return
   }
-  
   try {
     comment.submittingReply = true
-    await momentsStore.replyCommentAction(comment.commentId, { content: comment.replyContent })
+    await momentsStore.replyCommentAction(comment.commentId, { content: replyContent })
     comment.showReplyInput = false
-    
     // 找到对应的动态并重新加载详情以获取最新的评论和回复列表
     for (const post of momentsStore.posts) {
       const commentList = post.comments || momentsStore.comments[post.postId]
@@ -1221,7 +1195,6 @@ const submitReply = async (comment) => {
         break
       }
     }
-    
     message.success('回复发表成功')
   } catch (error) {
     message.error('回复发表失败')
