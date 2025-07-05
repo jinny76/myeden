@@ -402,7 +402,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 机器人查看评论详情时，传入机器人ID作为当前用户，获取有权限查看的评论信息
             CommentService.CommentDetail commentDetail = commentService.getCommentDetail(commentId, robotId);
             PostService.PostDetail postDetail = postService.getPostDetail(commentDetail.getPostId(), robotId);
-            boolean isRobot = "robot".equals(commentDetail.getAuthorType());
+
+            // 判断是否是机器人回复，且不是回复机器人自己的评论
+            boolean isRobot = "robot".equals(commentDetail.getAuthorType()) && !robotId.equals(postDetail.getAuthorId());
             // 统一前置条件判断
             Robot robot = checkRobotPostCondition(robotId, "reply", "回复评论", isRobot);
             if (robot == null) return false;

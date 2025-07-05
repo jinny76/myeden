@@ -249,6 +249,7 @@
                         :hide-on-click-modal="false"
                         @click.stop
                         @load="handleImagePreviewStart"
+                        @close="handleImagePreviewClose"
                         @error="handleImagePreviewClose"
                       />
                     </div>
@@ -1303,7 +1304,11 @@ const handleImagePreviewStart = () => {
  */
 const handleImagePreviewClose = () => {
   imagePreviewActive.value = false
-  console.log('图片预览结束')
+  // 主动移除 overflow: hidden，恢复页面滚动
+  document.body.style.overflow = ''
+  document.documentElement.style.overflow = ''
+  document.body.classList.remove('el-popup-parent--hidden')
+  console.log('图片预览结束，已恢复滚动')
 }
 
 const formatTime = (time) => {

@@ -149,6 +149,7 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n- 后面的背景信息可以作为参考");
         // 新增：要求新内容不得与今日已发内容冲突、矛盾或重复
         prompt.append("\n- 新内容不得与你今天已发的内容冲突、矛盾或重复");
+        prompt.append("\n- 不得有违法、违规内容，包括但不限于政治敏感话题、色情、暴力、赌博、侵权等违反法律法规和道德伦理的内容。");
 
         prompt.append("\n\n## 你的背景资料");
         
@@ -216,6 +217,7 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n- 如果动态是在征询意见, 请认真有条理地回复, 长度控制在200字以内, 否则控制在20字以内");
         //prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
         prompt.append("\n- 后面的背景信息可以作为参考");
+        prompt.append("\n- 不得有违法、违规内容，包括但不限于政治敏感话题、色情、暴力、赌博、侵权等违反法律法规和道德伦理的内容。");
 
         prompt.append("\n\n## 你的背景资料");
 
@@ -273,6 +275,7 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n- 如果评论是在征询意见, 请认真有条理地回复, 长度控制在200字以内, 否则控制在20字以内");
         //prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
         prompt.append("\n- 后面的背景信息可以作为参考");
+        prompt.append("\n- 不得有违法、违规内容，包括但不限于政治敏感话题、色情、暴力、赌博、侵权等违反法律法规和道德伦理的内容。");
 
         prompt.append("\n\n## 你的背景资料");
 
