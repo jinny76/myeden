@@ -133,9 +133,19 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
         prompt.append("\n- 内容要符合你的性格特征");
         prompt.append("\n- 语言风格要符合你的说话习惯");
-        prompt.append("\n- 长度控制在10-150字之间");
+
+        // 分三个长度, 一个非常简单20字内, 一个一般50字内, 一个比较长100字内, 随机
+        int length = random.nextInt(3);
+        if (length == 0) {
+            prompt.append("\n- 长度控制在20字以内");
+        } else if (length == 1) {
+            prompt.append("\n- 长度控制在50字以内");
+        } else {
+            prompt.append("\n- 长度控制在100字以内");
+        }
+
         prompt.append("\n- 必须围绕指定的主题进行创作");
-        prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
+        //prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
         prompt.append("\n- 后面的背景信息可以作为参考");
         // 新增：要求新内容不得与今日已发内容冲突、矛盾或重复
         prompt.append("\n- 新内容不得与你今天已发的内容冲突、矛盾或重复");
@@ -167,7 +177,7 @@ public class PromptServiceImpl implements PromptService {
         
         // 构建机器人身份设定
         String nickname = robotInfo != null ? robotInfo.getNickname() : robot.getName();
-        prompt.append(String.format("你是%s（昵称：%s），%s。",
+        prompt.append(String.format("/no_think 你是%s（昵称：%s），%s。",
             robot.getName(), nickname, robot.getPersonality()));
 
         // 添加动态信息
@@ -199,11 +209,12 @@ public class PromptServiceImpl implements PromptService {
 
         // 添加评论生成要求
         prompt.append("\n\n请根据一下发帖要求，加上你的性格和先前你看到的动态内容，生成一条纯文本的，自然、真实的评论, 仅返回动态本身, 不包含任何标题。");
+        prompt.append("\n- 如果动态内容提及多件事情, 请只评论其中一件事情");
         prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
         prompt.append("\n- 评论要符合你的性格特征");
         prompt.append("\n- 语言风格要符合你的说话习惯");
-        prompt.append("\n- 长度控制在20-40字之间");
-        prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
+        prompt.append("\n- 长度控制在20字以内");
+        //prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
         prompt.append("\n- 后面的背景信息可以作为参考");
 
         prompt.append("\n\n## 你的背景资料");
@@ -232,7 +243,7 @@ public class PromptServiceImpl implements PromptService {
         
         // 构建机器人身份设定
         String nickname = robotInfo != null ? robotInfo.getNickname() : robot.getName();
-        prompt.append(String.format("你是%s（昵称：%s），%s。\n",
+        prompt.append(String.format("/no_think 你是%s（昵称：%s），%s。\n",
             robot.getName(), nickname, robot.getPersonality()));
 
         // 添加上下文信息
@@ -255,11 +266,12 @@ public class PromptServiceImpl implements PromptService {
 
         // 添加回复生成要求
         prompt.append("\n\n请根据以下要求, 结合你的性格和评论内容，生成一条纯文本的, 自然、真实的回复来回复这条评论，只返回回复内容, 不要任何标题。");
+        prompt.append("\n- 如果评论内容提及多件事情, 请只评论其中一件事情");
         prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
         prompt.append("\n- 回复要符合你的性格特征");
         prompt.append("\n- 语言风格要符合你的说话习惯");
-        prompt.append("\n- 长度控制在15-30字之间");
-        prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
+        prompt.append("\n- 长度控制在20字以内");
+        //prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
         prompt.append("\n- 后面的背景信息可以作为参考");
 
         prompt.append("\n\n## 你的背景资料");
@@ -287,7 +299,7 @@ public class PromptServiceImpl implements PromptService {
         
         // 构建机器人身份设定
         String nickname = robotInfo != null ? robotInfo.getNickname() : robot.getName();
-        prompt.append(String.format("你是%s（昵称：%s），一个%s普通居民。",
+        prompt.append(String.format("/no_think 你是%s（昵称：%s），一个%s普通居民。",
             robot.getName(), nickname, robot.getPersonality()));
 
         // 添加当前情况
@@ -336,8 +348,8 @@ public class PromptServiceImpl implements PromptService {
         if (processedContent.startsWith("'") && processedContent.endsWith("'")) {
             processedContent = processedContent.substring(1, processedContent.length() - 1);
         }
-        if (processedContent.startsWith("<think>\n</think>\n")) {
-            processedContent = processedContent.replaceAll("<think>\n</think>\n", "");
+        if (processedContent.contains("</think>")) {
+            processedContent = processedContent.substring(processedContent.indexOf("</think>\n") + "</think>\n".length());
         }
 
         log.info(processedContent);

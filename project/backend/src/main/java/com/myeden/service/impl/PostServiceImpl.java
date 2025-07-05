@@ -211,9 +211,10 @@ public class PostServiceImpl implements PostService {
             
             // 新增：如有图片，异步识别图片内容，全部完成后再触发机器人评论
             if (imageUrls != null && !imageUrls.isEmpty()) {
-                asyncOcrAndRobotComment(savedPost, content);
+                // 启动新线程异步处理图片识别和机器人评论
+                new Thread(() -> asyncOcrAndRobotComment(savedPost, content)).start();
             } else {
-                triggerRobotCommentsAsync(savedPost.getPostId(), content);
+                new Thread(() -> triggerRobotCommentsAsync(savedPost.getPostId(), content)).start();
             }
             
             return new PostResult(
