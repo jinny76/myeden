@@ -3,6 +3,7 @@ package com.myeden.service.impl;
 import ch.qos.logback.core.testUtil.RandomUtil;
 import com.myeden.config.WorldConfig;
 import com.myeden.entity.*;
+import com.myeden.entity.Post.LinkInfo;
 import com.myeden.repository.RobotDailyPlanRepository;
 import com.myeden.repository.RobotRepository;
 import com.myeden.repository.UserRepository;
@@ -114,12 +115,11 @@ public class PromptServiceImpl implements PromptService {
         // 新增：根据主题类型插入外部数据背景
         String dataType = selectedTopic.getDataType();
         if (dataType != null) {
-            String dataBackground = getDataBackgroundByType(dataType);
-            if (dataBackground != null && !dataBackground.isEmpty()) {
+            DataBackgroundInfo dataInfo = getDataBackgroundByType(dataType);
+            if (dataInfo != null && dataInfo.getBackground() != null && !dataInfo.getBackground().isEmpty()) {
                 prompt.append("\n\n## 相关数据参考：\n");
-                prompt.append(dataBackground);
-                // 获取外部数据LinkInfo对象
-                // link = getDataLinkInfoByType(dataType);
+                prompt.append(dataInfo.getBackground());
+                link = dataInfo.getLinkInfo();
             }
         }
 
@@ -1371,113 +1371,95 @@ public class PromptServiceImpl implements PromptService {
     }
 
     /**
+     * 内部类：数据背景及外部链接信息封装对象
+     */
+    private static class DataBackgroundInfo {
+        private String background;
+        private Post.LinkInfo linkInfo;
+        public DataBackgroundInfo(String background, Post.LinkInfo linkInfo) {
+            this.background = background;
+            this.linkInfo = linkInfo;
+        }
+        public String getBackground() { return background; }
+        public Post.LinkInfo getLinkInfo() { return linkInfo; }
+    }
+
+    /**
      * 根据dataType获取外部数据背景
      */
-    private String getDataBackgroundByType(String dataType) {
-        if (dataType == null) return "";
+    private DataBackgroundInfo getDataBackgroundByType(String dataType) {
+        String background = "";
+        Post.LinkInfo linkInfo = null;
         Random rand = new Random();
         switch (dataType) {
             case "news":
                 List<com.myeden.model.external.NewsItem> news = externalDataCacheService.getNews();
                 if (news != null && !news.isEmpty()) {
                     com.myeden.model.external.NewsItem item = news.get(rand.nextInt(news.size()));
-                    return "新闻: " + item.getTitle() + (item.getSummary() != null ? "：" + item.getSummary() : "");
+                    background = "新闻: " + item.getTitle() + (item.getSummary() != null ? "：" + item.getSummary() : "");
+                    if (item.getUrl() != null) {
+                        linkInfo = new Post.LinkInfo();
+                        linkInfo.setTitle(item.getTitle());
+                        linkInfo.setUrl(item.getUrl());
+                        linkInfo.setDataType("news");
+                        if (item.getImage() != null) {
+                            linkInfo.setImage(item.getImage());
+                        }
+                    }
                 }
-                return "";
+                break;
             case "hot_search":
                 List<HotSearchItem> hot = externalDataCacheService.getHotSearchItems();
                 if (hot != null && !hot.isEmpty()) {
                     HotSearchItem item = hot.get(rand.nextInt(hot.size()));
-                    return "今日热搜：" + item.getTitle() + (item.getSummary() != null ? "：" + item.getSummary() : "");
+                    background = "今日热搜：" + item.getTitle() + (item.getSummary() != null ? "：" + item.getSummary() : "");
+                    if (item.getUrl() != null) {
+                        linkInfo = new Post.LinkInfo();
+                        linkInfo.setTitle(item.getTitle());
+                        linkInfo.setUrl(item.getUrl());
+                        linkInfo.setDataType("hot_search");
+                        if (item.getImage() != null) {
+                            linkInfo.setImage(item.getImage());
+                        }
+                    }
                 }
-                return "";
+                break;
             case "music":
                 List<com.myeden.model.external.MusicItem> music = externalDataCacheService.getMusic();
                 if (music != null && !music.isEmpty()) {
                     com.myeden.model.external.MusicItem item = music.get(rand.nextInt(music.size()));
-                    return "推荐歌曲：" + item.getTitle() + (item.getArtist() != null ? " - " + item.getArtist() : "");
+                    background = "推荐歌曲：" + item.getTitle() + (item.getArtist() != null ? " - " + item.getArtist() : "");
+                    if (item.getUrl() != null) {
+                        linkInfo = new Post.LinkInfo();
+                        linkInfo.setTitle(item.getTitle());
+                        linkInfo.setUrl(item.getUrl());
+                        linkInfo.setDataType("music");
+                        if (item.getImage() != null) {
+                            linkInfo.setImage(item.getImage());
+                        }
+                    }
                 }
-                return "";
+                break;
             case "movie":
                 List<com.myeden.model.external.MovieItem> movies = externalDataCacheService.getMovies();
                 if (movies != null && !movies.isEmpty()) {
                     com.myeden.model.external.MovieItem item = movies.get(rand.nextInt(movies.size()));
-                    return "推荐影视：" + item.getTitle();
-                }
-                return "";
-            default:
-                return "";
-        }
-    }
-
-    /**
-     * 根据dataType获取外部数据url
-     */
-    private String getDataUrlByType(String dataType) {
-        if (dataType == null) return null;
-        switch (dataType) {
-            case "news":
-                List<com.myeden.model.external.NewsItem> news = externalDataCacheService.getNews();
-                return news != null && !news.isEmpty() ? news.get(0).getUrl() : null;
-            case "music":
-                List<com.myeden.model.external.MusicItem> music = externalDataCacheService.getMusic();
-                return music != null && !music.isEmpty() ? music.get(0).getUrl() : null;
-            case "movie":
-                List<com.myeden.model.external.MovieItem> movies = externalDataCacheService.getMovies();
-                return movies != null && !movies.isEmpty() ? movies.get(0).getUrl() : null;
-            default:
-                return null;
-        }
-    }
-
-    /**
-     * 根据dataType获取外部数据LinkInfo对象
-     */
-    private Post.LinkInfo getDataLinkInfoByType(String dataType) {
-        if (dataType == null) return null;
-        Post.LinkInfo link = new Post.LinkInfo();
-        link.setDataType(dataType);
-        switch (dataType) {
-            case "news":
-                List<com.myeden.model.external.NewsItem> news = externalDataCacheService.getNews();
-                if (news != null && !news.isEmpty()) {
-                    com.myeden.model.external.NewsItem item = news.get(0);
-                    link.setUrl(item.getUrl());
-                    link.setTitle(item.getTitle());
-                    link.setImage(item.getImage());
-                }
-                break;
-            case "hot_search":
-                List<HotSearchItem> hot = externalDataCacheService.getHotSearchItems();
-                if (hot != null && !hot.isEmpty()) {
-                    HotSearchItem item = hot.get(0);
-                    link.setUrl(item.getUrl());
-                    link.setTitle(item.getTitle());
-                    link.setImage(item.getImage());
-                }
-                break;
-            case "music":
-                List<com.myeden.model.external.MusicItem> music = externalDataCacheService.getMusic();
-                if (music != null && !music.isEmpty()) {
-                    com.myeden.model.external.MusicItem item = music.get(0);
-                    link.setUrl(item.getUrl());
-                    link.setTitle(item.getTitle());
-                    link.setImage(item.getImage());
-                }
-                break;
-            case "movie":
-                List<com.myeden.model.external.MovieItem> movies = externalDataCacheService.getMovies();
-                if (movies != null && !movies.isEmpty()) {
-                    com.myeden.model.external.MovieItem item = movies.get(0);
-                    link.setUrl(item.getUrl());
-                    link.setTitle(item.getTitle());
-                    // 可扩展图片字段
+                    background = "推荐影视：" + item.getTitle();
+                    if (item.getUrl() != null) {
+                        linkInfo = new Post.LinkInfo();
+                        linkInfo.setTitle(item.getTitle());
+                        linkInfo.setUrl(item.getUrl());
+                        linkInfo.setDataType("movie");
+                        if (item.getImage() != null) {
+                            linkInfo.setImage(item.getImage());
+                        }
+                    }
                 }
                 break;
             default:
-                return null;
+                break;
         }
-        return (link.getUrl() != null) ? link : null;
+        return new DataBackgroundInfo(background, linkInfo);
     }
 
     /**

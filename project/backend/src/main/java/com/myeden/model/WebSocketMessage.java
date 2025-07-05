@@ -30,12 +30,14 @@ public class WebSocketMessage<T> {
      * 消息类型枚举
      */
     public enum MessageType {
-        POST_UPDATE,        // 动态更新
-        COMMENT_UPDATE,     // 评论更新
-        NOTIFICATION,       // 通知消息
-        ROBOT_ACTION,       // 机器人行为
-        SYSTEM_MESSAGE,     // 系统消息
-        HEARTBEAT          // 心跳消息
+        CHAT,
+        NOTIFICATION,
+        SYSTEM,
+        POST_UPDATE,
+        COMMENT_UPDATE,
+        ROBOT_ACTION,
+        SYSTEM_MESSAGE,
+        HEARTBEAT
     }
     
     /**
@@ -175,7 +177,7 @@ public class WebSocketMessage<T> {
      */
     public static <T> WebSocketMessage<T> systemMessage(String title, String content, T data) {
         return WebSocketMessage.<T>builder()
-                .type(MessageType.SYSTEM_MESSAGE)
+                .type(MessageType.SYSTEM)
                 .title(title)
                 .content(content)
                 .data(data)
@@ -197,5 +199,15 @@ public class WebSocketMessage<T> {
                 .createdAt(LocalDateTime.now())
                 .isRead(false)
                 .build();
+    }
+
+    /**
+     * 聊天消息推送工厂方法
+     */
+    public static <T> WebSocketMessage<T> chat(T data) {
+        WebSocketMessage<T> msg = new WebSocketMessage<>();
+        msg.setType(MessageType.CHAT);
+        msg.setData(data);
+        return msg;
     }
 } 

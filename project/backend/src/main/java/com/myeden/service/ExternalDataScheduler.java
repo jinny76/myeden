@@ -28,6 +28,9 @@ import java.util.HashMap;
 public class ExternalDataScheduler implements ApplicationContextAware {
     @Autowired
     private ExternalDataService externalDataService;
+    
+    @Autowired
+    private ExternalDataCacheService externalDataCacheService;
     @Autowired
     private RobotRepository robotRepository;
     private static ApplicationContext context;
@@ -38,37 +41,28 @@ public class ExternalDataScheduler implements ApplicationContextAware {
     }
 
     /**
-     * 每天凌晨1点自动采集并持久化外部数据
+     * 两小时自动采集并持久化外部数据
      */
-    @Scheduled(cron = "0 0 1 * * ?")
+    @Scheduled(cron = "0 0/2 * * * ?")
     public void fetchAndCacheData() {
-        // 采集新闻
         List<NewsItem> news = externalDataService.getLatestNews();
-        ExternalDataCacheService cacheService = context.getBean(ExternalDataCacheService.class);
-        cacheService.setNews(news);
-        // 采集热搜
-        List<HotSearchItem> hotSearches = externalDataService.getHotSearches();
-        cacheService.setHotSearchItems(hotSearches);
-        // 采集天气（遍历所有机器人location）
+        externalDataCacheService.setNews(news);
+        List<HotSearchItem> hot = externalDataService.getHotSearches();
+        externalDataCacheService.setHotSearchItems(hot);
+        List<MusicItem> music = externalDataService.getMusicRecommendations();
+        externalDataCacheService.setMusic(music);
+        List<MovieItem> movies = externalDataService.getMovieRecommendations();
+        externalDataCacheService.setMovies(movies);
         List<Robot> robots = robotRepository.findAll();
         Map<String, WeatherInfo> weatherMap = new HashMap<>();
         for (Robot robot : robots) {
             String location = robot.getLocation();
             if (location != null && !location.trim().isEmpty() && !weatherMap.containsKey(location)) {
                 WeatherInfo weather = externalDataService.getWeather(location);
-                if (weather != null) {
-                    weatherMap.put(location, weather);
-                }
+                weatherMap.put(location, weather);
             }
         }
-        cacheService.setWeatherMap(weatherMap);
-        // 采集音乐
-        List<MusicItem> music = externalDataService.getMusicRecommendations();
-        cacheService.setMusic(music);
-        // 采集影视
-        List<MovieItem> movies = externalDataService.getMovieRecommendations();
-        cacheService.setMovies(movies);
-        // 持久化到本地
-        cacheService.save();
-    }
+        externalDataCacheService.setWeatherMap(weatherMap);
+        externalDataCacheService.save();
+}
 } 

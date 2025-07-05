@@ -2,6 +2,11 @@ package com.myeden.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.time.LocalDateTime;
@@ -103,6 +108,8 @@ public class Post {
     /**
      * 外部数据链接对象
      */
+    @Data
+    @NoArgsConstructor
     public static class LinkInfo {
         /** 链接URL */
         private String url;
