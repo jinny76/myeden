@@ -181,10 +181,10 @@ public class PromptServiceImpl implements PromptService {
             robot.getName(), nickname, robot.getPersonality()));
 
         // 添加动态信息
-        prompt.append(String.format("\n\n## 你看到的动态内容：\"%s\" 想要评论一下。", post.getContent()));
-        prompt.append(String.format("\n这条动态的作者信息是：%s", getAuthorInfo(post)));
+        prompt.append(String.format("\n\n## 你看到的动态\n- 内容：\"%s\"", post.getContent()));
+        prompt.append(String.format("\n- 作者信息：%s", getAuthorInfo(post)));
         if (post.getImages() != null && !post.getImages().isEmpty()) {
-            prompt.append(String.format("\n动态有%s张图片", post.getImages().size()));
+            prompt.append(String.format("\n- 动态有%s张图片", post.getImages().size()));
             if (post.getImageInfos() != null && !post.getImageInfos().isEmpty()) {
                 prompt.append(", 图片内容有：");
                 for (int i = 0; i < post.getImageInfos().size(); i++) {
@@ -197,7 +197,7 @@ public class PromptServiceImpl implements PromptService {
         
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
-            prompt.append(String.format("\n\n当前情况：%s", context));
+            prompt.append(String.format("\n\n## 当前情况：%s", context));
         }
         // 新增：注入用户印象
         String userId = post.getAuthorId();
@@ -213,7 +213,7 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
         prompt.append("\n- 评论要符合你的性格特征");
         prompt.append("\n- 语言风格要符合你的说话习惯");
-        prompt.append("\n- 长度控制在20字以内");
+        prompt.append("\n- 如果动态是在征询意见, 请认真有条理地回复, 长度控制在200字以内, 否则控制在20字以内");
         //prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
         prompt.append("\n- 后面的背景信息可以作为参考");
 
@@ -259,10 +259,10 @@ public class PromptServiceImpl implements PromptService {
         }
 
         // 添加动态和评论信息
-        prompt.append(String.format("\n你正在查看朋友圈内容：\"%s\"", postDetail.getContent()));
-        prompt.append(String.format("\n这条动态的作者信息是：%s", getAuthorInfo(postDetail)));
-        prompt.append(String.format("\n你朋友圈下面你看到有条的评论内容：\"%s\"", commentDetail.getContent()));
-        prompt.append(String.format("\n这条评论的评论者是：%s, 请注意, 他这条评论是对 %s 说的", getCommentAuthorInfo(commentDetail), postDetail.getAuthorName()));
+        prompt.append(String.format("\n## 你正在查看朋友圈\n- 动态内容：\"%s\"", postDetail.getContent()));
+        prompt.append(String.format("\n- 动态作者：%s", getAuthorInfo(postDetail)));
+        prompt.append(String.format("\n- 你看到有条的评论内容：\"%s\"", commentDetail.getContent()));
+        prompt.append(String.format("\n- 这条评论的评论者是：%s, 请注意, 他这条评论是对 %s 说的", getCommentAuthorInfo(commentDetail), postDetail.getAuthorName()));
 
         // 添加回复生成要求
         prompt.append("\n\n请根据以下要求, 结合你的性格和评论内容，生成一条纯文本的, 自然、真实的回复来回复这条评论，只返回回复内容, 不要任何标题。");
@@ -270,7 +270,7 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
         prompt.append("\n- 回复要符合你的性格特征");
         prompt.append("\n- 语言风格要符合你的说话习惯");
-        prompt.append("\n- 长度控制在20字以内");
+        prompt.append("\n- 如果评论是在征询意见, 请认真有条理地回复, 长度控制在200字以内, 否则控制在20字以内");
         //prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
         prompt.append("\n- 后面的背景信息可以作为参考");
 

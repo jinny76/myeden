@@ -1103,7 +1103,7 @@ async function saveImpression() {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 8px 8px;
   border: 1px solid rgba(64, 158, 255, 0.3);
   border-radius: 12px;
   background: rgba(64, 158, 255, 0.1);
