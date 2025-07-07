@@ -36,7 +36,25 @@ public class ChatServiceImpl implements ChatService {
         if (userId == null || robotId == null || limit <= 0) {
             throw new IllegalArgumentException("用户ID、机器人ID和分页参数非法");
         }
-        return chatMessageRepository.findHistoryWithRobot(
+        return chatMessageRepository.findHistoryWithRobotDesc(
             userId, robotId, PageRequest.of(offset / limit, limit));
+    }
+
+    @Override
+    public List<ChatMessage> getLatestHistoryWithRobot(String userId, String robotId, int limit) {
+        if (userId == null || robotId == null || limit <= 0) {
+            throw new IllegalArgumentException("用户ID、机器人ID和分页参数非法");
+        }
+        return chatMessageRepository.findHistoryWithRobotDesc(
+            userId, robotId, PageRequest.of(0, limit));
+    }
+
+    @Override
+    public List<ChatMessage> getHistoryWithRobotBefore(String userId, String robotId, java.time.LocalDateTime before, int limit) {
+        if (userId == null || robotId == null || before == null || limit <= 0) {
+            throw new IllegalArgumentException("用户ID、机器人ID、时间和分页参数非法");
+        }
+        return chatMessageRepository.findHistoryWithRobotBeforeDesc(
+            userId, robotId, before, PageRequest.of(0, limit));
     }
 } 

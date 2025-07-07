@@ -7,4 +7,6 @@ public interface ChatService {
     void sendMessage(ChatMessage message);
     List<ChatMessage> getHistoryBySession(String sessionId, int limit, int offset);
     List<ChatMessage> getHistoryWithRobot(String userId, String robotId, int limit, int offset);
+    List<ChatMessage> getLatestHistoryWithRobot(String userId, String robotId, int limit);
+    List<ChatMessage> getHistoryWithRobotBefore(String userId, String robotId, java.time.LocalDateTime before, int limit);
 } 

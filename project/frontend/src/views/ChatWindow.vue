@@ -1,15 +1,22 @@
 <template>
   <div class="chat-window">
     <div class="chat-header">
-      <el-button @click="$router.back()" icon="el-icon-arrow-left" circle />
+      <el-button @click="goToWorld" circle>
+        <el-icon><Back /></el-icon>
+      </el-button>
       <span>{{ robot?.name || '天使' }} 聊天</span>
     </div>
     <div class="chat-messages" ref="messagesContainer">
+      <div v-if="loadingHistory" class="loading-history">历史消息加载中...</div>
       <div v-for="msg in messages" :key="msg.id" :class="['chat-message', msg.senderType]">
         <el-avatar :src="getAvatar(msg)" />
         <div class="message-content">{{ msg.content }}</div>
       </div>
       <div v-if="loading" class="loading">加载中...</div>
+      <div v-if="isRobotReplying" class="replying-tip">
+        天使正在回复
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
     </div>
     <div class="chat-input">
       <el-input v-model="input" @keyup.enter="sendMessage" placeholder="输入消息..." />
@@ -20,32 +27,58 @@
 
 <script setup>
 import { ref, onMounted, nextTick, watch, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { getChatHistory, sendChatMessage } from '@/api/chat'
 import { getRobotById } from '@/api/robot'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { useUserStore } from '@/stores/user'
-// 如有WebSocket全局store
 import { useWebSocketStore } from '@/stores/websocket'
+import { Back } from '@element-plus/icons-vue'
 
 const route = useRoute()
-const robotId = route.params.robotId
+const robotId = ref('')
 const messages = ref([])
 const input = ref('')
 const loading = ref(false)
 const robot = ref(null)
+const conversationId = ref(null)
 const userStore = useUserStore()
 const messagesContainer = ref(null)
 const websocketStore = useWebSocketStore && useWebSocketStore()
+const isRobotReplying = ref(false)
 
-const loadHistory = async () => {
-  loading.value = true
-  const res = await getChatHistory(robotId, { limit: 20, offset: 0 })
+// 游标分页相关
+const loadedMessageIds = ref(new Set())
+const pageSize = 20
+const hasMoreHistory = ref(true)
+const loadingHistory = ref(false)
+const historyCursor = ref(null) // 最早一条createdAt
+
+const params = ref({
+  limit: pageSize,
+  offset: 0
+})
+
+const loadHistory = async (append = false) => {
+  if (loadingHistory.value || !hasMoreHistory.value) return
+  loadingHistory.value = true
+  if (append && historyCursor.value) params.value.before = historyCursor.value
+  const res = await getChatHistory(robotId.value, params.value)
   if (res.code === 200) {
-    messages.value = res.data // 不再reverse，直接渲染
+    let newMsgs = (res.data || []).filter(msg => !loadedMessageIds.value.has(msg.id))
+    newMsgs.forEach(msg => loadedMessageIds.value.add(msg.id))
+    newMsgs = newMsgs.reverse() // 后端降序，前端reverse
+    if (append) {
+      messages.value = [...newMsgs, ...messages.value]
+    } else {
+      messages.value = newMsgs
+    }
+    if (newMsgs.length > 0) {
+      historyCursor.value = newMsgs[0].createdAt
+    }
+    if (newMsgs.length < pageSize) hasMoreHistory.value = false
   }
-  loading.value = false
-  scrollToBottom()
+  loadingHistory.value = false
 }
 
 const scrollToBottom = () => {
@@ -57,18 +90,30 @@ const scrollToBottom = () => {
   })
 }
 
+const onScroll = () => {
+  const el = messagesContainer.value
+  if (el && el.scrollTop <= 10 && hasMoreHistory.value && !loadingHistory.value) {
+    const oldHeight = el.scrollHeight
+    loadHistory(true).then(() => {
+      nextTick(() => {
+        el.scrollTop = el.scrollHeight - oldHeight
+      })
+    })
+  }
+}
+
 const sendMessage = async () => {
   if (!input.value.trim()) return
-  const res = await sendChatMessage(robotId, input.value)
+  const res = await sendChatMessage(robotId.value, input.value, conversationId.value)
   if (res.code === 200) {
-    // 立即追加用户消息
-    if (Array.isArray(res.data)) {
+    /* if (Array.isArray(res.data)) {
       messages.value.push(...res.data)
     } else {
       messages.value.push(res.data)
-    }
+    } */
     input.value = ''
     scrollToBottom()
+    isRobotReplying.value = true // 用户发消息后，显示“天使正在回复...”
   }
 }
 
@@ -86,41 +131,31 @@ watch(messages, () => {
   scrollToBottom()
 })
 
+const router = useRouter()
+function goToWorld() {
+  router.push('/world')
+}
+
 onMounted(async () => {
+  // 确保 robotId 始终为字符串
+  robotId.value = typeof route.params.robotId === 'string'
+    ? route.params.robotId
+    : (route.params.robotId?.id || route.params.robotId?.value || '')
+  console.log('robotId 类型', typeof robotId.value, robotId.value)
   // 加载机器人信息
-  const robotRes = await getRobotById(robotId)
+  const robotRes = await getRobotById(robotId.value)
   if (robotRes.code === 200) robot.value = robotRes.data
-  // 加载历史消息
-  await loadHistory()
-  // 监听 WebSocket 新消息（原有逻辑）
-  if (websocketStore && websocketStore.on) {
-    websocketStore.on('chat', (msg) => {
-      // 判断是否属于当前会话
-      if (msg.senderId === robotId || msg.receiverId === robotId) {
-        messages.value.push(msg)
-        scrollToBottom()
-      }
-    })
-    // 新增：监听后端标准type为'CHAT'的消息
-    websocketStore.on('message', (msgObj) => {
-      let obj = msgObj
-      if (typeof obj === 'string') {
-        try { obj = JSON.parse(obj) } catch {}
-      }
-      if (obj && obj.type === 'CHAT' && obj.data) {
-        const msg = obj.data
-        if (
-          (msg.senderId === robotId && msg.receiverId === userStore.userInfo?.userId) ||
-          (msg.senderId === userStore.userInfo?.userId && msg.receiverId === robotId)
-        ) {
-          messages.value.push(msg)
-          scrollToBottom()
-        }
-      }
-    })
-  }
+  // 初始化游标分页
+  historyCursor.value = null
+  hasMoreHistory.value = true
+  loadedMessageIds.value.clear()
+  await loadHistory(false)
   // 监听AI聊天广播消息
   window.addEventListener('ai-chat-message', handleAIChatMessage)
+  // 监听滚动加载历史
+  if (messagesContainer.value) {
+    messagesContainer.value.addEventListener('scroll', onScroll)
+  }
 })
 
 onUnmounted(() => {
@@ -129,15 +164,23 @@ onUnmounted(() => {
     websocketStore.off('message')
   }
   window.removeEventListener('ai-chat-message', handleAIChatMessage)
+  if (messagesContainer.value) {
+    messagesContainer.value.removeEventListener('scroll', onScroll)
+  }
 })
 
 function handleAIChatMessage(e) {
   const msg = e.detail
   if (
-    (msg.senderId === robotId && msg.receiverId === userStore.userInfo?.userId)
+    (msg.senderId === robotId.value && msg.receiverId === userStore.userInfo?.userId) ||
+    (msg.senderId === userStore.userInfo?.userId && msg.receiverId === robotId.value)
   ) {
     messages.value.push(msg)
+    conversationId.value = msg.conversationId
     scrollToBottom()
+    if (msg.senderType === 'ai' || msg.senderType === 'robot') {
+      isRobotReplying.value = false
+    }
   }
 }
 </script>
@@ -151,7 +194,8 @@ function handleAIChatMessage(e) {
   box-shadow: 0 4px 24px rgba(0,0,0,0.18);
   display: flex;
   flex-direction: column;
-  height: 80vh;
+  min-height: 100dvh;
+  height: 100dvh;
   color: #e0e0e0;
 }
 
@@ -187,7 +231,7 @@ function handleAIChatMessage(e) {
 
 .chat-message {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   margin-bottom: 18px;
   gap: 10px;
 }
@@ -239,6 +283,42 @@ function handleAIChatMessage(e) {
   margin: 12px 0;
 }
 
+.loading-history {
+  text-align: center;
+  color: #aaa;
+  font-size: 0.95rem;
+  margin: 8px 0;
+}
+
+.replying-tip {
+  text-align: left;
+  color: #3eb575;
+  font-size: 0.98rem;
+  margin: 8px 0 0 48px;
+  opacity: 0.85;
+  min-height: 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.replying-tip .dot {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: #3eb575;
+  opacity: 0.3;
+  animation: dotBlink 1.2s infinite;
+}
+.replying-tip .dot:nth-child(2) { animation-delay: 0.2s; }
+.replying-tip .dot:nth-child(3) { animation-delay: 0.4s; }
+.replying-tip .dot:nth-child(4) { animation-delay: 0.6s; }
+@keyframes dotBlink {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}
+
 .chat-input {
   display: flex;
   gap: 8px;
@@ -246,6 +326,10 @@ function handleAIChatMessage(e) {
   border-top: 1px solid #23272b;
   background: #23272b;
   border-radius: 0 0 16px 16px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .el-input {
@@ -287,11 +371,35 @@ function handleAIChatMessage(e) {
 @media (max-width: 600px) {
   .chat-window {
     border-radius: 0;
-    height: 100vh;
+    min-height: 100dvh;
+    height: 100dvh;
     max-width: 100vw;
   }
   .chat-header, .chat-input {
     border-radius: 0;
+  }
+  .chat-message {
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .el-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+  }
+  .message-content {
+    max-width: 90%;
+    font-size: 0.98rem;
+    padding: 8px 12px;
+  }
+  .chat-input {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+  .replying-tip {
+    margin-left: 36px;
+    font-size: 0.95rem;
   }
 }
 </style> 

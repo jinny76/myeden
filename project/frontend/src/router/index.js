@@ -38,11 +38,6 @@ const routes = [
     }
   },
   {
-    path: '/chat/:robotId',
-    name: 'ChatWindow',
-    component: () => import('@/views/ChatWindow.vue')
-  },
-  {
     path: '/',
     component: MainLayout,
     children: [
@@ -113,6 +108,11 @@ const routes = [
         path: 'robot-daily-plan',
         component: () => import('@/views/RobotDailyPlanPage.vue'),
         meta: { title: '天使的每一天' }
+      },
+      {
+        path: 'chat/:robotId',
+        name: 'ChatWindow',
+        component: () => import('@/views/ChatWindow.vue')
       }
     ]
   }

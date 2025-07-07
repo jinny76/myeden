@@ -1520,27 +1520,34 @@ public class PromptServiceImpl implements PromptService {
             // 新对话，构建双方背景
             User user = null;
             if (userMessage.getSenderId() != null) {
-                user = userRepository.findById(userMessage.getSenderId()).orElse(null);
+                user = userRepository.findByUserId(userMessage.getSenderId()).orElse(null);
             }
             // 机器人身份
-            prompt.append(String.format("你是%s（昵称：%s），%s。", robot.getName(), robot.getNickname(), robot.getDescription() != null ? robot.getDescription() : "一名虚拟AI陪伴者"));
+            prompt.append(String.format("/no_think 你是%s（昵称：%s），%s。", robot.getName(), robot.getNickname(), robot.getDescription() != null ? robot.getDescription() : "一名虚拟AI陪伴者"));
             prompt.append("\n你的详细背景资料：\n");
             prompt.append(buildSmartBackground(robot));
             prompt.append(buildSmartPersonalInfo(robot));
             // 用户身份
             if (user != null) {
-                prompt.append("\n对方用户信息：\n");
+                prompt.append("\n\n## 对方用户信息：\n");
                 prompt.append(String.format("昵称：%s，简介：%s，性别：%s，年龄：%s。", user.getNickname(), user.getIntroduction(), user.getGender(), user.getAge()));
             } else {
-                prompt.append("\n对方用户信息：未知\n");
+                prompt.append("\n\n## 对方用户信息：未知\n");
             }
             // 用户主动发起
             if (!userContent.isEmpty()) {
-                prompt.append("\n请结合双方背景资料，生成自然、真实、口语化的回复，仅返回回复内容，不要任何标题。\n");
-                prompt.append("\n用户消息：").append(userContent);
+                prompt.append("\n## 请根据以下要求, 结合双方背景资料，生成自然、真实、口语化的回复，仅返回回复内容，不要任何标题。\n");
+                prompt.append("\n- 用户消息：").append(userContent);
                 if (context != null && !context.isEmpty()) {
                     prompt.append("\n上下文信息：").append(context);
                 }
+                prompt.append("\n\n## 回复要求");
+                prompt.append("\n- 如果用户信息提及多件事情, 请只回复其中一件事情");
+                prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
+                prompt.append("\n- 回复要符合你的性格特征");
+                prompt.append("\n- 语言风格要符合你的说话习惯");
+                prompt.append("\n- 如果动态是在征询意见, 请认真有条理地回复, 长度控制在200字以内, 否则控制在20字以内");
+                prompt.append("\n- 不得有违法、违规内容，包括但不限于政治敏感话题、色情、暴力、赌博、侵权等违反法律法规和道德伦理的内容。");
             // 机器人主动发起
             } else {
                 RobotConfig.Topic aiTopic = selectRandomTopic(robot);
@@ -1549,11 +1556,7 @@ public class PromptServiceImpl implements PromptService {
             }
         } else {
             // 后继消息，保持原有逻辑
-            prompt.append("现在有用户向你发来消息，请用自然、真实、口语化的方式回复：\n");
-            prompt.append("\n用户消息：").append(userMessage.getContent());
-            if (context != null && !context.isEmpty()) {
-                prompt.append("\n上下文信息：").append(context);
-            }
+            prompt.append(userMessage.getContent());
         }
         return prompt.toString();
     }

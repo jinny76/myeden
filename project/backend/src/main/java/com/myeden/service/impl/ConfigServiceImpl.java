@@ -361,6 +361,7 @@ public class ConfigServiceImpl implements ConfigService {
         // 基本信息
         robot.setRobotId(robotConfig.getId());
         robot.setName(robotConfig.getName());
+        robot.setNickname(robotConfig.getNickname());
         robot.setAvatar(robotConfig.getAvatar());
         robot.setPersonality(robotConfig.getPersonality());
         robot.setDescription(robotConfig.getDescription());
@@ -500,6 +501,7 @@ public class ConfigServiceImpl implements ConfigService {
     private void updateRobotFromConfig(Robot existing, Robot newConfig) {
         // 更新基本信息
         existing.setName(newConfig.getName());
+        existing.setNickname(newConfig.getNickname());
         existing.setAvatar(newConfig.getAvatar());
         existing.setPersonality(newConfig.getPersonality());
         existing.setDescription(newConfig.getDescription());

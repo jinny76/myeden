@@ -79,8 +79,6 @@ public class ChatController {
             @RequestParam(defaultValue = "0") int offset) {
         try {
             List<ChatMessage> history = chatService.getHistoryBySession(sessionId, limit, offset);
-            // 按时间升序排序，最新消息在底部
-            history.sort(java.util.Comparator.comparing(ChatMessage::getCreatedAt));
             return ResponseEntity.ok(new EventResponse(200, "获取历史消息成功", history));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new EventResponse(400, "获取历史消息失败: " + e.getMessage(), null));
@@ -88,18 +86,24 @@ public class ChatController {
     }
 
     /**
-     * 查询与指定机器人所有历史消息
+     * 查询与指定机器人所有历史消息（游标分页，desc排序，前端reverse）
      */
     @GetMapping("/history/robot")
     public ResponseEntity<EventResponse> getHistoryWithRobot(
             @RequestParam String userId,
             @RequestParam String robotId,
             @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(defaultValue = "0") int offset) {
+            @RequestParam(required = false) String before // ISO时间字符串
+    ) {
         try {
-            List<ChatMessage> history = chatService.getHistoryWithRobot(userId, robotId, limit, offset);
-            // 按时间升序排序，最新消息在底部
-            history.sort(java.util.Comparator.comparing(ChatMessage::getCreatedAt));
+            List<ChatMessage> history;
+            if (before != null && !before.isEmpty()) {
+                java.time.LocalDateTime beforeTime = java.time.LocalDateTime.parse(before);
+                history = chatService.getHistoryWithRobotBefore(userId, robotId, beforeTime, limit);
+            } else {
+                history = chatService.getLatestHistoryWithRobot(userId, robotId, limit);
+            }
+            // 不再排序，直接返回desc，前端reverse
             return ResponseEntity.ok(new EventResponse(200, "获取历史消息成功", history));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new EventResponse(400, "获取历史消息失败: " + e.getMessage(), null));

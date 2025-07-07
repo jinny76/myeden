@@ -23,7 +23,7 @@ export function getChatHistory(robotId, params = { limit: 20, offset: 0 }) {
  * @param {string} content 消息内容
  * @returns Promise
  */
-export function sendChatMessage(robotId, content) {
+export function sendChatMessage(robotId, content, conversationId) {
   const userStore = useUserStore()
   const userId = userStore.userInfo?.userId
   return request({
@@ -34,7 +34,8 @@ export function sendChatMessage(robotId, content) {
       senderType: 'user',
       receiverId: robotId,
       receiverType: 'robot',
-      content
+      content,
+      conversationId
     }
   })
 } 
