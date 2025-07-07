@@ -119,7 +119,9 @@ public class RobotDailyPlanServiceImpl implements RobotDailyPlanService {
             if (existing.isPresent() && "SUCCESS".equals(existing.get().getStatus())) continue;
 
             // 删除之前失败的
-            planRepository.delete(existing.get());
+            if (existing.isPresent()) {
+                planRepository.delete(existing.get());
+            }
 
             RobotDailyPlan plan = new RobotDailyPlan();
             plan.setRobotId(robot.getRobotId());

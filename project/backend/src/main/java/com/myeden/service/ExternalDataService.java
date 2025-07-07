@@ -30,11 +30,10 @@ public interface ExternalDataService {
     List<HotSearchItem> getHotSearches();
 
     /**
-     * 获取指定城市的天气信息
-     * @param city 城市名（如"北京"），如为空则返回默认城市天气
+     * 获取指定城市的天气信息    
      * @return 天气信息对象
      */
-    WeatherInfo getWeather(String city);
+    List<WeatherInfo> getWeather();
 
     /**
      * 获取最新音乐推荐

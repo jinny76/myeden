@@ -13,6 +13,12 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import com.myeden.repository.RobotRepository;
+import java.util.Set;
 
 /**
  * 外部数据采集服务Mock实现
@@ -22,91 +28,220 @@ import java.util.List;
 @Slf4j
 public class ExternalDataServiceImpl implements ExternalDataService {
 
+    private final RobotRepository robotRepository;
+
+    public ExternalDataServiceImpl(RobotRepository robotRepository) {
+        this.robotRepository = robotRepository;
+    }
+
+    /**
+     * 获取最新新闻列表
+     * 
+     * 该方法从 https://api.xhus.cn/api/rdouyin 获取新闻数据，
+     * 接口返回为纯文本，每行一个新闻标题，格式如：
+     * 1. 济南暴雨
+     * 2. 东亚杯揭幕战中国vs韩国
+     * ...
+     * 
+     * 每行去除序号后作为 NewsItem 的 title 字段，其他字段置为 null。
+     * 
+     * @return 新闻条目列表，每个条目仅包含标题
+     */
     @Override
     public List<NewsItem> getLatestNews() {
         List<NewsItem> news = new ArrayList<>();
+        HttpURLConnection conn = null;
+        BufferedReader reader = null;
         try {
-            String apiKey = "36de5db81215";
-            String apiUrl = "https://whyta.cn/api/toutiao?key=" + apiKey;
+            // 1. 构建请求 URL
+            String apiUrl = "https://api.xhus.cn/api/rdouyin";
             URL url = new URL(apiUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+            // 2. 打开 HTTP 连接
+            conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
 
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(conn.getInputStream());
-            if (root.has("items")) {
-                for (JsonNode item : root.get("items")) {
+            // 3. 读取响应内容（纯文本，每行一个新闻标题）
+            reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                // 跳过空行
+                if (!line.isEmpty()) {
+                    // 只取标题部分，忽略前面的序号和点
+                    String title = line.replaceFirst("^\\d+\\.\\s*", "");
                     NewsItem newsItem = new NewsItem();
-                    newsItem.setTitle(item.has("title") ? item.get("title").asText() : null);
-                    newsItem.setUrl(item.has("url") ? item.get("url").asText() : null);
+                    newsItem.setTitle(title);
+                    newsItem.setSummary(null);
+                    newsItem.setUrl(null);
+                    newsItem.setImage(null);
                     news.add(newsItem);
                 }
             }
         } catch (Exception e) {
             log.error("获取新闻失败", e);
+        } finally {
+            // 4. 关闭资源
+            if (reader != null) {
+                try { reader.close(); } catch (Exception ignored) {}
+            }
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
         return news;
     }
 
+    /**
+     * 获取热搜列表
+     * 
+     * 该方法从 https://api.xhus.cn/api/rweibo 获取热搜数据，
+     * 接口返回为纯文本，每行一个热搜标题，格式如：
+     * 1. 张子枫简直蜕变
+     * 2. 老师因学生志愿未报清北解散群聊
+     * ...
+     * 
+     * 每行去除序号后作为 HotSearchItem 的 title 字段，其他字段置为 null。
+     * 
+     * @return 热搜条目列表，每个条目仅包含标题
+     */
     @Override
     public List<HotSearchItem> getHotSearches() {
         List<HotSearchItem> hot = new ArrayList<>();
+        HttpURLConnection conn = null;
+        BufferedReader reader = null;
         try {
-            String apiKey = "36de5db81215";
-            String apiUrl = "https://whyta.cn/api/tx/weibohot?key=" + apiKey;
+            // 1. 构建请求 URL
+            String apiUrl = "https://api.xhus.cn/api/rweibo";
             URL url = new URL(apiUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+            // 2. 打开 HTTP 连接
+            conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
 
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(conn.getInputStream());
-            if (root.has("code") && root.get("code").asInt() == 200 && root.has("result") && root.get("result").has("list")) {
-                for (JsonNode item : root.get("result").get("list")) {
+            // 3. 读取响应内容（纯文本，每行一个热搜标题）
+            reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                // 跳过空行
+                if (!line.isEmpty()) {
+                    // 只取标题部分，忽略前面的序号和点
+                    String title = line.replaceFirst("^\\d+\\.\\s*", "");
                     HotSearchItem hotItem = new HotSearchItem();
-                    hotItem.setTitle(item.has("hotword") ? item.get("hotword").asText() : null);
-                    hotItem.setSummary(item.has("hotwordnum") ? item.get("hotwordnum").asText() : null);
+                    hotItem.setTitle(title);
+                    hotItem.setSummary(null);
+                    hotItem.setUrl(null);
+                    hotItem.setImage(null);
                     hot.add(hotItem);
                 }
             }
         } catch (Exception e) {
             log.error("获取热搜失败", e);
+        } finally {
+            // 4. 关闭资源
+            if (reader != null) {
+                try { reader.close(); } catch (Exception ignored) {}
+            }
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
         return hot;
     }
 
-    @Override
-    public WeatherInfo getWeather(String city) {
-        WeatherInfo info = new WeatherInfo();
-        try {
-            String apiKey = "36de5db81215";
-            String apiUrl = "https://whyta.cn/api/tianqi?key=" + apiKey + "&city=" + java.net.URLEncoder.encode(city == null ? "北京" : city, "UTF-8");
-            URL url = new URL(apiUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    /**
+     * 支持自动处理301/302/303/307/308重定向的GET请求
+     * @param urlStr 原始URL
+     * @param maxRedirects 最大重定向次数
+     * @return 响应内容字符串
+     */
+    private String fetchWithRedirect(String urlStr, int maxRedirects) throws Exception {
+        int redirects = 0;
+        String currentUrl = urlStr;
+        while (redirects < maxRedirects) {
+            java.net.URL url = new java.net.URL(currentUrl);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setInstanceFollowRedirects(false); // 手动处理重定向
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
-
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(conn.getInputStream());
-            if (root.has("lives") && root.get("lives").isArray() && root.get("lives").size() > 0) {
-                JsonNode live = root.get("lives").get(0);
-                info.setCity(live.has("city") ? live.get("city").asText() : city);
-                info.setDescription(live.has("weather") ? live.get("weather").asText() : null);
-                info.setTemperature(live.has("temperature") ? live.get("temperature").asText() + "℃" : null);
-            } else {
-                return null;
+            int code = conn.getResponseCode();
+            if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                String location = conn.getHeaderField("Location");
+                if (location == null) throw new RuntimeException("重定向无Location头");
+                currentUrl = location;
+                redirects++;
+                continue;
             }
-            Thread.sleep(1000L);
-        } catch (Exception e) {
-            info.setCity(city == null ? "北京" : city);
-            info.setDescription("");
-            info.setTemperature("");
+            if (code == 200) {
+                return new String(conn.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            }
+            throw new RuntimeException("请求失败，状态码: " + code);
         }
-        return info;
+        throw new RuntimeException("重定向次数过多");
+    }
+
+    /**
+     * 获取所有激活机器人所在城市的天气信息（全部返回）
+     * @return List<WeatherInfo>（所有城市的天气信息）
+     */
+    public List<WeatherInfo> getWeather() {
+        List<WeatherInfo> result = new ArrayList<>();
+        try {
+            List<com.myeden.entity.Robot> robots = robotRepository.findAll();
+            Set<String> cityNames = new java.util.HashSet<>();
+            for (com.myeden.entity.Robot robot : robots) {
+                if (robot.getLocation() != null && !robot.getLocation().trim().isEmpty()) {
+                    cityNames.add(robot.getLocation().trim());
+                }
+            }
+            if (cityNames.isEmpty()) {
+                log.warn("无可用机器人城市信息");
+                return result;
+            }
+            List<CityCodeItem> cityCodeList = loadAllCityCodes();
+            java.util.Map<String, String> cityNameToId = new java.util.HashMap<>();
+            for (CityCodeItem item : cityCodeList) {
+                if (item.getCountyname() != null && item.getAreaid() != null) {
+                    cityNameToId.put(item.getCountyname(), item.getAreaid());
+                }
+            }
+            java.util.List<String> cityIds = new java.util.ArrayList<>();
+            for (String name : cityNames) {
+                String id = cityNameToId.get(name);
+                if (id != null) cityIds.add(id);
+            }
+            if (cityIds.isEmpty()) {
+                log.warn("无可用城市ID");
+                return result;
+            }
+            String joinedIds = String.join("&cityIds=", cityIds);
+            String apiUrl = "http://aider.meizu.com/app/weather/listWeather?cityIds=" + joinedIds;
+            String json = fetchWithRedirect(apiUrl, 5);
+            log.info("天气接口返回: " + json);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(json);
+            if (root.has("code") && root.get("code").asInt() == 200 && root.has("value") && root.get("value").isArray()) {
+                for (JsonNode weather : root.get("value")) {
+                    WeatherInfo info = new WeatherInfo();
+                    info.setCity(weather.has("city") ? weather.get("city").asText() : null);
+                    if (weather.has("realtime")) {
+                        JsonNode realtime = weather.get("realtime");
+                        info.setDescription(realtime.has("weather") ? realtime.get("weather").asText() : null);
+                        info.setTemperature(realtime.has("temp") ? realtime.get("temp").asText() + "℃" : null);
+                    }
+                    result.add(info);
+                }
+            }
+        } catch (Exception e) {
+            log.error("批量获取天气失败", e);
+        }
+        return result;
     }
 
     @Override
@@ -171,5 +306,56 @@ public class ExternalDataServiceImpl implements ExternalDataService {
             log.error("获取热播剧失败", e);
         }
         return movies;
+    }
+
+    /**
+     * 城市编码实体类
+     * 用于存储城市名称与对应的编码
+     */
+    public static class CityCodeItem {
+        /** 区县名称 */
+        private String countyname;
+        /** 区县编码 */
+        private String areaid;
+        public String getCountyname() { return countyname; }
+        public void setCountyname(String countyname) { this.countyname = countyname; }
+        public String getAreaid() { return areaid; }
+        public void setAreaid(String areaid) { this.areaid = areaid; }
+    }
+
+    /**
+     * 从 classpath:/config/citycode.json 加载所有城市编码
+     * 
+     * @return 城市编码列表，每个元素包含 countyname 和 areaid
+     */
+    public List<CityCodeItem> loadAllCityCodes() {
+        List<CityCodeItem> cityCodes = new ArrayList<>();
+        if (cityCodes.size() > 0) {
+            return cityCodes;
+        }
+        try {
+            // 1. 通过ClassLoader读取资源，兼容本地和jar包
+            ClassLoader classLoader = getClass().getClassLoader();
+            java.io.InputStream is = classLoader.getResourceAsStream("config/citycode.json");
+            if (is == null) {
+                log.error("未找到城市编码文件: config/citycode.json");
+                return cityCodes;
+            }
+            byte[] bytes = is.readAllBytes();
+            String cityCodeJson = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+
+            // 2. 解析JSON
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(cityCodeJson);
+            for (JsonNode item : root) {
+                CityCodeItem codeItem = new CityCodeItem();
+                codeItem.setCountyname(item.has("countyname") ? item.get("countyname").asText() : null);
+                codeItem.setAreaid(item.has("areaid") ? item.get("areaid").asText() : null);
+                cityCodes.add(codeItem);
+            }
+        } catch (Exception e) {
+            log.error("加载城市编码列表失败", e);
+        }
+        return cityCodes;
     }
 } 

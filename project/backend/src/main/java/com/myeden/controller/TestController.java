@@ -195,14 +195,10 @@ public class TestController {
             externalDataCacheService.setMusic(music);
             List<MovieItem> movies = externalDataService.getMovieRecommendations();
             externalDataCacheService.setMovies(movies);
-            List<Robot> robots = robotRepository.findAll();
+            List<WeatherInfo> weathers = externalDataService.getWeather();
             Map<String, WeatherInfo> weatherMap = new HashMap<>();
-            for (Robot robot : robots) {
-                String location = robot.getLocation();
-                if (location != null && !location.trim().isEmpty() && !weatherMap.containsKey(location)) {
-                    WeatherInfo weather = externalDataService.getWeather(location);
-                    weatherMap.put(location, weather);
-                }
+            for (WeatherInfo weather : weathers) {
+                weatherMap.put(weather.getCity(), weather);
             }
             externalDataCacheService.setWeatherMap(weatherMap);
             externalDataCacheService.save();
@@ -227,17 +223,15 @@ public class TestController {
      * @return 包含天气信息的响应Map
      */
     @GetMapping("/weather")
-    public Map<String, Object> weatherTest(@RequestParam("city") String city) {
+    public Map<String, Object> weatherTest() {
         Map<String, Object> response = new HashMap<>();
         try {
             // 调用外部数据服务获取天气信息
-            com.myeden.model.external.WeatherInfo weatherInfo = externalDataService.getWeather(city);
+            List<WeatherInfo> weatherInfo = externalDataService.getWeather();
             response.put("message", "天气抓取测试成功");
-            response.put("city", city);
             response.put("data", weatherInfo);
         } catch (Exception e) {
             response.put("message", "天气抓取失败: " + e.getMessage());
-            response.put("city", city);
             response.put("data", null);
         }
         response.put("timestamp", System.currentTimeMillis());

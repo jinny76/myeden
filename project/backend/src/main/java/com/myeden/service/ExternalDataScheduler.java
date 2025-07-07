@@ -53,14 +53,10 @@ public class ExternalDataScheduler implements ApplicationContextAware {
         externalDataCacheService.setMusic(music);
         List<MovieItem> movies = externalDataService.getMovieRecommendations();
         externalDataCacheService.setMovies(movies);
-        List<Robot> robots = robotRepository.findAll();
         Map<String, WeatherInfo> weatherMap = new HashMap<>();
-        for (Robot robot : robots) {
-            String location = robot.getLocation();
-            if (location != null && !location.trim().isEmpty() && !weatherMap.containsKey(location)) {
-                WeatherInfo weather = externalDataService.getWeather(location);
-                weatherMap.put(location, weather);
-            }
+        List<WeatherInfo> weathers = externalDataService.getWeather();
+        for (WeatherInfo weather : weathers) {
+            weatherMap.put(weather.getCity(), weather);
         }
         externalDataCacheService.setWeatherMap(weatherMap);
         externalDataCacheService.save();
