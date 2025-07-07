@@ -4,7 +4,7 @@
       <el-button @click="goToWorld" circle>
         <el-icon><Back /></el-icon>
       </el-button>
-      <span>{{ robot?.name || '天使' }} 聊天</span>
+      <span style="margin-left: 10px;">{{ robot?.name || '天使' }} 聊天</span>
     </div>
     <div class="chat-messages" ref="messagesContainer">
       <div v-if="loadingHistory" class="loading-history">历史消息加载中...</div>
@@ -188,45 +188,54 @@ function handleAIChatMessage(e) {
 <style scoped>
 .chat-window {
   max-width: 600px;
-  margin: 0 auto;
+  margin: 80px auto 0 auto;
   background: #181c20;
   border-radius: 16px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.18);
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
-  height: 100dvh;
+  min-height: calc(100dvh - 80px);
+  height: calc(100dvh - 80px);
   color: #e0e0e0;
 }
 
 .chat-header {
-  padding: 16px;
-  border-bottom: 1px solid #23272b;
-  font-weight: bold;
+  flex-shrink: 0;
+  height: 56px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: #23272b;
-  color: #fff;
-  border-radius: 16px 16px 0 0;
+  padding: 0 16px;
+  border-bottom: 1px solid #23272e;
+  background: #23272e;
+  z-index: 2;
 }
 
 .chat-messages {
-  flex: 1;
+  flex: 1 1 0;
   overflow-y: auto;
-  padding: 24px 16px 16px 16px;
+  padding: 16px;
+  padding-top: 56px;
+  margin-top: -40px;
   background: #181c20;
-  scrollbar-width: thin;
-  scrollbar-color: #222 transparent;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #444 #23272e; /* Firefox */
 }
 
+/* Webkit 浏览器（Chrome/Edge/Safari） */
 .chat-messages::-webkit-scrollbar {
   width: 8px;
   background: transparent;
 }
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #222;
-  border-radius: 4px;
+  background: rgba(80, 80, 80, 0.5);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.7);
+}
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .chat-message {
@@ -320,16 +329,14 @@ function handleAIChatMessage(e) {
 }
 
 .chat-input {
+  flex-shrink: 0;
   display: flex;
-  gap: 8px;
+  align-items: center;
   padding: 16px;
-  border-top: 1px solid #23272b;
-  background: #23272b;
+  background: #23272e;
+  border-top: 1px solid #23272e;
   border-radius: 0 0 16px 16px;
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-  padding-bottom: env(safe-area-inset-bottom);
+  /* 移除position:sticky，保证flex布局下始终在底部 */
 }
 
 .el-input {
@@ -400,6 +407,44 @@ function handleAIChatMessage(e) {
   .replying-tip {
     margin-left: 36px;
     font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .chat-window {
+    max-width: 100vw;
+    min-width: 0;
+    margin: 0;
+    border-radius: 0;
+    height: 100dvh;
+    min-height: 100dvh;
+    box-shadow: none;
+  }
+  .chat-header {
+    height: 48px;
+    padding: 0 8px;
+    font-size: 16px;
+  }
+  .chat-messages {
+    padding: 8px;
+    padding-top: 48px;
+    margin-top: -20px;
+    font-size: 15px;
+  }
+  .chat-input {
+    padding: 8px;
+    font-size: 15px;
+    border-radius: 0;
+  }
+  .el-input__inner, .el-button {
+    font-size: 15px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    border-radius: 6px !important;
+  }
+  .el-avatar {
+    width: 32px !important;
+    height: 32px !important;
   }
 }
 </style> 

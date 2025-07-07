@@ -127,10 +127,10 @@
               v-for="robot in filteredRobots" 
               :key="robot.id" 
               class="robot-card"
-              @click="goToChat(robot)"
             >
               <div class="robot-content">
-                <div class="robot-avatar-section">
+                <div class="robot-avatar-section" 
+                @click="goToChat(robot)">
                   <div class="robot-avatar">
                     <el-avatar :src="getRobotAvatarUrl(robot)" :size="80" />
                     <div class="robot-status" :class="{ active: robot.active }">
@@ -973,6 +973,7 @@ const goToChat = (robot) => {
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  cursor: pointer;
 }
 
 .robot-avatar {
