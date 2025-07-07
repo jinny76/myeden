@@ -9,6 +9,7 @@ import com.myeden.repository.RobotRepository;
 import com.myeden.repository.UserRepository;
 import com.myeden.service.DifyService;
 import com.myeden.service.PromptService;
+import com.myeden.service.DifyService.DifyChatResult;
 import com.myeden.service.PostService;
 import com.myeden.service.CommentService;
 import com.myeden.config.RobotConfig;
@@ -334,11 +335,11 @@ public class PromptServiceImpl implements PromptService {
     }
     
     @Override
-    public String processGeneratedContent(String rawContent, Robot robot, String contentType) {
-        if (rawContent == null || rawContent.trim().isEmpty()) {
-            return "";
+    public DifyChatResult processGeneratedContent(DifyChatResult result, Robot robot, String contentType) {
+        if (result == null || result.answer == null || result.answer.trim().isEmpty()) {
+            result.answer = "";
         }
-        String processedContent = rawContent.trim();
+        String processedContent = result.answer.trim();
 
         // 移除多余的换行和空格
         processedContent = processedContent.replaceAll("\\n+", "\n").replaceAll(" +", " ");
@@ -356,8 +357,8 @@ public class PromptServiceImpl implements PromptService {
         }
 
         log.info(processedContent);
-        
-        return processedContent;
+        result.answer = processedContent;
+        return result;
     }
     
     @Override
@@ -713,15 +714,15 @@ public class PromptServiceImpl implements PromptService {
             // 使用PromptService构建提示词和link
             PostPromptResult promptResult = buildPostPrompt(robot, context);
             // 调用Dify API
-            String rawContent = difyService.callDifyApi(promptResult.getPrompt(), robot.getRobotId());
+            DifyChatResult result = difyService.callDifyApi(promptResult.getPrompt(), robot.getRobotId(), null);
             // 使用PromptService处理生成的内容
-            String content = processGeneratedContent(rawContent, robot, "post");
+            String content = processGeneratedContent(result, robot, "post").answer;
 
             // 保存生成日志
             ContentGenerationLog log = new ContentGenerationLog(
                 robot, // 完整robot对象
                 promptResult.getPrompt(),
-                rawContent,
+                content,
                 LocalDateTime.now(),
                 "post",
                 context
@@ -761,11 +762,11 @@ public class PromptServiceImpl implements PromptService {
             // 使用PromptService构建提示词
             String prompt = buildCommentPrompt(robot, post, context);
             // 调用Dify API
-            String rawContent = difyService.callDifyApi(prompt, robot.getRobotId());
+            DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), null);
             // 使用PromptService处理生成的内容
-            String content = processGeneratedContent(rawContent, robot, "comment");
+            String content = processGeneratedContent(result, robot, "comment").answer;
             // 保存日志
-            saveContentGenerationLog(robot, prompt, rawContent, "comment", context);
+            saveContentGenerationLog(robot, prompt, content, "comment", context);
             return content;
         } catch (Exception e) {
             log.error("生成机器人评论内容失败: {}", e.getMessage(), e);
@@ -779,11 +780,11 @@ public class PromptServiceImpl implements PromptService {
             // 使用PromptService构建提示词
             String prompt = buildReplyPrompt(robot, commentDetail, postDetail, context);
             // 调用Dify API
-            String rawContent = difyService.callDifyApi(prompt, robot.getRobotId());
+            DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), null);
             // 使用PromptService处理生成的内容
-            String content = processGeneratedContent(rawContent, robot, "reply");
+            String content = processGeneratedContent(result, robot, "reply").answer;
             // 保存日志
-            saveContentGenerationLog(robot, prompt, rawContent, "reply", context);
+            saveContentGenerationLog(robot, prompt, content, "reply", context);
             return content;
         } catch (Exception e) {
             log.error("生成机器人回复内容失败: {}", e.getMessage(), e);
@@ -797,11 +798,11 @@ public class PromptServiceImpl implements PromptService {
             // 使用PromptService构建提示词
             String prompt = buildInnerThoughtsPrompt(robot, situation);
             // 调用Dify API
-            String rawContent = difyService.callDifyApi(prompt, robot.getRobotId());
+            DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), null);
             // 使用PromptService处理生成的内容
-            String content = processGeneratedContent(rawContent, robot, "inner_thoughts");
+            String content = processGeneratedContent(result, robot, "inner_thoughts").answer;
             // 保存日志
-            saveContentGenerationLog(robot, prompt, rawContent, "inner_thoughts", situation);
+            saveContentGenerationLog(robot, prompt, content, "inner_thoughts", situation);
             return content;
         } catch (Exception e) {
             log.error("生成机器人内心活动失败: {}", e.getMessage(), e);
@@ -1347,7 +1348,7 @@ public class PromptServiceImpl implements PromptService {
         for (int i = 0; i < maxRetry; i++) {
             try {
                 // 1. 调用Dify获取AI结果
-                String aiResult = difyService.callDifyApi(prompt, robot.getId());
+                String aiResult = difyService.callDifyApi(prompt, robot.getId(), null).answer;
                 // 2. 反序列化为RobotDailyPlan对象
                 ObjectMapper mapper = new ObjectMapper();
                 if (aiResult.indexOf("</think>\n") != -1) {
@@ -1491,5 +1492,69 @@ public class PromptServiceImpl implements PromptService {
             .filter(Objects::nonNull)
             .filter(s -> !s.trim().isEmpty())
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public DifyChatResult generateChatReply(Robot robot, ChatMessage userMessage, String context) {
+        // 1. 构建prompt
+        String prompt = buildChatPrompt(robot, userMessage, context);
+        // 2. 支持多轮对话，传递conversationId
+        DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), userMessage.getConversationId());
+        // 3. 后处理
+        return processGeneratedContent(result, robot, "chat");
+    }
+
+    /**
+     * 构建AI聊天场景的prompt
+     * @param robot 机器人实体
+     * @param userMessage 用户输入内容
+     * @param context 额外上下文（可选）
+     * @return prompt字符串
+     */
+    @Override
+    public String buildChatPrompt(Robot robot, ChatMessage userMessage, String context) {
+        StringBuilder prompt = new StringBuilder();
+        boolean isNewConversation = (userMessage.getConversationId() == null || userMessage.getConversationId().trim().isEmpty());
+        String userContent = userMessage.getContent() != null ? userMessage.getContent().trim() : "";
+        if (isNewConversation) {
+            // 新对话，构建双方背景
+            User user = null;
+            if (userMessage.getSenderId() != null) {
+                user = userRepository.findById(userMessage.getSenderId()).orElse(null);
+            }
+            // 机器人身份
+            prompt.append(String.format("你是%s（昵称：%s），%s。", robot.getName(), robot.getNickname(), robot.getDescription() != null ? robot.getDescription() : "一名虚拟AI陪伴者"));
+            prompt.append("\n你的详细背景资料：\n");
+            prompt.append(buildSmartBackground(robot));
+            prompt.append(buildSmartPersonalInfo(robot));
+            // 用户身份
+            if (user != null) {
+                prompt.append("\n对方用户信息：\n");
+                prompt.append(String.format("昵称：%s，简介：%s，性别：%s，年龄：%s。", user.getNickname(), user.getIntroduction(), user.getGender(), user.getAge()));
+            } else {
+                prompt.append("\n对方用户信息：未知\n");
+            }
+            // 用户主动发起
+            if (!userContent.isEmpty()) {
+                prompt.append("\n请结合双方背景资料，生成自然、真实、口语化的回复，仅返回回复内容，不要任何标题。\n");
+                prompt.append("\n用户消息：").append(userContent);
+                if (context != null && !context.isEmpty()) {
+                    prompt.append("\n上下文信息：").append(context);
+                }
+            // 机器人主动发起
+            } else {
+                RobotConfig.Topic aiTopic = selectRandomTopic(robot);
+                prompt.append(String.format("\n本次对话主题：%s\n", aiTopic.getContent()));
+                prompt.append("\n请结合双方背景资料，基于上述主题，生成一条自然、真实、口语化的开场白，仅返回回复内容，不要任何标题。\n");
+            }
+        } else {
+            // 后继消息，保持原有逻辑
+            prompt.append("现在有用户向你发来消息，请用自然、真实、口语化的方式回复：\n");
+            prompt.append("\n用户消息：").append(userMessage.getContent());
+            if (context != null && !context.isEmpty()) {
+                prompt.append("\n上下文信息：").append(context);
+            }
+        }
+        return prompt.toString();
     }
 } 

@@ -51,14 +51,37 @@ public class DifyServiceImpl implements DifyService {
     private final AtomicInteger totalCalls = new AtomicInteger(0);
     private final AtomicInteger successCalls = new AtomicInteger(0);
     private final AtomicInteger failedCalls = new AtomicInteger(0);
-    
+
+    /**
+     * 调用Dify API生成内容
+     * 向Dify API发送提示词并获取生成的内容
+     * 
+     * @param prompt 提示词
+     * @param userId 机器人信息（用于API配置）
+     * @return 生成的内容
+     */
     @Override
-    public String callDifyApi(String prompt, String userId) {
+    public DifyChatResult callDifyApi(String prompt, String userId) {
+        return callDifyApi(prompt, userId, null);
+    }
+    
+    /**
+     * 调用Dify API，支持传递conversationId以实现多轮对话
+     * @param prompt 用户输入的提示词
+     * @param userId 用户唯一标识
+     * @param conversationId 会话ID（可为null或空字符串，表示无上下文）
+     * @return Dify API返回的回复内容
+     */
+    @Override
+    public DifyChatResult callDifyApi(String prompt, String userId, String conversationId) {
         try {
             DifyRequest request = new DifyRequest(new HashMap<>(), prompt);
             request.setUser(userId);
             request.setResponseMode("blocking");
-            
+            // 支持多轮对话：如果传入了conversationId，则设置到request
+            if (conversationId != null && !conversationId.isEmpty()) {
+                request.setConversationId(conversationId);
+            }
             return callDifyApiInternal(request, "API调用");
         } catch (Exception e) {
             logger.error("调用Dify API失败: {}", e.getMessage(), e);
@@ -101,32 +124,36 @@ public class DifyServiceImpl implements DifyService {
     }
 
     /**
-     * 内部调用Dify API的方法
+     * 内部调用Dify API的方法，返回完整对象
      */
-    private String callDifyApiInternal(DifyRequest request, String operation) {
+    private DifyChatResult callDifyApiInternal(DifyRequest request, String operation) {
+        DifyChatResult result = new DifyChatResult();
         if (!difyConfig.isEnabled()) {
             logger.warn("Dify API已禁用，使用备用内容生成");
             return generateFallbackContent(operation);
         }
-
         totalCalls.incrementAndGet();
-
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", "Bearer " + difyConfig.getKey());
-
             HttpEntity<DifyRequest> entity = new HttpEntity<>(request, headers);
             String url = difyConfig.getUrl() + "/chat-messages";
-
             ResponseEntity<DifyResponse> response = restTemplate.exchange(
                 url, HttpMethod.POST, entity, DifyResponse.class);
-
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 DifyResponse difyResponse = response.getBody();
+                result.event = difyResponse.getEvent();
+                result.messageId = difyResponse.getMessageId();
+                result.conversationId = difyResponse.getConversationId();
+                result.mode = difyResponse.getMode();
+                result.answer = difyResponse.getAnswer();
+                result.metadata = difyResponse.getMetadata();
+                result.createdAt = difyResponse.getCreatedAt();
                 if ("message".equals(difyResponse.getEvent()) && difyResponse.getAnswer() != null) {
                     successCalls.incrementAndGet();
-                    return difyResponse.getAnswer();
+                    result.success = true;
+                    return result;
                 } else {
                     failedCalls.incrementAndGet();
                     logger.error("Dify API返回异常响应: {}", difyResponse);
@@ -134,7 +161,7 @@ public class DifyServiceImpl implements DifyService {
                 }
             } else {
                 failedCalls.incrementAndGet();
-                logger.error("Dify API调用失败，状态码: {}", response.getStatusCode());
+                logger.error("Dify API调用失败，状态码: {}", response.getStatusCode());                
                 return generateFallbackContent(operation);
             }
         } catch (ResourceAccessException e) {
@@ -219,7 +246,11 @@ public class DifyServiceImpl implements DifyService {
     }
 
     // 备用内容生成方法
-    private String generateFallbackContent(String operation) {
-        return String.format("我是谁, 我失忆了, 头好疼", operation);
+    private DifyChatResult generateFallbackContent(String operation) {
+        DifyChatResult result = new DifyChatResult();
+        result.success = false;
+        result.answer = String.format("我是谁, 我失忆了, 头好疼", operation);
+        result.error = "Dify API未启用";
+        return result;        
     }
 } 

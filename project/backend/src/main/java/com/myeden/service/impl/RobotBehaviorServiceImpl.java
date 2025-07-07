@@ -403,7 +403,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             CommentService.CommentDetail commentDetail = commentService.getCommentDetail(commentId, robotId);
             PostService.PostDetail postDetail = postService.getPostDetail(commentDetail.getPostId(), robotId);
 
-            // 判断是否是机器人回复，且不是回复机器人自己的评论
+            // 判断是否是机器人回复，且不是机器人自己回复
             boolean isRobot = "robot".equals(commentDetail.getAuthorType()) && !robotId.equals(postDetail.getAuthorId());
             // 统一前置条件判断
             Robot robot = checkRobotPostCondition(robotId, "reply", "回复评论", isRobot);

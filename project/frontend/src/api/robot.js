@@ -145,6 +145,18 @@ export function getDailyPlanList(params) {
   })
 }
 
+/**
+ * 根据机器人ID获取机器人信息
+ * @param {string} robotId
+ * @returns Promise
+ */
+export function getRobotById(robotId) {
+  return request({
+    url: `/robots/${robotId}`,
+    method: 'get'
+  })
+}
+
 export default {
   getRobotList,
   getRobotDetail,

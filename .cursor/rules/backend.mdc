@@ -7,3 +7,7 @@ alwaysApply: false
 
 
 - 检查设计文档, 不要自行生成新的Controller类及Controller方法, 不要自行生成文档, 不要自行生成测试
+
+- Controller对象参考 PostController, 封装统一的返回对象 ResponseEntity, 内容是EventResponse对象
+
+- 所有服务的请求路径都以/api/v1/[module]/[function]

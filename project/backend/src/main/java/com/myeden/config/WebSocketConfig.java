@@ -51,10 +51,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // 注册WebSocket端点，客户端通过此端点建立连接
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*") // 允许所有来源，生产环境应该限制
+                .setHandshakeHandler(new WebSocketUserHandshakeHandler())
+                .addInterceptors(new JwtHandshakeInterceptor())
                 .withSockJS(); // 启用SockJS支持，提供降级方案
         
         // 注册纯WebSocket端点（不使用SockJS）
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*");
+                .setAllowedOriginPatterns("*")
+                .setHandshakeHandler(new WebSocketUserHandshakeHandler())
+                .addInterceptors(new JwtHandshakeInterceptor());
     }
 } 

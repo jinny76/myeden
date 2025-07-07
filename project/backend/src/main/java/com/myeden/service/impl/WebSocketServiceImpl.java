@@ -118,11 +118,11 @@ public class WebSocketServiceImpl implements WebSocketService {
             // 转换为JSON
             String messageJson = objectMapper.writeValueAsString(message);
             
-            // 发送给指定用户
-            messagingTemplate.convertAndSendToUser(userId, "/queue/messages", messageJson);
+            // 广播给所有订阅者
+            messagingTemplate.convertAndSend("/topic/broadcast", messageJson);
             
-            log.info("发送消息给用户成功: userId={}, type={}, messageId={}", 
-                    userId, message.getType(), message.getMessageId());
+            log.info("广播AI消息: type={}, messageId={}", 
+                    message.getType(), message.getMessageId());
         } catch (JsonProcessingException e) {
             log.error("消息序列化失败", e);
         } catch (Exception e) {

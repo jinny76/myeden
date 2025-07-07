@@ -7,6 +7,8 @@ import com.myeden.service.WebSocketService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -30,7 +32,7 @@ public class AIActiveMessageTask {
             aiMsg.setReceiverType("user");
             aiMsg.setContent("早安，今天也要元气满满哦！");
             aiMsg.setMsgType("text");
-            aiMsg.setCreatedAt(new Date());
+            aiMsg.setCreatedAt(LocalDateTime.now());
             aiMsg.setIsRead(false);
             chatMessageRepository.save(aiMsg);
             // 推送到前端

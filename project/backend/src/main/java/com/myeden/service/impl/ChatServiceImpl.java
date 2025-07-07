@@ -18,6 +18,7 @@ public class ChatServiceImpl implements ChatService {
         if (message == null || message.getSenderId() == null || message.getReceiverId() == null || message.getContent() == null) {
             throw new IllegalArgumentException("消息内容、发送者和接收者不能为空");
         }
+
         chatMessageRepository.save(message);
     }
 

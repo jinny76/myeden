@@ -6,6 +6,7 @@ import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
 import { useConfigStore } from '@/stores/config'
 import { sendUserOnlineMessage } from '@/api/websocket'
+import { watch } from 'vue'
 
 /**
  * WebSocket状态管理
@@ -64,7 +65,10 @@ export const useWebSocketStore = defineStore('websocket', () => {
   const getWebSocketUrl = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = window.location.host
-    return `${protocol}//${host}/ws`
+    // 拼接token参数
+    const userStore = useUserStore()
+    const token = userStore.token
+    return `${protocol}//${host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`
   }
 
   /**
@@ -334,11 +338,30 @@ export const useWebSocketStore = defineStore('websocket', () => {
     // 订阅用户个人消息
     const userStore = useUserStore()
     if (userStore.userInfo?.userId) {
-      subscribe(`/user/${userStore.userInfo.userId}/queue/messages`, handleUserMessage, 'user-messages')
+      const userId = userStore.userInfo.userId
+      subscribe(`/user/${userId}/queue/messages`, handleUserMessage, `user-messages-${userId}`)
+    } else {
+      console.warn('未检测到用户ID，无法订阅个人消息')
     }
     
     console.log('📡 WebSocket消息订阅完成')
   }
+
+  // 监听用户登录状态变化，自动重新订阅和重连
+  const userStore = useUserStore()
+  watch(() => userStore.userInfo?.userId, (newUserId, oldUserId) => {
+    if (newUserId && newUserId !== oldUserId) {
+      disconnect()
+      connect()
+    }
+  })
+  // 监听token变化，token变化时自动断开重连
+  watch(() => userStore.token, (newToken, oldToken) => {
+    if (newToken && newToken !== oldToken) {
+      disconnect()
+      connect()
+    }
+  })
 
   /**
    * 检查消息是否已处理过（去重）
@@ -397,6 +420,9 @@ export const useWebSocketStore = defineStore('websocket', () => {
         case 'HEARTBEAT':
           // 心跳消息，不需要特殊处理
           console.log('💓 收到心跳消息')
+          break
+        case 'CHAT':
+          window.dispatchEvent(new CustomEvent('ai-chat-message', { detail: wsMessage.data }))
           break
         default:
           console.log('未知消息类型:', wsMessage.type)

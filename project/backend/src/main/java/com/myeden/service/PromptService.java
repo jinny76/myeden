@@ -65,12 +65,12 @@ public interface PromptService {
      * 处理AI生成的内容
      * 对AI生成的内容进行后处理，如清理格式、验证长度、添加表情等
      * 
-     * @param rawContent AI生成的原始内容
+     * @param result AI生成的原始内容
      * @param robot 机器人信息
      * @param contentType 内容类型（post/comment/reply）
      * @return 处理后的内容
      */
-    String processGeneratedContent(String rawContent, Robot robot, String contentType);
+    DifyService.DifyChatResult processGeneratedContent(DifyService.DifyChatResult result, Robot robot, String contentType);
     
     /**
      * 构建上下文信息
@@ -132,6 +132,24 @@ public interface PromptService {
     String generateReplyContent(Robot robot, CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail, String context);
 
     String generateInnerThoughts(Robot robot, String situation);
+
+    /**
+     * 生成AI聊天回复内容（含prompt构建与Dify调用）
+     * @param robot 机器人实体
+     * @param userMessage 用户消息对象，包含内容、会话ID等
+     * @param context 额外上下文（可选）
+     * @return AI生成的回复内容
+     */
+    DifyService.DifyChatResult generateChatReply(com.myeden.entity.Robot robot, com.myeden.entity.ChatMessage userMessage, String context);
+
+    /**
+     * 构建AI聊天场景的prompt
+     * @param robot 机器人实体
+     * @param userMessage 用户输入内容
+     * @param context 额外上下文（可选）
+     * @return prompt字符串
+     */
+    String buildChatPrompt(com.myeden.entity.Robot robot, com.myeden.entity.ChatMessage userMessage, String context);
 
     /**
      * 构建机器人每日计划AI提示词

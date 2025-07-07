@@ -93,8 +93,7 @@
           <!-- 过滤控制区域 -->
           <div class="filter-controls">
             <div class="filter-group">
-              <div class="search-input-wrapper">
-                <el-input
+              <el-input
                   v-model="searchKeyword"
                   placeholder="搜索天使名称或描述..."
                   clearable
@@ -128,6 +127,7 @@
               v-for="robot in filteredRobots" 
               :key="robot.id" 
               class="robot-card"
+              @click="goToChat(robot)"
             >
               <div class="robot-content">
                 <div class="robot-avatar-section">
@@ -209,7 +209,6 @@
         </div>
       </div>
     </div>
-  </div>
 
   <!-- 印象编辑弹层 -->
   <div
@@ -510,6 +509,10 @@ async function saveImpression() {
     impressionPanelVisible.value = false
     message.success('印象已保存')
   }
+}
+
+const goToChat = (robot) => {
+  router.push(`/chat/${robot.id}`)
 }
 </script>
 

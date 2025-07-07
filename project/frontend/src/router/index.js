@@ -38,6 +38,11 @@ const routes = [
     }
   },
   {
+    path: '/chat/:robotId',
+    name: 'ChatWindow',
+    component: () => import('@/views/ChatWindow.vue')
+  },
+  {
     path: '/',
     component: MainLayout,
     children: [
