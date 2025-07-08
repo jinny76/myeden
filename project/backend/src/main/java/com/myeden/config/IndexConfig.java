@@ -54,6 +54,9 @@ public class IndexConfig {
             
             // 点赞记录索引
             createLikeIndexes(mongoDatabase);
+
+            // 机器人每日计划集合索引
+            createRobotDailyPlanIndexes(mongoDatabase);
             
             logger.info("数据库索引初始化完成");
         } catch (Exception e) {
@@ -293,4 +296,24 @@ public class IndexConfig {
         
         logger.info("点赞记录索引创建完成");
     }
+
+    private void createRobotDailyPlanIndexes(MongoDatabase database) {
+        var collection = database.getCollection("robot_daily_plans");
+        
+        // 机器人ID索引
+        createIndexSafely(database, "robot_daily_plans", 
+            new org.bson.Document("robotId", 1),
+            new IndexOptions().name("idx_robot_daily_plan_robot_id")
+        );
+
+        // 创建机器人Id+日期索引
+        createIndexSafely(database, "robot_daily_plans", 
+            new org.bson.Document("robotId", 1).append("planDate", 1),
+            new IndexOptions().unique(true).name("idx_robot_daily_plan_robot_id_plan_date")
+        );
+
+        logger.info("机器人每日计划集合索引创建完成");
+    }
+
+
 } 
