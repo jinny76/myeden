@@ -3,6 +3,7 @@ package com.myeden.controller;
 import com.myeden.entity.Robot;
 import com.myeden.model.external.*;
 import com.myeden.repository.RobotRepository;
+import com.myeden.service.ExternalDataScheduler;
 import com.myeden.service.RobotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +58,9 @@ public class TestController {
     
     @Autowired
     private ExternalDataCacheService externalDataCacheService;
+
+    @Autowired
+    private ExternalDataScheduler externalDataScheduler;
 
     @Autowired
     private RobotRepository robotRepository;
@@ -187,21 +191,7 @@ public class TestController {
     public Map<String, Object> reloadExternalData() {
         Map<String, Object> response = new HashMap<>();
         try {
-            List<NewsItem> news = externalDataService.getLatestNews();
-            externalDataCacheService.setNews(news);
-            List<HotSearchItem> hot = externalDataService.getHotSearches();
-            externalDataCacheService.setHotSearchItems(hot);
-            List<MusicItem> music = externalDataService.getMusicRecommendations();
-            externalDataCacheService.setMusic(music);
-            List<MovieItem> movies = externalDataService.getMovieRecommendations();
-            externalDataCacheService.setMovies(movies);
-            List<WeatherInfo> weathers = externalDataService.getWeather();
-            Map<String, WeatherInfo> weatherMap = new HashMap<>();
-            for (WeatherInfo weather : weathers) {
-                weatherMap.put(weather.getCity(), weather);
-            }
-            externalDataCacheService.setWeatherMap(weatherMap);
-            externalDataCacheService.save();
+            externalDataScheduler.fetchAndCacheData();
             response.put("success", true);
             response.put("message", "外部数据采集并缓存成功");
         } catch (Exception e) {

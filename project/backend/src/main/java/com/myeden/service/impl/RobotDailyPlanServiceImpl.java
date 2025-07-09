@@ -111,7 +111,7 @@ public class RobotDailyPlanServiceImpl implements RobotDailyPlanService {
                 .filter(r -> r.getIsDeleted() == null || !r.getIsDeleted())
                 .collect(java.util.stream.Collectors.toList());
         List<RobotDailyPlan> result = new ArrayList<>();
-        Semaphore semaphore = new Semaphore(2); // 最多2个并发
+        Semaphore semaphore = new Semaphore(1); // 最多2个并发
 
         for (Robot robot : robots) {
             Optional<RobotDailyPlan> existing = planRepository.findByRobotIdAndPlanDate(robot.getRobotId(), planDate);

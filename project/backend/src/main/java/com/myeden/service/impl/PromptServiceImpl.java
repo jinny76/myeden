@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -36,7 +37,7 @@ import com.myeden.repository.PostRepository;
 /**
  * 提示词服务实现类
  * 实现提示词构建、内容处理和上下文构建的具体逻辑
- * 
+ *
  * @author MyEden Team
  * @version 1.0.0
  * @since 2024-01-01
@@ -44,7 +45,7 @@ import com.myeden.repository.PostRepository;
 @Service
 @Slf4j
 public class PromptServiceImpl implements PromptService {
-    
+
     @Autowired
     private RobotConfig robotConfig;
 
@@ -65,34 +66,41 @@ public class PromptServiceImpl implements PromptService {
 
     @Autowired
     private AIAnalysisService aiAnalysisService;
-    
+
     @Autowired
     @Lazy
     private ExternalDataCacheService externalDataCacheService;
-    
+
     @Autowired
     private ContentGenerationLogRepository contentGenerationLogRepository;
-    
+
     @Autowired
     private UserRobotLinkRepository userRobotLinkRepository;
-    
+
     @Autowired
     private PostRepository postRepository;
-    
+
     private final Random random = new Random();
-    
+
     /**
      * 封装动态生成提示词和外部数据链接的结果对象
      */
     public static class PostPromptResult {
         private String prompt;
         private Post.LinkInfo link;
+
         public PostPromptResult(String prompt, Post.LinkInfo link) {
             this.prompt = prompt;
             this.link = link;
         }
-        public String getPrompt() { return prompt; }
-        public Post.LinkInfo getLink() { return link; }
+
+        public String getPrompt() {
+            return prompt;
+        }
+
+        public Post.LinkInfo getLink() {
+            return link;
+        }
     }
 
     @Override
@@ -104,9 +112,9 @@ public class PromptServiceImpl implements PromptService {
         // 构建机器人身份设定
         RobotConfig.Topic selectedTopic = selectRandomTopic(robot);
         prompt.append(String.format("你是%s（昵称：%s），%s。正在看朋友圈, 想发一条%s的动态\n\n",
-            robot.getName(), 
-            robotInfo != null ? robotInfo.getNickname() : robot.getName(), 
-            robot.getPersonality(), selectedTopic.getContent()));
+                robot.getName(),
+                robotInfo != null ? robotInfo.getNickname() : robot.getName(),
+                robot.getPersonality(), selectedTopic.getContent()));
 
         // 新增：插入今日本人已发帖内容作为历史参考
         List<String> todayPosts = getTodayPostsContent(robot);
@@ -125,6 +133,12 @@ public class PromptServiceImpl implements PromptService {
                 prompt.append("\n\n## 相关数据参考：\n");
                 prompt.append(dataInfo.getBackground());
                 link = dataInfo.getLinkInfo();
+            }
+
+            List<AIAnalysisResult> aiAnalysisResults = aiAnalysisService.findByAiTagAndTime("青花瓷", null, null);
+            if (aiAnalysisResults != null && !aiAnalysisResults.isEmpty()) {
+                AIAnalysisResult aiAnalysisResult = aiAnalysisResults.get(0);
+                prompt.append("\n本次主题背景：" + aiAnalysisResult.getAiSummary());
             }
         }
 
@@ -157,34 +171,33 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n- 不得有违法、违规内容，包括但不限于政治敏感话题、色情、暴力、赌博、侵权等违反法律法规和道德伦理的内容。");
 
         prompt.append("\n\n## 你的背景资料");
-        
+
         // 使用智能选择器构建背景信息
         prompt.append(buildSmartBackground(robot));
-        
+
         // 使用智能选择器构建个人档案
         prompt.append(buildSmartPersonalInfo(robot));
 
         // 今日安排
         prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
 
-        
 
         log.info("生成的动态提示词: {}", prompt.toString());
-        
+
         return new PostPromptResult(prompt.toString(), link);
     }
-    
+
     @Override
     public String buildCommentPrompt(Robot robot, PostService.PostDetail post, String context) {
         StringBuilder prompt = new StringBuilder();
-        
+
         // 获取机器人的详细配置信息
         RobotConfig.RobotInfo robotInfo = getRobotInfo(robot.getName());
-        
+
         // 构建机器人身份设定
         String nickname = robotInfo != null ? robotInfo.getNickname() : robot.getName();
         prompt.append(String.format("/no_think 你是%s（昵称：%s），%s。",
-            robot.getName(), nickname, robot.getPersonality()));
+                robot.getName(), nickname, robot.getPersonality()));
 
         // 添加动态信息
         prompt.append(String.format("\n\n## 你看到的动态\n- 内容：\"%s\"", post.getContent()));
@@ -200,7 +213,7 @@ public class PromptServiceImpl implements PromptService {
 
             }
         }
-        
+
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
             prompt.append(String.format("\n\n## 当前情况：%s", context));
@@ -236,22 +249,22 @@ public class PromptServiceImpl implements PromptService {
         prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
 
         log.info("生成的评论提示词: {}", prompt.toString());
-        
+
         return prompt.toString();
     }
-    
+
     @Override
-    public String buildReplyPrompt(Robot robot, CommentService.CommentDetail commentDetail, 
-                                  PostService.PostDetail postDetail, String context) {
+    public String buildReplyPrompt(Robot robot, CommentService.CommentDetail commentDetail,
+                                   PostService.PostDetail postDetail, String context) {
         StringBuilder prompt = new StringBuilder();
-        
+
         // 获取机器人的详细配置信息
         RobotConfig.RobotInfo robotInfo = getRobotInfo(robot.getName());
-        
+
         // 构建机器人身份设定
         String nickname = robotInfo != null ? robotInfo.getNickname() : robot.getName();
         prompt.append(String.format("/no_think 你是%s（昵称：%s），%s。\n",
-            robot.getName(), nickname, robot.getPersonality()));
+                robot.getName(), nickname, robot.getPersonality()));
 
         // 添加上下文信息
         if (context != null && !context.trim().isEmpty()) {
@@ -286,7 +299,7 @@ public class PromptServiceImpl implements PromptService {
 
         // 使用智能选择器构建背景信息
         prompt.append(buildSmartBackground(robot));
-        
+
         // 使用智能选择器构建个人档案
         prompt.append(buildSmartPersonalInfo(robot));
 
@@ -294,21 +307,21 @@ public class PromptServiceImpl implements PromptService {
         prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
 
         log.info("生成的回复提示词: {}", prompt.toString());
-        
+
         return prompt.toString();
     }
-    
+
     @Override
     public String buildInnerThoughtsPrompt(Robot robot, String situation) {
         StringBuilder prompt = new StringBuilder();
-        
+
         // 获取机器人的详细配置信息
         RobotConfig.RobotInfo robotInfo = getRobotInfo(robot.getName());
-        
+
         // 构建机器人身份设定
         String nickname = robotInfo != null ? robotInfo.getNickname() : robot.getName();
         prompt.append(String.format("/no_think 你是%s（昵称：%s），一个%s普通居民。",
-            robot.getName(), nickname, robot.getPersonality()));
+                robot.getName(), nickname, robot.getPersonality()));
 
         // 添加当前情况
         prompt.append(String.format("\n\n当前发生了：%s", situation));
@@ -326,7 +339,7 @@ public class PromptServiceImpl implements PromptService {
         prompt.append("\n\n## 你的背景资料");
         // 使用智能选择器构建背景信息
         prompt.append(buildSmartBackground(robot));
-        
+
         // 使用智能选择器构建个人档案
         prompt.append(buildSmartPersonalInfo(robot));
 
@@ -334,10 +347,10 @@ public class PromptServiceImpl implements PromptService {
         prompt.append(buildTodayPlanContext(robot, LocalDate.now()));
 
         log.info("生成的内心活动提示词: {}", prompt.toString());
-        
+
         return prompt.toString();
     }
-    
+
     @Override
     public DifyChatResult processGeneratedContent(DifyChatResult result, Robot robot, String contentType) {
         if (result == null || result.answer == null || result.answer.trim().isEmpty()) {
@@ -364,37 +377,37 @@ public class PromptServiceImpl implements PromptService {
         result.answer = processedContent;
         return result;
     }
-    
+
     @Override
     public String buildContext(Robot robot) {
         StringBuilder context = new StringBuilder();
-        
+
         // 添加时间信息
         LocalDateTime now = LocalDateTime.now();
         String timeStr = now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm"));
         String dayOfWeek = getDayOfWeek(now.getDayOfWeek().getValue());
-        
+
         context.append(String.format("现在是%s，%s", timeStr, dayOfWeek));
-        
+
         // 添加时间段信息
         String timeSlot = getTimeSlot(now.getHour());
         context.append(String.format("，%s", timeSlot));
-        
+
         // 添加天气信息（模拟）
         WeatherInfo weatherInfo = getWeather(robot);
         String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
         String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
         context.append(String.format("，天气%s, 温度%s", weather, temperature));
-        
+
         return context.toString();
     }
-    
+
     @Override
     public boolean validateContent(String content, Robot robot, String contentType) {
         if (content == null || content.trim().isEmpty()) {
             return false;
         }
-        
+
         // 检查内容长度
         int minLength = 0, maxLength = 0;
         switch (contentType) {
@@ -411,11 +424,11 @@ public class PromptServiceImpl implements PromptService {
                 maxLength = 60;
                 break;
         }
-        
+
         if (content.length() < minLength || content.length() > maxLength) {
             return false;
         }
-        
+
         // 检查是否包含不当内容
         String[] inappropriateWords = {"死", "杀", "暴力", "色情", "政治"};
         for (String word : inappropriateWords) {
@@ -423,13 +436,13 @@ public class PromptServiceImpl implements PromptService {
                 return false;
             }
         }
-        
+
         return true;
     }
 
     /**
- * 获取机器人今日已生成的计划内容（可选）
- */
+     * 获取机器人今日已生成的计划内容（可选）
+     */
     private String buildTodayPlanContext(Robot robot, LocalDate planDate) {
         Optional<RobotDailyPlan> planOpt = planRepository.findByRobotIdAndPlanDate(robot.getRobotId(), planDate);
         if (planOpt.isPresent() && "SUCCESS".equals(planOpt.get().getStatus())) {
@@ -453,11 +466,11 @@ public class PromptServiceImpl implements PromptService {
             // 当前时间段
             String now = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
             RobotDailyPlan.PlanSlot currentSlot = plan.getSlots().stream()
-                .filter(slot -> slot.getStart().compareTo(now) <= 0 && slot.getEnd().compareTo(now) > 0)
-                .findFirst().orElse(null);
+                    .filter(slot -> slot.getStart().compareTo(now) <= 0 && slot.getEnd().compareTo(now) > 0)
+                    .findFirst().orElse(null);
             if (currentSlot != null) {
                 sb.append("\n### 当前时间 ").append(now).append("\n- 对应安排：")
-                .append(currentSlot.getStart()).append("-").append(currentSlot.getEnd());
+                        .append(currentSlot.getStart()).append("-").append(currentSlot.getEnd());
                 if (currentSlot.getEvents() != null) {
                     for (RobotDailyPlan.PlanEvent event : currentSlot.getEvents()) {
                         sb.append(event.getContent());
@@ -471,14 +484,14 @@ public class PromptServiceImpl implements PromptService {
         }
         return "";
     }
-    
+
     @Override
     public String getRobotPersonality(Robot robot) {
         StringBuilder personality = new StringBuilder();
-        
+
         personality.append(String.format("姓名：%s", robot.getName()));
         personality.append(String.format("\n性格：%s", robot.getPersonality()));
-        
+
         if (robot.getGender() != null) {
             personality.append(String.format("\n性别：%s", robot.getGender()));
         }
@@ -491,12 +504,12 @@ public class PromptServiceImpl implements PromptService {
         if (robot.getLocation() != null) {
             personality.append(String.format("\n所在地：%s", robot.getLocation()));
         }
-        
+
         return personality.toString();
     }
-    
+
     // 私有辅助方法
-    
+
     private RobotConfig.RobotInfo getRobotInfo(String robotName) {
         if (robotConfig.getList() != null) {
             for (RobotConfig.RobotInfo robotInfo : robotConfig.getList()) {
@@ -507,10 +520,10 @@ public class PromptServiceImpl implements PromptService {
         }
         return null;
     }
-    
+
     private String buildPersonalInfo(Robot robot, RobotConfig.RobotInfo robotInfo) {
         StringBuilder info = new StringBuilder();
-        
+
         info.append("\n\n### 你的个人档案：");
         info.append(String.format("\n- 性别：%s", robot.getGender() != null ? robot.getGender() : "未知"));
         info.append(String.format("\n- 年龄：%d岁", robot.getAge() != null ? robot.getAge() : 25));
@@ -522,54 +535,54 @@ public class PromptServiceImpl implements PromptService {
         info.append(String.format("\n- 学历：%s", robot.getEducation() != null ? robot.getEducation() : "未知"));
         info.append(String.format("\n- 感情状态：%s", getRelationshipText(robot.getRelationship())));
         info.append(String.format("\n- 家庭背景：%s", robot.getFamily() != null ? robot.getFamily() : "未知"));
-        
+
         return info.toString();
     }
-    
+
     private String buildTraitsAndInterests(Robot robot, RobotConfig.RobotInfo robotInfo) {
         StringBuilder traits = new StringBuilder();
-        
+
         // 性格特征
         if (robot.getTraits() != null && !robot.getTraits().isEmpty()) {
             traits.append(String.format("\n- 性格特征：%s", String.join("、", robot.getTraits())));
         }
-        
+
         // 兴趣爱好
         if (robot.getInterests() != null && !robot.getInterests().isEmpty()) {
             traits.append(String.format("\n- 兴趣爱好：%s", String.join("、", robot.getInterests())));
         }
-        
+
         return traits.toString();
     }
-    
+
     private String buildSpeakingStyle(RobotConfig.RobotInfo robotInfo) {
         if (robotInfo == null || robotInfo.getSpeakingStyle() == null) {
             return "";
         }
-        
+
         StringBuilder style = new StringBuilder();
         RobotConfig.SpeakingStyle speakingStyle = robotInfo.getSpeakingStyle();
-        
+
         style.append(String.format("\n- 说话风格：%s", speakingStyle.getTone()));
         style.append(String.format("\n- 用词特点：%s", speakingStyle.getVocabulary()));
         style.append(String.format("\n- 表情使用：%s", speakingStyle.getEmojiUsage()));
         style.append(String.format("\n- 句子长度：%s", speakingStyle.getSentenceLength()));
-        
+
         if (speakingStyle.getFavoriteWords() != null && !speakingStyle.getFavoriteWords().isEmpty()) {
             style.append(String.format("\n- 常用词汇：%s", String.join("、", speakingStyle.getFavoriteWords())));
         }
-        
+
         if (speakingStyle.getSpeechPatterns() != null && !speakingStyle.getSpeechPatterns().isEmpty()) {
             style.append(String.format("\n- 说话习惯：%s", String.join("、", speakingStyle.getSpeechPatterns())));
         }
-        
+
         return style.toString();
     }
-    
+
     /**
      * 获取动态作者信息
      * 从post中获取作者ID和类型，然后使用repository查询详细信息并拼接成作者信息
-     * 
+     *
      * @param post 动态详情
      * @return 格式化的作者信息
      */
@@ -577,16 +590,16 @@ public class PromptServiceImpl implements PromptService {
         if (post == null || post.getAuthorId() == null) {
             return "未知作者";
         }
-        
+
         StringBuilder authorInfo = new StringBuilder();
-        
+
         try {
             if ("robot".equals(post.getAuthorType())) {
                 // 查询机器人详细信息
                 Robot robot = robotRepository.findByRobotId(post.getAuthorId()).orElse(null);
                 if (robot != null) {
                     authorInfo.append(String.format("%s", robot.getName()));
-                    
+
                     // 添加机器人详细信息
                     if (robot.getAge() != null) {
                         authorInfo.append(String.format("，%d岁", robot.getAge()));
@@ -608,7 +621,7 @@ public class PromptServiceImpl implements PromptService {
                 User user = userRepository.findByUserId(post.getAuthorId()).orElse(null);
                 if (user != null) {
                     authorInfo.append(String.format("%s", user.getNickname() != null ? user.getNickname() : "未知"));
-                    
+
                     // 添加用户详细信息
                     if (user.getAge() != null) {
                         authorInfo.append(String.format("，%d岁", user.getAge()));
@@ -627,18 +640,18 @@ public class PromptServiceImpl implements PromptService {
                 }
             }
         } catch (Exception e) {
-            log.error("获取作者信息失败，postId: {}, authorId: {}, error: {}", 
+            log.error("获取作者信息失败，postId: {}, authorId: {}, error: {}",
                     post.getPostId(), post.getAuthorId(), e.getMessage(), e);
             authorInfo.append("未知作者");
         }
-        
+
         return authorInfo.toString();
     }
-    
+
     /**
      * 获取评论作者信息
      * 从comment中获取作者ID和类型，然后使用repository查询详细信息并拼接成作者信息
-     * 
+     *
      * @param commentDetail 评论详情
      * @return 格式化的作者信息
      */
@@ -646,16 +659,16 @@ public class PromptServiceImpl implements PromptService {
         if (commentDetail == null || commentDetail.getAuthorId() == null) {
             return "未知评论者";
         }
-        
+
         StringBuilder authorInfo = new StringBuilder();
-        
+
         try {
             if ("robot".equals(commentDetail.getAuthorType())) {
                 // 查询机器人详细信息
                 Robot robot = robotRepository.findByRobotId(commentDetail.getAuthorId()).orElse(null);
                 if (robot != null) {
                     authorInfo.append(String.format("机器人：%s", robot.getName()));
-                    
+
                     // 添加机器人详细信息
                     if (robot.getAge() != null) {
                         authorInfo.append(String.format("，%d岁", robot.getAge()));
@@ -674,7 +687,7 @@ public class PromptServiceImpl implements PromptService {
                 User user = userRepository.findByUserId(commentDetail.getAuthorId()).orElse(null);
                 if (user != null) {
                     authorInfo.append(String.format("用户：%s", user.getNickname() != null ? user.getNickname() : "未知"));
-                    
+
                     // 添加用户详细信息
                     if (user.getAge() != null) {
                         authorInfo.append(String.format("，%d岁", user.getAge()));
@@ -690,11 +703,11 @@ public class PromptServiceImpl implements PromptService {
                 }
             }
         } catch (Exception e) {
-            log.error("获取评论作者信息失败，commentId: {}, authorId: {}, error: {}", 
+            log.error("获取评论作者信息失败，commentId: {}, authorId: {}, error: {}",
                     commentDetail.getCommentId(), commentDetail.getAuthorId(), e.getMessage(), e);
             authorInfo.append("未知评论者");
         }
-        
+
         return authorInfo.toString();
     }
 
@@ -704,12 +717,19 @@ public class PromptServiceImpl implements PromptService {
     public static class PostContentResult {
         private String content;
         private Post.LinkInfo link;
+
         public PostContentResult(String content, Post.LinkInfo link) {
             this.content = content;
             this.link = link;
         }
-        public String getContent() { return content; }
-        public Post.LinkInfo getLink() { return link; }
+
+        public String getContent() {
+            return content;
+        }
+
+        public Post.LinkInfo getLink() {
+            return link;
+        }
     }
 
     @Override
@@ -724,12 +744,12 @@ public class PromptServiceImpl implements PromptService {
 
             // 保存生成日志
             ContentGenerationLog log = new ContentGenerationLog(
-                robot, // 完整robot对象
-                promptResult.getPrompt(),
-                content,
-                LocalDateTime.now(),
-                "post",
-                context
+                    robot, // 完整robot对象
+                    promptResult.getPrompt(),
+                    content,
+                    LocalDateTime.now(),
+                    "post",
+                    context
             );
             contentGenerationLogRepository.save(log);
 
@@ -742,20 +762,21 @@ public class PromptServiceImpl implements PromptService {
 
     /**
      * 保存内容生成日志
-     * @param robot 机器人对象
-     * @param prompt 生成用的prompt
+     *
+     * @param robot      机器人对象
+     * @param prompt     生成用的prompt
      * @param rawContent 生成内容的原始结果
-     * @param type 生成类型（如post, comment, reply, innerThoughts等）
-     * @param context 生成上下文
+     * @param type       生成类型（如post, comment, reply, innerThoughts等）
+     * @param context    生成上下文
      */
     private void saveContentGenerationLog(Robot robot, String prompt, String rawContent, String type, String context) {
         ContentGenerationLog log = new ContentGenerationLog(
-            robot,
-            prompt,
-            rawContent,
-            LocalDateTime.now(),
-            type,
-            context
+                robot,
+                prompt,
+                rawContent,
+                LocalDateTime.now(),
+                type,
+                context
         );
         contentGenerationLogRepository.save(log);
     }
@@ -813,31 +834,36 @@ public class PromptServiceImpl implements PromptService {
             return generateFallbackInnerThoughts(robot, situation);
         }
     }
-    
+
     private String getRelationshipText(String relationship) {
         if (relationship == null) return "未知";
-        
+
         switch (relationship) {
-            case "single": return "单身";
-            case "married": return "已婚";
-            case "in_relationship": return "恋爱中";
-            case "complicated": return "复杂";
-            default: return relationship;
+            case "single":
+                return "单身";
+            case "married":
+                return "已婚";
+            case "in_relationship":
+                return "恋爱中";
+            case "complicated":
+                return "复杂";
+            default:
+                return relationship;
         }
     }
-    
+
     private String getDayOfWeek(int dayOfWeek) {
         String[] days = {"", "周一", "周二", "周三", "周四", "周五", "周六", "周日"};
         return days[dayOfWeek];
     }
-    
+
     private String getTimeSlot(int hour) {
         if (hour >= 6 && hour < 12) return "上午";
         else if (hour >= 12 && hour < 18) return "下午";
         else if (hour >= 18 && hour < 22) return "晚上";
         else return "深夜";
     }
-    
+
     /**
      * 获取机器人所在城市的天气信息（优先缓存，缺失则随机一个）
      *
@@ -864,7 +890,7 @@ public class PromptServiceImpl implements PromptService {
                 return allWeather.get(idx);
             }
         }
-        
+
         return null;
     }
 
@@ -889,12 +915,12 @@ public class PromptServiceImpl implements PromptService {
         try {
             // 获取合并后的主题列表
             List<RobotConfig.Topic> mergedTopics = getMergedTopics(robot);
-            
+
             if (mergedTopics.isEmpty()) {
                 log.warn("机器人 {} 没有可用的主题，使用默认主题", robot.getName());
                 return new RobotConfig.Topic("分享心情", 1, "分享你的心情", null);
             }
-            
+
             // 根据频次创建权重列表
             List<RobotConfig.Topic> weightedTopics = new ArrayList<>();
             for (RobotConfig.Topic topic : mergedTopics) {
@@ -903,24 +929,24 @@ public class PromptServiceImpl implements PromptService {
                     weightedTopics.add(topic);
                 }
             }
-            
+
             // 随机选择一个主题
             RobotConfig.Topic selectedTopic = weightedTopics.get(random.nextInt(weightedTopics.size()));
-            
+
             log.info("为机器人 {} 选择了主题: {}",
                     robot.getName(), selectedTopic.getName());
-            
+
             return selectedTopic;
         } catch (Exception e) {
             log.error("为机器人 {} 选择主题失败: {}", robot.getName(), e.getMessage(), e);
             return new RobotConfig.Topic("分享心情", 1, "分享你的心情", null);
         }
     }
-    
+
     @Override
     public List<RobotConfig.Topic> getMergedTopics(Robot robot) {
         List<RobotConfig.Topic> mergedTopics = new ArrayList<>();
-        
+
         try {
             // 获取通用主题
             if (robotConfig.getBaseConfig() != null && robotConfig.getBaseConfig().getCommonTopic() != null) {
@@ -928,7 +954,7 @@ public class PromptServiceImpl implements PromptService {
                     mergedTopics.add(commonTopic);
                 }
             }
-            
+
             // 获取机器人个人主题
             RobotConfig.RobotInfo robotInfo = findRobotInfo(robot.getRobotId());
             if (robotInfo != null && robotInfo.getTopic() != null) {
@@ -940,13 +966,13 @@ public class PromptServiceImpl implements PromptService {
         } catch (Exception e) {
             log.error("获取机器人 {} 的合并主题列表失败: {}", robot.getName(), e.getMessage(), e);
         }
-        
+
         return mergedTopics;
     }
-    
+
     /**
      * 根据机器人ID查找机器人配置信息
-     * 
+     *
      * @param robotId 机器人ID
      * @return 机器人配置信息，如果未找到返回null
      */
@@ -954,27 +980,27 @@ public class PromptServiceImpl implements PromptService {
         if (robotConfig.getList() == null) {
             return null;
         }
-        
+
         return robotConfig.getList().stream()
                 .filter(robot -> robotId.equals(robot.getId()))
                 .findFirst()
                 .orElse(null);
     }
-    
+
     /**
      * 构建智能背景信息
      * 使用智能选择器构建机器人的背景信息
      */
     private String buildSmartBackground(Robot robot) {
         StringBuilder background = new StringBuilder();
-        
+
         // 基本信息 - 选择性获取
         background.append("\n性别:" + robot.getGender());
         background.append("\n年龄:" + robot.getAge());
         List<String> occupation = getRobotValue(robot, "occupation", 1, 0.8);
         background.append("\n职业:" + (occupation.size() > 0 ? occupation.get(0) : ""));
-        
-        
+
+
         // 性格特征 - 选择性获取2-3个
         List<String> traits = getRobotValue(robot, "traits", 1, 0.4);
         if (!traits.isEmpty()) {
@@ -983,7 +1009,7 @@ public class PromptServiceImpl implements PromptService {
                 background.append(String.format("\n- %s", trait));
             }
         }
-        
+
         // 兴趣爱好 - 选择性获取2-4个
         List<String> interests = getRobotValue(robot, "interests", 1, 0.3);
         if (!interests.isEmpty()) {
@@ -992,19 +1018,19 @@ public class PromptServiceImpl implements PromptService {
                 background.append(String.format("\n- %s", interest));
             }
         }
-        
+
         // 说话风格 - 选择性获取
         List<String> speakingStyle = getRobotValue(robot, "speakingStyle.tone", 1, 0.2);
         if (!speakingStyle.isEmpty()) {
             background.append(String.format("\n### 说话风格：%s", speakingStyle.get(0)));
         }
-        
+
         // 常用词汇 - 选择性获取1-3个
         List<String> favoriteWords = getRobotValue(robot, "speakingStyle.favoriteWords", 1, 0.5);
         if (!favoriteWords.isEmpty()) {
             background.append(String.format("\n### 常用词汇：%s", String.join("、", favoriteWords)));
         }
-        
+
         // 说话习惯 - 选择性获取1-2个
         List<String> speechPatterns = getRobotValue(robot, "speakingStyle.speechPatterns", 2, 0.6);
         if (!speechPatterns.isEmpty()) {
@@ -1016,25 +1042,25 @@ public class PromptServiceImpl implements PromptService {
         if (!backgroundInfo.isEmpty()) {
             background.append(String.format("\n### 背景信息：%s", String.join("、", backgroundInfo)));
         }
-        
+
         // 家庭背景 - 选择性获取
         List<String> familyInfo = getRobotValue(robot, "family", 1, 0.3);
         if (!familyInfo.isEmpty()) {
             background.append(String.format("\n### 家庭背景：%s", String.join("、", familyInfo)));
         }
-        
+
         return background.toString();
     }
-    
+
     /**
      * 构建智能个人档案
      * 使用智能选择器构建机器人的个人档案
      */
     private String buildSmartPersonalInfo(Robot robot) {
         StringBuilder info = new StringBuilder();
-        
+
         info.append("\n### 个人档案：");
-        
+
         // 基本信息 - 选择性显示
         String[] basicFields = {"gender", "age", "mbti", "bloodType", "zodiac", "occupation", "location", "education", "relationship", "family"};
         for (String field : basicFields) {
@@ -1045,29 +1071,40 @@ public class PromptServiceImpl implements PromptService {
                 info.append(String.format("\n- %s：%s", label, value));
             }
         }
-        
+
         return info.toString();
     }
-    
+
     /**
      * 获取字段标签
      */
     private String getFieldLabel(String field) {
         switch (field) {
-            case "gender": return "性别";
-            case "age": return "年龄";
-            case "mbti": return "MBTI";
-            case "bloodType": return "血型";
-            case "zodiac": return "星座";
-            case "occupation": return "职业";
-            case "location": return "所在地";
-            case "education": return "学历";
-            case "relationship": return "感情状态";
-            case "family": return "家庭背景";
-            default: return field;
+            case "gender":
+                return "性别";
+            case "age":
+                return "年龄";
+            case "mbti":
+                return "MBTI";
+            case "bloodType":
+                return "血型";
+            case "zodiac":
+                return "星座";
+            case "occupation":
+                return "职业";
+            case "location":
+                return "所在地";
+            case "education":
+                return "学历";
+            case "relationship":
+                return "感情状态";
+            case "family":
+                return "家庭背景";
+            default:
+                return field;
         }
     }
-    
+
     /**
      * 格式化字段值
      */
@@ -1075,7 +1112,7 @@ public class PromptServiceImpl implements PromptService {
         if (value == null || value.isEmpty()) {
             return "未知";
         }
-        
+
         switch (field) {
             case "gender":
                 return "male".equals(value) ? "男" : "female".equals(value) ? "女" : value;
@@ -1093,23 +1130,23 @@ public class PromptServiceImpl implements PromptService {
     /**
      * 智能机器人属性选择器
      * 根据属性名选择性获取机器人配置信息，支持多级属性获取
-     * 
-     * @param robot 机器人实体
-     * @param attributePath 属性路径，支持多级，如 "speakingStyle.speechPatterns"
-     * @param maxUnits 最大返回单元数量
+     *
+     * @param robot           机器人实体
+     * @param attributePath   属性路径，支持多级，如 "speakingStyle.speechPatterns"
+     * @param maxUnits        最大返回单元数量
      * @param nullProbability 空值几率 (0.0-1.0)
      * @return 选中的属性值数组
      */
     private List<String> getRobotValue(Robot robot, String attributePath, int maxUnits, double nullProbability) {
         List<String> result = new ArrayList<>();
-        
+
         // 获取机器人的详细配置信息
         RobotConfig.RobotInfo robotInfo = getRobotInfo(robot.getName());
-        
+
         // 解析属性路径
         String[] pathParts = attributePath.split("\\.");
         Object currentValue = null;
-        
+
         // 确定起始对象
         if (pathParts[0].equals("robot")) {
             currentValue = robot;
@@ -1119,54 +1156,54 @@ public class PromptServiceImpl implements PromptService {
             // 默认从robotInfo开始查找
             currentValue = robotInfo;
         }
-        
+
         // 遍历属性路径
         for (int i = 0; i < pathParts.length && currentValue != null; i++) {
             String part = pathParts[i];
             if (part.equals("robot") || part.equals("config")) {
                 continue; // 跳过前缀
             }
-            
+
             currentValue = getPropertyValue(currentValue, part);
         }
-        
+
         // 处理最终值
         if (currentValue != null) {
             List<String> units = extractUnits(currentValue);
             result = selectRandomUnits(units, maxUnits, nullProbability);
         }
-        
+
         return result;
     }
-    
+
     /**
      * 获取对象的属性值
      */
     private Object getPropertyValue(Object obj, String propertyName) {
         if (obj == null) return null;
-        
+
         try {
             // 使用反射获取属性值
             String getterName = "get" + propertyName.substring(0, 1).toUpperCase() + propertyName.substring(1);
             java.lang.reflect.Method getter = obj.getClass().getMethod(getterName);
             return getter.invoke(obj);
         } catch (Exception e) {
-            log.warn("获取属性值失败: {}.{}, error: {}", 
+            log.warn("获取属性值失败: {}.{}, error: {}",
                     obj.getClass().getSimpleName(), propertyName, e.getMessage());
             return null;
         }
     }
-    
+
     /**
      * 从值中提取单元
      */
     private List<String> extractUnits(Object value) {
         List<String> units = new ArrayList<>();
-        
+
         if (value == null) {
             return units;
         }
-        
+
         if (value instanceof String) {
             String strValue = (String) value;
             if (strValue.contains("\n")) {
@@ -1200,23 +1237,23 @@ public class PromptServiceImpl implements PromptService {
             // 其他类型，直接转换为字符串
             units.add(value.toString());
         }
-        
+
         return units;
     }
-    
+
     /**
      * 随机选择单元
      */
     private List<String> selectRandomUnits(List<String> units, int maxUnits, double nullProbability) {
         List<String> result = new ArrayList<>();
-        
+
         if (units.isEmpty()) {
             return result;
         }
-        
+
         // 计算每个单元的出现概率
         double unitProbability = 1.0 - nullProbability;
-        
+
         // 随机选择单元
         Collections.shuffle(units);
 
@@ -1226,7 +1263,7 @@ public class PromptServiceImpl implements PromptService {
                 result.add(selectedUnit);
             }
         }
-        
+
         return result;
     }
 
@@ -1238,16 +1275,16 @@ public class PromptServiceImpl implements PromptService {
     public String buildDailyPlanPrompt(Robot robot, java.time.LocalDate planDate) {
         StringBuilder prompt = new StringBuilder();
         prompt.append(String.format(
-            "你是一个居民，请为你生成 %s 的详细日常计划，包括一篇日记和当天的时间段安排。\n",
-            planDate.toString() + ", 星期" + planDate.getDayOfWeek().toString() + ", " + isHoliday(planDate)
+                "你是一个居民，请为你生成 %s 的详细日常计划，包括一篇日记和当天的时间段安排。\n",
+                planDate.toString() + ", 星期" + planDate.getDayOfWeek().toString() + ", " + isHoliday(planDate)
         ));
         // 拼接个人档案
         prompt.append(buildPersonalInfo(robot, null));
         prompt.append("\n");
         prompt.append(String.format("- 姓名：%s\n- 性格：%s\n- 兴趣：%s\n",
-            robot.getName(),
-            robot.getPersonality() != null ? robot.getPersonality() : "",            
-            robot.getInterests() != null ? String.join(",", robot.getInterests()) : ""
+                robot.getName(),
+                robot.getPersonality() != null ? robot.getPersonality() : "",
+                robot.getInterests() != null ? String.join(",", robot.getInterests()) : ""
         ));
         if (robot.getActiveHours() != null) {
             StringBuilder hours = new StringBuilder("\n- 活跃时间: ");
@@ -1268,78 +1305,78 @@ public class PromptServiceImpl implements PromptService {
 
         prompt.append("\n\n## 范例:\n");
         prompt.append("""
-{
-  "diary": "今天早上可真叫有惊无险，公交车站了一半人就晕倒了，还是空调车呢，人就是直冒冷汗，然后眼前就黑了，亏得有好心人让座，我才得以安抵，现在才觉得上班族真是辛苦呀，穿得是套装加高跟鞋，衬衫加领带得，挤个公交车，湿了一身不说，像我这样的还带晕倒车上的，真是没到办公室，就已经历经磨难阿，可见白领不易啊，也看出身体本钱的重要性阿。",
-  "slots": [
-    {
-      "start": "06:00",
-      "end": "07:00",
-      "events": [
-        {"content": "早起洗漱", "mood": "平静"},
-        {"content": "面膜不见了", "mood": "惊讶"},
-        {"content": "化妆美美的", "mood": "开心"}
-      ]
-    },
-    {
-      "start": "07:00",
-      "end": "08:30",
-      "events": [
-        {"content": "上班通勤", "mood": "平静"},
-        {"content": "抢到座位", "mood": "满足"},
-        {"content": "买了杯咖啡", "mood": "愉快"}
-      ]
-    },
-    {
-      "start": "08:30",
-      "end": "12:00",
-      "events": [
-        {"content": "上午上班", "mood": "专注"},
-        {"content": "老板又给安排了个新任务", "mood": "无奈"}
-      ]
-    },
-    {
-      "start": "12:00",
-      "end": "13:00",
-      "events": [
-        {"content": "午休", "mood": "放松"}
-      ]
-    },
-    {
-      "start": "13:00",
-      "end": "17:30",
-      "events": [
-        {"content": "下午上班", "mood": "努力"},
-        {"content": "财务说报销单填错了", "mood": "郁闷"},
-        {"content": "买了杯咖啡", "mood": "提神"}
-      ]
-    },
-    {
-      "start": "17:30",
-      "end": "19:00",
-      "events": [
-        {"content": "回家", "mood": "轻松"},
-        {"content": "给老奶奶让座", "mood": "温暖"}
-      ]
-    },
-    {
-      "start": "19:00",
-      "end": "23:00",
-      "events": [
-        {"content": "晚上吃饭休息", "mood": "满足"},
-        {"content": "做了碗面", "mood": "幸福"},
-        {"content": "追剧", "mood": "放松"}
-      ]
-    },
-    {
-      "start": "23:00",
-      "end": "23:30",
-      "events": [
-        {"content": "上床", "mood": "困倦"}
-      ]
-    }
-  ]
-}
-""");
+                {
+                  "diary": "今天早上可真叫有惊无险，公交车站了一半人就晕倒了，还是空调车呢，人就是直冒冷汗，然后眼前就黑了，亏得有好心人让座，我才得以安抵，现在才觉得上班族真是辛苦呀，穿得是套装加高跟鞋，衬衫加领带得，挤个公交车，湿了一身不说，像我这样的还带晕倒车上的，真是没到办公室，就已经历经磨难阿，可见白领不易啊，也看出身体本钱的重要性阿。",
+                  "slots": [
+                    {
+                      "start": "06:00",
+                      "end": "07:00",
+                      "events": [
+                        {"content": "早起洗漱", "mood": "平静"},
+                        {"content": "面膜不见了", "mood": "惊讶"},
+                        {"content": "化妆美美的", "mood": "开心"}
+                      ]
+                    },
+                    {
+                      "start": "07:00",
+                      "end": "08:30",
+                      "events": [
+                        {"content": "上班通勤", "mood": "平静"},
+                        {"content": "抢到座位", "mood": "满足"},
+                        {"content": "买了杯咖啡", "mood": "愉快"}
+                      ]
+                    },
+                    {
+                      "start": "08:30",
+                      "end": "12:00",
+                      "events": [
+                        {"content": "上午上班", "mood": "专注"},
+                        {"content": "老板又给安排了个新任务", "mood": "无奈"}
+                      ]
+                    },
+                    {
+                      "start": "12:00",
+                      "end": "13:00",
+                      "events": [
+                        {"content": "午休", "mood": "放松"}
+                      ]
+                    },
+                    {
+                      "start": "13:00",
+                      "end": "17:30",
+                      "events": [
+                        {"content": "下午上班", "mood": "努力"},
+                        {"content": "财务说报销单填错了", "mood": "郁闷"},
+                        {"content": "买了杯咖啡", "mood": "提神"}
+                      ]
+                    },
+                    {
+                      "start": "17:30",
+                      "end": "19:00",
+                      "events": [
+                        {"content": "回家", "mood": "轻松"},
+                        {"content": "给老奶奶让座", "mood": "温暖"}
+                      ]
+                    },
+                    {
+                      "start": "19:00",
+                      "end": "23:00",
+                      "events": [
+                        {"content": "晚上吃饭休息", "mood": "满足"},
+                        {"content": "做了碗面", "mood": "幸福"},
+                        {"content": "追剧", "mood": "放松"}
+                      ]
+                    },
+                    {
+                      "start": "23:00",
+                      "end": "23:30",
+                      "events": [
+                        {"content": "上床", "mood": "困倦"}
+                      ]
+                    }
+                  ]
+                }
+                """);
 
         return prompt.toString();
     }
@@ -1369,6 +1406,11 @@ public class PromptServiceImpl implements PromptService {
             } catch (Exception e) {
                 lastException = e;
                 log.error("AI调用失败:", e);
+                try {
+                    Thread.sleep(5 * 60 * 1000);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         }
         // 多次失败，抛出异常
@@ -1381,12 +1423,19 @@ public class PromptServiceImpl implements PromptService {
     private static class DataBackgroundInfo {
         private String background;
         private Post.LinkInfo linkInfo;
+
         public DataBackgroundInfo(String background, Post.LinkInfo linkInfo) {
             this.background = background;
             this.linkInfo = linkInfo;
         }
-        public String getBackground() { return background; }
-        public Post.LinkInfo getLinkInfo() { return linkInfo; }
+
+        public String getBackground() {
+            return background;
+        }
+
+        public Post.LinkInfo getLinkInfo() {
+            return linkInfo;
+        }
     }
 
     /**
@@ -1469,7 +1518,8 @@ public class PromptServiceImpl implements PromptService {
 
     /**
      * 获取用户对机器人的印象内容
-     * @param userId 用户ID
+     *
+     * @param userId  用户ID
      * @param robotId 机器人ID
      * @return 印象内容，若无则返回null
      */
@@ -1477,8 +1527,8 @@ public class PromptServiceImpl implements PromptService {
         try {
             Optional<UserRobotLink> byUserIdAndRobotId = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
             return byUserIdAndRobotId
-                .map(link -> link.getImpression() != null && link.getImpression().length() > 500 ? link.getImpression().substring(0, 500) : link.getImpression())
-                .orElse(null);
+                    .map(link -> link.getImpression() != null && link.getImpression().length() > 500 ? link.getImpression().substring(0, 500) : link.getImpression())
+                    .orElse(null);
         } catch (Exception e) {
             return null;
         }
@@ -1490,12 +1540,12 @@ public class PromptServiceImpl implements PromptService {
     private List<String> getTodayPostsContent(Robot robot) {
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         List<Post> todayPosts = postRepository.findByAuthorIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
-            robot.getRobotId(), todayStart);
+                robot.getRobotId(), todayStart);
         return todayPosts.stream()
-            .map(Post::getContent)
-            .filter(Objects::nonNull)
-            .filter(s -> !s.trim().isEmpty())
-            .collect(Collectors.toList());
+                .map(Post::getContent)
+                .filter(Objects::nonNull)
+                .filter(s -> !s.trim().isEmpty())
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -1510,9 +1560,10 @@ public class PromptServiceImpl implements PromptService {
 
     /**
      * 构建AI聊天场景的prompt
-     * @param robot 机器人实体
+     *
+     * @param robot       机器人实体
      * @param userMessage 用户输入内容
-     * @param context 额外上下文（可选）
+     * @param context     额外上下文（可选）
      * @return prompt字符串
      */
     @Override

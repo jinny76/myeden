@@ -19,6 +19,12 @@ import com.myeden.repository.RobotRepository;
 import com.myeden.entity.Robot;
 
 import java.util.HashMap;
+import com.myeden.repository.AIAnalysisResultRepository;
+import com.myeden.service.SearchContentService;
+import com.myeden.service.AIAnalysisService;
+import com.myeden.entity.SearchContent;
+import com.myeden.entity.AIAnalysisResult;
+import java.util.ArrayList;
 
 /**
  * 外部数据定时采集任务
@@ -38,11 +44,44 @@ public class ExternalDataScheduler implements ApplicationContextAware {
     private ExternalDataCacheService externalDataCacheService;
     @Autowired
     private RobotRepository robotRepository;
+    @Autowired
+    private SearchContentService searchContentService;
+    @Autowired
+    private AIAnalysisService aiAnalysisService;
+    @Autowired
+    private AIAnalysisResultRepository aiAnalysisResultRepository;
     private static ApplicationContext context;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
         context = applicationContext;
+    }
+
+    /**
+     * 判断指定title是否已被AI分析（通过AI标签查重）
+     * @param title 内容标题
+     * @return true-已分析，false-未分析
+     */
+    private boolean isAnalyzedByTitle(String title) {
+        List<AIAnalysisResult> results = aiAnalysisResultRepository.findByAiTagsContaining(title);
+        return results != null && !results.isEmpty();
+    }
+
+    /**
+     * 搜索任务队列元素定义
+     */
+    private static class SearchTask {
+        /** 搜索内容（如标题） */
+        public String query;
+        /** 来源类型（如news/music/movie） */
+        public String sourceType;
+        /** 原始对象（可选，便于后续扩展） */
+        public Object raw;
+        public SearchTask(String query, String sourceType, Object raw) {
+            this.query = query;
+            this.sourceType = sourceType;
+            this.raw = raw;
+        }
     }
 
     /**
@@ -52,6 +91,7 @@ public class ExternalDataScheduler implements ApplicationContextAware {
     public void fetchAndCacheData() {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 1. 采集外部数据
             List<NewsItem> news = externalDataService.getLatestNews();
             externalDataCacheService.setNews(news);
             List<HotSearchItem> hot = externalDataService.getHotSearches();
@@ -67,8 +107,37 @@ public class ExternalDataScheduler implements ApplicationContextAware {
             }
             externalDataCacheService.setWeatherMap(weatherMap);
             externalDataCacheService.save();
+
+            // 2. 构建搜索队列
+            List<SearchTask> searchQueue = new ArrayList<>();
+            for (NewsItem item : news) {
+                searchQueue.add(new SearchTask(item.getTitle(), "新闻", item));
+            }
+            for (MusicItem item : music) {
+                searchQueue.add(new SearchTask(item.getTitle(), "音乐", item));
+            }
+            for (MovieItem item : movies) {
+                searchQueue.add(new SearchTask(item.getTitle(), "影视", item));
+            }
+            // 3. 依次处理队列
+            for (SearchTask task : searchQueue) {
+                // 3.1 用title查AI分析结果
+                if (isAnalyzedByTitle(task.query)) {
+                    log.info("AI分析已存在（通过title标签查重），跳过: [{}] {}", task.sourceType, task.query);
+                    continue;
+                }
+
+                // 未采集，自动采集
+                boolean triggerOk = searchContentService.triggerSearch(task.query, task.sourceType);
+                if (!triggerOk) {
+                    log.warn("内容采集失败，跳过: [{}] {}", task.sourceType, task.query);
+                    continue;
+                }
+
+                Thread.sleep(5000);
+            }
         } catch (Exception e) {
-            log.error(e.getMessage());
+            log.error("定时采集与AI分析任务异常: {}", e.getMessage());
         }
     }
 } 

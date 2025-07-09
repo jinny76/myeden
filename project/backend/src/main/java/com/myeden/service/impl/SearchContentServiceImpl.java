@@ -76,7 +76,7 @@ public class SearchContentServiceImpl implements SearchContentService {
         List<SearchContent.SearchResultItem> resultItems = new java.util.ArrayList<>();
         if (searxngResults != null) {
             for (SearxngClient.SearxngResultItem item : searxngResults) {
-                if (item.getContent() == null || !item.getContent().contains(query)) {
+                if (item.getContent() == null || (!item.getContent().contains(query) && !"新闻".equals(sourceType))) {
                     continue;
                 }
                 resultItems.add(new SearchContent.SearchResultItem(

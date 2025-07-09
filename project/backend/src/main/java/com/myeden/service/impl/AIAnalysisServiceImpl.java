@@ -83,6 +83,9 @@ public class AIAnalysisServiceImpl implements AIAnalysisService {
                 // 5. 反序列化
                 ObjectMapper objectMapper = new ObjectMapper();
                 AIAnalysisResult result = objectMapper.readValue(json, AIAnalysisResult.class);
+                if (!result.getAiTags().contains(content.getQuery())) {
+                    result.getAiTags().add(content.getQuery());
+                }
                 result.setContentId(contentId);
                 result.setSourceType(content.getSourceType());
                 result.setAnalysisTime(new java.util.Date());
