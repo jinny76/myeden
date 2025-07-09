@@ -77,4 +77,6 @@ public interface DifyService {
         public boolean success;
         public String error;
     }
+
+    String recognizeFileWorkflow(String filePath, String apiKey, String userId, String variableName);
 } 

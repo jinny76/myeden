@@ -116,6 +116,8 @@ dify:
       delay: 1000  # 1秒
   image:
     apiKey: app-jey4nbiLS9jyiUDWeIQTcvZ5
+  data:
+    apiKey: app-WykrFiNbfUTbRMtbSgAEHlAU
 
 # 机器人行为配置
 robot:

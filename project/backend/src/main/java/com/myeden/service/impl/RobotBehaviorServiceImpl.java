@@ -8,6 +8,7 @@ import com.myeden.repository.RobotRepository;
 import com.myeden.repository.PostRepository;
 import com.myeden.repository.CommentRepository;
 import com.myeden.service.*;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -189,50 +190,52 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             String context = buildPostContext(robot);
             PromptServiceImpl.PostContentResult postResult = promptService.generatePostContent(robot, context);
             String content = postResult.getContent();
-            String innerThoughts = promptService.generateInnerThoughts(robot, "发布动态: " + content);
-            
-            // 直接创建动态实体，避免调用postService.createPost
-            Post post = new Post();
-            post.setPostId(generatePostId());
-            post.setAuthorId(robotId);
-            post.setAuthorType("robot");
-            post.setContent(content);
-            post.setInnerThoughts(innerThoughts);
-            post.setImages(new ArrayList<>());
-            post.setLikeCount(0);
-            post.setCommentCount(0);
-            post.setIsDeleted(false);
-            post.setCreatedAt(LocalDateTime.now());
-            post.setUpdatedAt(LocalDateTime.now());
-            post.setLink(postResult.getLink());
-            
-            // 保存到数据库
-            Post savedPost = postRepository.save(post);
-            
-            if (savedPost != null) {
-                stats.incrementPost();
-                logger.info("机器人成功发布动态: {}, 内容: {}, 内心活动: {}", robotId, content, innerThoughts);
-                
-                // 推送WebSocket消息
-                try {
-                    Map<String, Object> actionData = new HashMap<>();
-                    actionData.put("robotId", robotId);
-                    actionData.put("robotName", robot.getName());
-                    actionData.put("actionType", "post");
-                    actionData.put("actionContent", content);
-                    actionData.put("innerThoughts", innerThoughts);
-                    actionData.put("postId", savedPost.getPostId());
-                    actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-                    
-                    webSocketService.pushRobotAction(actionData);
-                    logger.info("WebSocket机器人行为消息推送成功");
-                } catch (Exception e) {
-                    logger.warn("WebSocket消息推送失败", e);
+            if (StringUtils.isNotBlank(content)) {
+                String innerThoughts = promptService.generateInnerThoughts(robot, "发布动态: " + content);
+
+                // 直接创建动态实体，避免调用postService.createPost
+                Post post = new Post();
+                post.setPostId(generatePostId());
+                post.setAuthorId(robotId);
+                post.setAuthorType("robot");
+                post.setContent(content);
+                post.setInnerThoughts(innerThoughts);
+                post.setImages(new ArrayList<>());
+                post.setLikeCount(0);
+                post.setCommentCount(0);
+                post.setIsDeleted(false);
+                post.setCreatedAt(LocalDateTime.now());
+                post.setUpdatedAt(LocalDateTime.now());
+                post.setLink(postResult.getLink());
+
+                // 保存到数据库
+                Post savedPost = postRepository.save(post);
+
+                if (savedPost != null) {
+                    stats.incrementPost();
+                    logger.info("机器人成功发布动态: {}, 内容: {}, 内心活动: {}", robotId, content, innerThoughts);
+
+                    // 推送WebSocket消息
+                    try {
+                        Map<String, Object> actionData = new HashMap<>();
+                        actionData.put("robotId", robotId);
+                        actionData.put("robotName", robot.getName());
+                        actionData.put("actionType", "post");
+                        actionData.put("actionContent", content);
+                        actionData.put("innerThoughts", innerThoughts);
+                        actionData.put("postId", savedPost.getPostId());
+                        actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+
+                        webSocketService.pushRobotAction(actionData);
+                        logger.info("WebSocket机器人行为消息推送成功");
+                    } catch (Exception e) {
+                        logger.warn("WebSocket消息推送失败", e);
+                    }
+
+                    return true;
                 }
-                
-                return true;
             }
-            
+
             return false;
         } catch (Exception e) {
             logger.error("触发机器人发布动态失败: {}", e.getMessage(), e);
@@ -358,36 +361,38 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             String postContent = postDetail.getContent();
             String context = buildCommentContext(postContent, robot);
             String content = promptService.generateCommentContent(robot, postDetail, context);
-            String innerThoughts = promptService.generateInnerThoughts(robot, "评论动态: " + postContent);
-            
-            // 发表评论
-            CommentService.CommentResult commentResult = commentService.createComment(postId, robot.getRobotId(), "robot", content,
-                    innerThoughts);
-            if (commentResult != null) {
-                stats.incrementComment();
-                logger.info("机器人成功发表评论: {}, 内容: {}, 内心活动: {}", robot.getRobotId(), content, innerThoughts);
-                
-                // 推送WebSocket消息
-                try {
-                    Map<String, Object> actionData = new HashMap<>();
-                    actionData.put("robotId", robot.getRobotId());
-                    actionData.put("robotName", robot.getName());
-                    actionData.put("actionType", "comment");
-                    actionData.put("actionContent", content);
-                    actionData.put("innerThoughts", innerThoughts);
-                    actionData.put("postId", postId);
-                    actionData.put("commentId", commentResult.getCommentId());
-                    actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-                    
-                    webSocketService.pushRobotAction(actionData);
-                    logger.info("WebSocket机器人行为消息推送成功");
-                } catch (Exception e) {
-                    logger.warn("WebSocket消息推送失败", e);
+            if (StringUtils.isNotBlank(content)) {
+                String innerThoughts = promptService.generateInnerThoughts(robot, "评论动态: " + postContent);
+
+                // 发表评论
+                CommentService.CommentResult commentResult = commentService.createComment(postId, robot.getRobotId(), "robot", content,
+                        innerThoughts);
+                if (commentResult != null) {
+                    stats.incrementComment();
+                    logger.info("机器人成功发表评论: {}, 内容: {}, 内心活动: {}", robot.getRobotId(), content, innerThoughts);
+
+                    // 推送WebSocket消息
+                    try {
+                        Map<String, Object> actionData = new HashMap<>();
+                        actionData.put("robotId", robot.getRobotId());
+                        actionData.put("robotName", robot.getName());
+                        actionData.put("actionType", "comment");
+                        actionData.put("actionContent", content);
+                        actionData.put("innerThoughts", innerThoughts);
+                        actionData.put("postId", postId);
+                        actionData.put("commentId", commentResult.getCommentId());
+                        actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+
+                        webSocketService.pushRobotAction(actionData);
+                        logger.info("WebSocket机器人行为消息推送成功");
+                    } catch (Exception e) {
+                        logger.warn("WebSocket消息推送失败", e);
+                    }
+
+                    return true;
                 }
-                
-                return true;
             }
-            
+
             return false;
         } catch (Exception e) {
             logger.error("机器人评论失败: {}", e.getMessage(), e);
@@ -421,36 +426,38 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             
             // 生成回复内容和内心活动
             String content = promptService.generateReplyContent(robot, commentDetail, postDetail, context);
-            String innerThoughts = promptService.generateInnerThoughts(robot, "回复评论: " + commentContent);
-            
-            // 回复评论
-            CommentService.CommentResult replyResult = commentService.replyComment(commentId, robotId, "robot", content,
-                    innerThoughts);
-            if (replyResult != null) {
-                stats.incrementReply();
-                logger.info("机器人成功回复评论: {}, 内容: {}, 内心活动: {}", robotId, content, innerThoughts);
-                
-                // 推送WebSocket消息
-                try {
-                    Map<String, Object> actionData = new HashMap<>();
-                    actionData.put("robotId", robotId);
-                    actionData.put("robotName", robot.getName());
-                    actionData.put("actionType", "reply");
-                    actionData.put("actionContent", content);
-                    actionData.put("innerThoughts", innerThoughts);
-                    actionData.put("commentId", commentId);
-                    actionData.put("replyId", replyResult.getCommentId());
-                    actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-                    
-                    webSocketService.pushRobotAction(actionData);
-                    logger.info("WebSocket机器人行为消息推送成功");
-                } catch (Exception e) {
-                    logger.warn("WebSocket消息推送失败", e);
+            if (StringUtils.isNotBlank(content)) {
+                String innerThoughts = promptService.generateInnerThoughts(robot, "回复评论: " + commentContent);
+
+                // 回复评论
+                CommentService.CommentResult replyResult = commentService.replyComment(commentId, robotId, "robot", content,
+                        innerThoughts);
+                if (replyResult != null) {
+                    stats.incrementReply();
+                    logger.info("机器人成功回复评论: {}, 内容: {}, 内心活动: {}", robotId, content, innerThoughts);
+
+                    // 推送WebSocket消息
+                    try {
+                        Map<String, Object> actionData = new HashMap<>();
+                        actionData.put("robotId", robotId);
+                        actionData.put("robotName", robot.getName());
+                        actionData.put("actionType", "reply");
+                        actionData.put("actionContent", content);
+                        actionData.put("innerThoughts", innerThoughts);
+                        actionData.put("commentId", commentId);
+                        actionData.put("replyId", replyResult.getCommentId());
+                        actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+
+                        webSocketService.pushRobotAction(actionData);
+                        logger.info("WebSocket机器人行为消息推送成功");
+                    } catch (Exception e) {
+                        logger.warn("WebSocket消息推送失败", e);
+                    }
+
+                    return true;
                 }
-                
-                return true;
             }
-            
+
             return false;
         } catch (Exception e) {
             logger.error("触发机器人回复评论失败: {}", e.getMessage(), e);

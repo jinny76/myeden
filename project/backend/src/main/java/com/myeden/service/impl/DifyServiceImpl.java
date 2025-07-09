@@ -245,6 +245,65 @@ public class DifyServiceImpl implements DifyService {
         return result;
     }
 
+    /**
+     * 调用Dify工作流分析文本文件，返回AI分析结果字符串
+     * @param filePath 本地文本文件路径
+     * @param apiKey Dify API Key
+     * @param userId 用户唯一标识
+     * @param variableName App定义的inputs变量名
+     * @return 分析结果字符串
+     */
+    public String recognizeFileWorkflow(String filePath, String apiKey, String userId, String variableName) {
+        try {
+            // 1. 上传文件，获取upload_file_id
+            String uploadUrl = difyConfig.getUrl() + "/files/upload";
+            HttpHeaders uploadHeaders = new HttpHeaders();
+            uploadHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
+            uploadHeaders.set("Authorization", "Bearer " + apiKey);
+            org.springframework.util.MultiValueMap<String, Object> uploadBody = new org.springframework.util.LinkedMultiValueMap<>();
+            uploadBody.add("file", new org.springframework.core.io.FileSystemResource(filePath));
+            uploadBody.add("user", userId);
+            HttpEntity<org.springframework.util.MultiValueMap<String, Object>> uploadRequest = new HttpEntity<>(uploadBody, uploadHeaders);
+            ResponseEntity<java.util.Map> uploadResp = restTemplate.postForEntity(uploadUrl, uploadRequest, java.util.Map.class);
+            if (uploadResp.getStatusCode() != HttpStatus.CREATED || uploadResp.getBody() == null || uploadResp.getBody().get("id") == null) {
+                return "文件上传失败: " + (uploadResp.getBody() != null ? uploadResp.getBody().toString() : "无返回");
+            }
+            String uploadFileId = uploadResp.getBody().get("id").toString();
+
+            // 2. 调用workflow/run接口
+            String workflowUrl = difyConfig.getUrl() + "/workflows/run";
+            HttpHeaders wfHeaders = new HttpHeaders();
+            wfHeaders.setContentType(MediaType.APPLICATION_JSON);
+            wfHeaders.set("Authorization", "Bearer " + apiKey);
+            java.util.Map<String, Object> fileInput = new java.util.HashMap<>();
+            fileInput.put("transfer_method", "local_file");
+            fileInput.put("upload_file_id", uploadFileId);
+            fileInput.put("type", "document");
+            java.util.Map<String, Object> inputs = new java.util.HashMap<>();
+            inputs.put(variableName, fileInput);
+            java.util.Map<String, Object> wfBody = new java.util.HashMap<>();
+            wfBody.put("inputs", inputs);
+            wfBody.put("response_mode", "blocking");
+            wfBody.put("user", userId);
+            HttpEntity<java.util.Map<String, Object>> wfRequest = new HttpEntity<>(wfBody, wfHeaders);
+            ResponseEntity<java.util.Map> wfResp = restTemplate.postForEntity(workflowUrl, wfRequest, java.util.Map.class);
+            if (wfResp.getStatusCode() == HttpStatus.OK && wfResp.getBody() != null) {
+                java.util.Map data = (java.util.Map) wfResp.getBody().get("data");
+                if (data != null && "succeeded".equals(data.get("status"))) {
+                    java.util.Map outputs = (java.util.Map) data.get("outputs");
+                    // 假设AI分析结果在outputs的某个字段，如"summary"
+                    return outputs != null && outputs.get("text") != null ? outputs.get("text").toString() : "无AI分析结果";
+                } else {
+                    return "分析失败: " + (data != null ? data.get("error") : "无详细信息");
+                }
+            } else {
+                return "workflow调用失败: " + (wfResp.getBody() != null ? wfResp.getBody().toString() : "无返回");
+            }
+        } catch (Exception e) {
+            return "Dify分析异常: " + e.getMessage();
+        }
+    }
+
     // 备用内容生成方法
     private DifyChatResult generateFallbackContent(String operation) {
         DifyChatResult result = new DifyChatResult();

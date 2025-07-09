@@ -5,15 +5,19 @@ import com.myeden.model.external.WeatherInfo;
 import com.myeden.model.external.MusicItem;
 import com.myeden.model.external.HotSearchItem;
 import com.myeden.model.external.MovieItem;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.Map;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import com.myeden.repository.RobotRepository;
 import com.myeden.entity.Robot;
+
 import java.util.HashMap;
 
 /**
@@ -25,10 +29,11 @@ import java.util.HashMap;
  * @since 2024-07-03
  */
 @Component
+@Slf4j
 public class ExternalDataScheduler implements ApplicationContextAware {
     @Autowired
     private ExternalDataService externalDataService;
-    
+
     @Autowired
     private ExternalDataCacheService externalDataCacheService;
     @Autowired
@@ -45,20 +50,25 @@ public class ExternalDataScheduler implements ApplicationContextAware {
      */
     @Scheduled(cron = "0 0/2 * * * ?")
     public void fetchAndCacheData() {
-        List<NewsItem> news = externalDataService.getLatestNews();
-        externalDataCacheService.setNews(news);
-        List<HotSearchItem> hot = externalDataService.getHotSearches();
-        externalDataCacheService.setHotSearchItems(hot);
-        List<MusicItem> music = externalDataService.getMusicRecommendations();
-        externalDataCacheService.setMusic(music);
-        List<MovieItem> movies = externalDataService.getMovieRecommendations();
-        externalDataCacheService.setMovies(movies);
-        Map<String, WeatherInfo> weatherMap = new HashMap<>();
-        List<WeatherInfo> weathers = externalDataService.getWeather();
-        for (WeatherInfo weather : weathers) {
-            weatherMap.put(weather.getCity(), weather);
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<NewsItem> news = externalDataService.getLatestNews();
+            externalDataCacheService.setNews(news);
+            List<HotSearchItem> hot = externalDataService.getHotSearches();
+            externalDataCacheService.setHotSearchItems(hot);
+            List<MusicItem> music = externalDataService.getMusicRecommendations();
+            externalDataCacheService.setMusic(music);
+            List<MovieItem> movies = externalDataService.getMovieRecommendations();
+            externalDataCacheService.setMovies(movies);
+            List<WeatherInfo> weathers = externalDataService.getWeather();
+            Map<String, WeatherInfo> weatherMap = new HashMap<>();
+            for (WeatherInfo weather : weathers) {
+                weatherMap.put(weather.getCity(), weather);
+            }
+            externalDataCacheService.setWeatherMap(weatherMap);
+            externalDataCacheService.save();
+        } catch (Exception e) {
+            log.error(e.getMessage());
         }
-        externalDataCacheService.setWeatherMap(weatherMap);
-        externalDataCacheService.save();
-}
+    }
 } 

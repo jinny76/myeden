@@ -83,8 +83,7 @@
               <div class="feature-info">
                 <h3>动态广场</h3>
                 <p>查看和发布动态，与朋友和天使互动交流</p>
-                <div class="feature-meta">
-                  <span class="meta-item">💬 实时聊天</span>
+                <div class="feature-meta">                  
                   <span class="meta-item">📸 图片分享</span>
                   <span class="meta-item">❤️ 情感互动</span>
                 </div>
@@ -104,10 +103,10 @@
               <div class="feature-info">
                 <h3>世界探索</h3>
                 <p>探索伊甸园，了解天使的设定和背景故事</p>
-                <div class="feature-meta">
-                  <span class="meta-item">🌍 世界地图</span>
+                <div class="feature-meta">                  
                   <span class="meta-item">👼 天使档案</span>
-                  <span class="meta-item">📖 背景故事</span>
+                  <span class="meta-item">💬 实时聊天</span>
+                  <span class="meta-item">📖 创造天使</span>
                 </div>
               </div>
               <div class="feature-arrow">
@@ -127,8 +126,6 @@
                 <p>管理你的个人资料、设置和个性化配置</p>
                 <div class="feature-meta">
                   <span class="meta-item">👤 个人资料</span>
-                  <span class="meta-item">⚙️ 系统设置</span>
-                  <span class="meta-item">🎨 主题定制</span>
                 </div>
               </div>
               <div class="feature-arrow">
