@@ -19,6 +19,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import com.myeden.repository.RobotRepository;
 import java.util.Set;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.ResponseEntity;
 
 /**
  * 外部数据采集服务Mock实现
@@ -211,31 +213,31 @@ public class ExternalDataServiceImpl implements ExternalDataService {
                     cityNameToId.put(item.getCountyname(), item.getAreaid());
                 }
             }
-            java.util.List<String> cityIds = new java.util.ArrayList<>();
+            RestTemplate restTemplate = new RestTemplate();
+            ObjectMapper objectMapper = new ObjectMapper();
             for (String name : cityNames) {
-                String id = cityNameToId.get(name);
-                if (id != null) cityIds.add(id);
-            }
-            if (cityIds.isEmpty()) {
-                log.warn("无可用城市ID");
-                return result;
-            }
-            String joinedIds = String.join("&cityIds=", cityIds);
-            String apiUrl = "http://aider.meizu.com/app/weather/listWeather?cityIds=" + joinedIds;
-            String json = fetchWithRedirect(apiUrl, 5);
-            log.info("天气接口返回: " + json);
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(json);
-            if (root.has("code") && root.get("code").asInt() == 200 && root.has("value") && root.get("value").isArray()) {
-                for (JsonNode weather : root.get("value")) {
-                    WeatherInfo info = new WeatherInfo();
-                    info.setCity(weather.has("city") ? weather.get("city").asText() : null);
-                    if (weather.has("realtime")) {
-                        JsonNode realtime = weather.get("realtime");
-                        info.setDescription(realtime.has("weather") ? realtime.get("weather").asText() : null);
-                        info.setTemperature(realtime.has("temp") ? realtime.get("temp").asText() + "℃" : null);
+                String cityId = cityNameToId.get(name);
+                if (cityId == null) continue;
+                String url = "http://t.weather.itboy.net/api/weather/city/" + cityId;
+                try {
+                    ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+                    if (response.getStatusCodeValue() == 200) {
+                        JsonNode root = objectMapper.readTree(response.getBody());
+                        if (root.path("status").asInt() == 200) {
+                            WeatherInfo info = new WeatherInfo();
+                            info.setCity(name);
+                            // 提取温度和天气描述
+                            JsonNode dataNode = root.path("data");
+                            String wendu = dataNode.path("wendu").asText();
+                            String type = dataNode.path("forecast").isArray() && dataNode.path("forecast").size() > 0
+                                ? dataNode.path("forecast").get(0).path("type").asText() : "";
+                            info.setTemperature(wendu + "℃");
+                            info.setDescription(type);
+                            result.add(info);
+                        }
                     }
-                    result.add(info);
+                } catch (Exception ex) {
+                    log.warn("获取城市天气失败:{} {}", name, ex.getMessage());
                 }
             }
         } catch (Exception e) {

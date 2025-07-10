@@ -23,6 +23,15 @@
       <el-button type="primary" @click="sendMessage">发送</el-button>
       <!-- 浮动摄像头图标 -->
       <span
+        class="switch-icon"
+        @click="switchCamera"
+        title="切换摄像头"
+      >
+        <el-icon>
+          <Refresh />
+        </el-icon>
+      </span>
+      <span
         class="camera-icon"
         :class="{ active: cameraActive }"
         @click="toggleCamera"
@@ -49,7 +58,7 @@ import { getRobotById } from '@/api/robot'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { useUserStore } from '@/stores/user'
 import { useWebSocketStore } from '@/stores/websocket'
-import { Back, VideoCamera } from '@element-plus/icons-vue'
+import { Back, VideoCamera, Refresh } from '@element-plus/icons-vue'
 import { message } from '@/utils/message'
 
 const route = useRoute()
@@ -124,30 +133,39 @@ const cameraActive = ref(false)
 const stream = ref(null)
 const videoRef = ref(null)
 const canvasRef = ref(null)
+const facingMode = ref('user') // 'user'前置, 'environment'后置
 
-/**
- * 切换摄像头开关
- */
 const toggleCamera = async () => {
   if (cameraActive.value) {
-    // 关闭摄像头
     if (stream.value) {
       stream.value.getTracks().forEach(track => track.stop())
     }
     cameraActive.value = false
     stream.value = null
-    message.info('摄像头已关闭')
   } else {
-    try {
-      stream.value = await navigator.mediaDevices.getUserMedia({ video: true })
-      cameraActive.value = true
-      await nextTick()
-      if (videoRef.value) {
-        videoRef.value.srcObject = stream.value
-      }
-      message.success('摄像头已打开')
-    } catch (err) {
-      message.error('无法访问摄像头: ' + err.message)
+    stream.value = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facingMode.value }
+    })
+    cameraActive.value = true
+    await nextTick()
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream.value
+    }
+  }
+}
+
+const switchCamera = async () => {
+  facingMode.value = facingMode.value === 'user' ? 'environment' : 'user'
+  if (cameraActive.value) {
+    if (stream.value) {
+      stream.value.getTracks().forEach(track => track.stop())
+    }
+    stream.value = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facingMode.value }
+    })
+    await nextTick()
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream.value
     }
   }
 }
@@ -446,6 +464,13 @@ function handleAIChatMessage(e) {
 }
 .camera-icon.active {
   color: #67c23a;
+}
+.switch-icon {
+  position: absolute;
+  right: 120px;
+  top: 58%;
+  transform: translateY(-50%);
+  cursor: pointer;
 }
 
 .floating-video-window {
