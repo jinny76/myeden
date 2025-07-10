@@ -12,6 +12,7 @@ import com.myeden.service.PostService;
 import com.myeden.service.FileService;
 import com.myeden.service.WebSocketService;
 import com.myeden.service.RobotBehaviorService;
+import com.myeden.service.SearchContentService;
 import com.myeden.service.CommentService;
 import com.myeden.service.UserRobotLinkService;
 import com.myeden.service.CommentService.CommentSummary;
@@ -90,6 +91,9 @@ public class PostServiceImpl implements PostService {
     
     @Autowired
     private DifyServiceImpl difyServiceImpl;
+
+    @Autowired
+    private SearchContentService searchContentService;
     
     @Value("${dify.image.apiKey:app-jey4nbiLS9jyiUDWeIQTcvZ5}")
     private String imageApiKey;
@@ -115,7 +119,7 @@ public class PostServiceImpl implements PostService {
             // 验证作者是否存在
             String authorName = "";
             String authorAvatar = "";
-            
+
             if ("user".equals(authorType)) {
                 Optional<User> userOpt = userRepository.findByUserId(authorId);
                 if (userOpt.isEmpty()) {
@@ -157,6 +161,8 @@ public class PostServiceImpl implements PostService {
             post.setLikeCount(0);
             post.setCommentCount(0);
             post.setIsDeleted(false);
+            // 自动提取#标签到topic
+            post.setTopic(extractTopicsFromContent(content));
             
             // 设置可见性
             if ("user".equals(authorType)) {
@@ -216,6 +222,12 @@ public class PostServiceImpl implements PostService {
             } else {
                 new Thread(() -> triggerRobotCommentsAsync(savedPost.getPostId(), content)).start();
             }
+
+            if (post.getTopic() != null && !post.getTopic().isEmpty()) {
+                for (String t : post.getTopic()) {
+                    new Thread(() -> searchContentService.triggerSearch(t, "")).start();
+                }
+            }
             
             return new PostResult(
                 savedPost.getPostId(),
@@ -229,7 +241,7 @@ public class PostServiceImpl implements PostService {
             throw e;
         }
     }
-    
+
     @Override
     public PostListResult getPostList(int page, int size, String authorType, String currentUserId) {
         try {
@@ -383,7 +395,7 @@ public class PostServiceImpl implements PostService {
                 likes,
                 comments,
                 post.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                post.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                post.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), post.getTopic()
             );
             
         } catch (Exception e) {
@@ -679,7 +691,8 @@ public class PostServiceImpl implements PostService {
             post.getCommentCount(),
             isLiked,
             post.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-            post.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            post.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                post.getTopic()
         );
     }
     
@@ -1051,5 +1064,23 @@ public class PostServiceImpl implements PostService {
             logger.error("下载图片到本地失败: {}", imagePath, e);
             return null;
         }
+    }
+
+    /**
+     * 从内容中提取所有#标签，去除重复和空白
+     * @param content 动态内容
+     * @return 标签列表
+     */
+    private List<String> extractTopicsFromContent(String content) {
+        List<String> topics = new ArrayList<>();
+        if (content == null) return topics;
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("#([^#\\s]+)").matcher(content);
+        while (matcher.find()) {
+            String tag = matcher.group(1).trim();
+            if (!tag.isEmpty() && !topics.contains(tag)) {
+                topics.add(tag);
+            }
+        }
+        return topics;
     }
 } 

@@ -162,6 +162,18 @@ public interface PostService {
      * 动态摘要信息
      */
     class PostSummary {
+        /**
+         * 帖子主题标签（如“科技”、“娱乐”、“AI”等），支持多主题
+         */
+        private List<String> topic;
+
+        public List<String> getTopic() {
+            return topic;
+        }
+
+        public void setTopic(List<String> topic) {
+            this.topic = topic;
+        }
         private String postId;
         private String authorId;
         private String authorType;
@@ -177,7 +189,7 @@ public interface PostService {
         
         public PostSummary(String postId, String authorId, String authorType, String authorName, 
                           String authorAvatar, String content, List<String> images, int likeCount, 
-                          int commentCount, boolean isLiked, String createdAt, String updatedAt) {
+                          int commentCount, boolean isLiked, String createdAt, String updatedAt, List<String> topic) {
             this.postId = postId;
             this.authorId = authorId;
             this.authorType = authorType;
@@ -190,6 +202,7 @@ public interface PostService {
             this.isLiked = isLiked;
             this.createdAt = createdAt;
             this.updatedAt = updatedAt;
+            this.topic = topic;
         }
         
         // Getter方法
@@ -211,6 +224,18 @@ public interface PostService {
      * 动态详细信息
      */
     class PostDetail {
+        /**
+         * 帖子主题标签（如“科技”、“娱乐”、“AI”等），支持多主题
+         */
+        private List<String> topic;
+
+        public List<String> getTopic() {
+            return topic;
+        }
+
+        public void setTopic(List<String> topic) {
+            this.topic = topic;
+        }
         private String postId;
         private String authorId;
         private String authorType;
@@ -230,7 +255,7 @@ public interface PostService {
         public PostDetail(String postId, String authorId, String authorType, String authorName, 
                          String authorAvatar, String content, List<String> images, List<String> imageInfos, int likeCount, 
                          int commentCount, boolean isLiked, List<LikeDetail> likes, 
-                         List<CommentSummary> comments, String createdAt, String updatedAt) {
+                         List<CommentSummary> comments, String createdAt, String updatedAt, List<String> topic) {
             this.postId = postId;
             this.authorId = authorId;
             this.authorType = authorType;
@@ -246,6 +271,7 @@ public interface PostService {
             this.comments = comments;
             this.createdAt = createdAt;
             this.updatedAt = updatedAt;
+            this.topic = topic;
         }
         
         // Getter方法

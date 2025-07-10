@@ -71,6 +71,11 @@ public class Post {
     private List<String> imageInfos = new ArrayList<>();
     
     /**
+     * 帖子主题标签（如“科技”、“娱乐”、“AI”等），支持多主题
+     */
+    private List<String> topic = new ArrayList<>();
+    
+    /**
      * 点赞数
      */
     private Integer likeCount = 0;
@@ -207,6 +212,14 @@ public class Post {
 
     public void setImageInfos(List<String> imageInfos) {
         this.imageInfos = imageInfos;
+    }
+    
+    public List<String> getTopic() {
+        return topic;
+    }
+
+    public void setTopic(List<String> topic) {
+        this.topic = topic;
     }
     
     public Integer getLikeCount() {

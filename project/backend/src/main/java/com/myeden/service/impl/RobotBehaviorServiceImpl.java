@@ -71,6 +71,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
     @Autowired
     private ExternalDataCacheService externalDataCacheService;
+
+    @Autowired
+    private SearchContentService searchContentService;
     
     private final Random random = new Random();
     private final ConcurrentHashMap<String, RobotDailyStats> dailyStats = new ConcurrentHashMap<>();
@@ -207,6 +210,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 post.setCreatedAt(LocalDateTime.now());
                 post.setUpdatedAt(LocalDateTime.now());
                 post.setLink(postResult.getLink());
+                post.setTopic(postResult.getTopic());
 
                 // 保存到数据库
                 Post savedPost = postRepository.save(post);
@@ -232,6 +236,12 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                         logger.warn("WebSocket消息推送失败", e);
                     }
 
+                    if (post.getTopic() != null && !post.getTopic().isEmpty()) {
+                        for (String t : post.getTopic()) {
+                            new Thread(() -> searchTopic(t)).start();
+                        }
+                    }
+
                     return true;
                 }
             }
@@ -241,6 +251,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             logger.error("触发机器人发布动态失败: {}", e.getMessage(), e);
             return false;
         }
+    }
+
+    private void searchTopic(String topic) {
+        searchContentService.triggerSearch(topic, "");
     }
     
     @Override

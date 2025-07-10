@@ -88,10 +88,12 @@ public class PromptServiceImpl implements PromptService {
     public static class PostPromptResult {
         private String prompt;
         private Post.LinkInfo link;
+        private List<String> topics;
 
-        public PostPromptResult(String prompt, Post.LinkInfo link) {
+        public PostPromptResult(String prompt, Post.LinkInfo link, List<String> topics) {
             this.prompt = prompt;
             this.link = link;
+            this.topics = topics;
         }
 
         public String getPrompt() {
@@ -100,6 +102,14 @@ public class PromptServiceImpl implements PromptService {
 
         public Post.LinkInfo getLink() {
             return link;
+        }
+
+        public List<String> getTopics() {
+            return topics;
+        }
+
+        public void setTopics(List<String> topics) {
+            this.topics = topics;
         }
     }
 
@@ -115,6 +125,8 @@ public class PromptServiceImpl implements PromptService {
                 robot.getName(),
                 robotInfo != null ? robotInfo.getNickname() : robot.getName(),
                 robot.getPersonality(), selectedTopic.getContent()));
+        List<String> topic = new ArrayList<>();
+        topic.add(selectedTopic.getContent());
 
         // 新增：插入今日本人已发帖内容作为历史参考
         List<String> todayPosts = getTodayPostsContent(robot);
@@ -184,7 +196,7 @@ public class PromptServiceImpl implements PromptService {
 
         log.info("生成的动态提示词: {}", prompt.toString());
 
-        return new PostPromptResult(prompt.toString(), link);
+        return new PostPromptResult(prompt.toString(), link, topic);
     }
 
     @Override
@@ -218,12 +230,23 @@ public class PromptServiceImpl implements PromptService {
         if (context != null && !context.trim().isEmpty()) {
             prompt.append(String.format("\n\n## 当前情况：%s", context));
         }
+
         // 新增：注入用户印象
         String userId = post.getAuthorId();
         String impression = getUserImpression(userId, robot.getRobotId());
         if (impression != null && !impression.trim().isEmpty()) {
             prompt.append("\n\n## 你对动态作者的印象：\n");
             prompt.append(impression);
+        }
+
+        if (post.getTopic() != null && !post.getTopic().isEmpty()) {
+            for (String t : post.getTopic()) {
+                List<AIAnalysisResult> bg = aiAnalysisService.findByAiTagAndTime(t, null, null);
+                if (bg != null && !bg.isEmpty()) {
+                    AIAnalysisResult aiAnalysisResult = bg.get(0);
+                    prompt.append("\n## 帖子主题信息\n").append(aiAnalysisResult.getAiSummary()).append("\n\n");
+                }
+            }
         }
 
         // 添加评论生成要求
@@ -283,6 +306,16 @@ public class PromptServiceImpl implements PromptService {
         prompt.append(String.format("\n- 动态作者：%s", getAuthorInfo(postDetail)));
         prompt.append(String.format("\n- 你看到有条的评论内容：\"%s\"", commentDetail.getContent()));
         prompt.append(String.format("\n- 这条评论的评论者是：%s, 请注意, 他这条评论是对 %s 说的", getCommentAuthorInfo(commentDetail), postDetail.getAuthorName()));
+
+        if (postDetail.getTopic() != null && !postDetail.getTopic().isEmpty()) {
+            for (String t : postDetail.getTopic()) {
+                List<AIAnalysisResult> bg = aiAnalysisService.findByAiTagAndTime(t, null, null);
+                if (bg != null && !bg.isEmpty()) {
+                    AIAnalysisResult aiAnalysisResult = bg.get(0);
+                    prompt.append("\n## 帖子主题信息\n").append(aiAnalysisResult.getAiSummary()).append("\n\n");
+                }
+            }
+        }
 
         // 添加回复生成要求
         prompt.append("\n\n请根据以下要求, 结合你的性格和评论内容，生成一条纯文本的, 自然、真实的回复来回复这条评论，只返回回复内容, 不要任何标题。");
@@ -717,10 +750,12 @@ public class PromptServiceImpl implements PromptService {
     public static class PostContentResult {
         private String content;
         private Post.LinkInfo link;
+        private List<String> topic;
 
-        public PostContentResult(String content, Post.LinkInfo link) {
+        public PostContentResult(String content, Post.LinkInfo link, List<String> topic) {
             this.content = content;
             this.link = link;
+            this.topic = topic;
         }
 
         public String getContent() {
@@ -729,6 +764,14 @@ public class PromptServiceImpl implements PromptService {
 
         public Post.LinkInfo getLink() {
             return link;
+        }
+
+        public List<String> getTopic() {
+            return topic;
+        }
+
+        public void setTopic(List<String> topic) {
+            this.topic = topic;
         }
     }
 
@@ -753,10 +796,10 @@ public class PromptServiceImpl implements PromptService {
             );
             contentGenerationLogRepository.save(log);
 
-            return new PostContentResult(content, promptResult.getLink());
+            return new PostContentResult(content, promptResult.getLink(), promptResult.getTopics());
         } catch (Exception e) {
             log.error("生成机器人动态内容失败: {}", e.getMessage(), e);
-            return new PostContentResult(null, null);
+            return new PostContentResult(null, null, null);
         }
     }
 
