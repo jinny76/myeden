@@ -221,6 +221,10 @@ const startRecording = async (e) => {
         const base64Audio = reader.result
         await sendChatMessage(robotId.value, null, conversationId.value, null, base64Audio)
         isRecording.value = false
+        isRobotReplying.value = true
+        nextTick(() => {
+          scrollToBottom()
+        })
       }
       reader.readAsDataURL(blob)
     }
@@ -325,8 +329,92 @@ function handleAIChatMessage(e) {
     scrollToBottom()
     if (msg.senderType === 'ai' || msg.senderType === 'robot') {
       isRobotReplying.value = false
+      // 如果上一条消息是自己发的语音，自动朗读AI回复
+      const lastMsg = messages.value[messages.value.length - 2]
+      if (lastMsg && lastMsg.senderType === 'user' && lastMsg.asrResult) {
+        playSpeech(msg.content)
+      }
     }
   }
+}
+
+const playSpeech = (text, author = {}) => {
+  if (!window.speechSynthesis) {
+    message.warning('当前浏览器不支持语音朗读')
+    return
+  }
+  if (!text || typeof text !== 'string') {
+    message.warning('无可朗读内容')
+    return
+  }
+  // 停止当前朗读
+  window.speechSynthesis.cancel()
+  // 获取所有可用voice，仅首次获取，后续用缓存
+  /* if (!cachedVoices) {
+    cachedVoices = window.speechSynthesis.getVoices()
+    // 监听voiceschanged事件，异步加载时更新缓存
+    if (cachedVoices.length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        cachedVoices = window.speechSynthesis.getVoices()
+      }
+    }
+  }
+  const voices = cachedVoices || []
+  let selectedVoice = null
+  // 语音选择策略
+  const gender = author.gender || 'female'
+  const age = author.age || 20
+  // 优先中文语音
+  const preferredVoices = voices.filter(v => v.name && (v.name.includes('Mainland') || v.name.startsWith('Online')))
+  console.log('author', author)
+  console.log('preferredVoices', preferredVoices)
+  // 性别优先
+  if (gender === 'male') {
+    if (age <= 12) {
+      // 儿童音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Yunxia'))
+    } else if (age <= 25) {
+      // 青年音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Yunxi'))
+    } else {
+      // 成年音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Yunyang'))
+    }
+  } else {
+    if (age <= 12) {
+      // 儿童音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Xiaoyi'))
+    } else if (age <= 25) {
+      // 青年音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Xiaoyi'))
+    } else {
+      // 成年音
+      selectedVoice = preferredVoices.find(v => v.name.includes('Xiaoyi'))
+    }
+  } */
+
+  // 判空处理：如果voices为空，直接不指定voice，仅指定lang
+  const utter = new window.SpeechSynthesisUtterance(text)
+  /* if (voices.length > 0 && selectedVoice) {
+    utter.voice = selectedVoice
+    utter.lang = selectedVoice?.lang || 'zh-CN'
+    console.log('selectedVoice', selectedVoice, text)
+  } else {
+    utter.lang = 'zh-CN'
+    // 仅首次提示
+    if (!window._speechVoiceWarned) {      
+      window._speechVoiceWarned = true
+    }
+  } */
+  utter.rate = 1
+  utter.pitch = 1
+  utter.volume = 1
+  utter.onerror = (e) => {
+    //message.error('语音播放失败')
+    //console.error('SpeechSynthesis error:', e)
+  }
+  console.log('text', text)
+  window.speechSynthesis.speak(utter)
 }
 </script>
 
