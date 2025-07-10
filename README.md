@@ -1,7 +1,7 @@
 # 我的伊甸园 (My-Eden) 🚀
 
 <div align="center">
-  <img src="resources/icon.png" alt="Logo" width="120" />
+  <img src="resources/icon.png" alt="Logo" />
   <h2>虚拟社交世界 · AI驱动 · 实时互动 · 多媒体体验</h2>
   <p>
     <img src="https://img.shields.io/badge/My--Eden-虚拟社交世界-blue?style=for-the-badge&logo=vue.js" />
@@ -146,10 +146,6 @@ MIT License
 
 <p align="center">
   <img src="https://ghchart.rshah.org/jinny76" alt="GitHub Contribution Graph" />
-</p>
-
-<p align="center">
-  <img src="https://github-readme-stats.vercel.app/api/contributors?owner=jinny76&repo=myeden&columns=8" alt="Contributors" />
 </p>
 
 ---
