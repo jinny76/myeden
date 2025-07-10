@@ -4,8 +4,15 @@ import com.myeden.entity.ChatMessage;
 import com.myeden.model.WebSocketMessage;
 import com.myeden.service.ChatService;
 import com.myeden.service.WebSocketService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
 import com.myeden.service.AIChatService;
 import com.myeden.controller.EventResponse;
@@ -21,17 +28,81 @@ public class ChatController {
     @Autowired
     private AIChatService aiChatService;
 
+    @Value("${ffmpeg.path}")
+    private String ffmpegPath;
+
+    /**
+     * 将base64音频字符串保存为本地文件
+     * @param base64Str base64字符串（可带data:audio/wav;base64,前缀）
+     * @param savePath 保存路径
+     * @return File对象
+     */
+    private File saveBase64AudioToFile(String base64Str, String savePath) throws IOException {
+        String base64 = base64Str;
+        if (base64.contains(",")) {
+            base64 = base64.substring(base64.indexOf(",") + 1);
+        }
+        byte[] data = Base64.getDecoder().decode(base64);
+        File file = new File(savePath);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(data);
+        }
+        return file;
+    }
+
     /**
      * 发送聊天消息，并推送给接收方
      */
     @PostMapping("/send")
     public ResponseEntity<EventResponse> sendMessage(@RequestBody ChatMessage message) {
         try {
+
+            if (message.getAudioBase64() != null && !message.getAudioBase64().isEmpty()) {
+                // 1. 保存音频到本地文件
+                File audioFile = File.createTempFile("audio", ".webm");
+                try {
+                    saveBase64AudioToFile(message.getAudioBase64(), audioFile.getAbsolutePath());
+
+                    // 2. 将音频文件转换为wav格式
+                    File wavFile = convertAudioToWav(audioFile, StringUtils.replace(audioFile.getAbsolutePath(), ".webm", ".wav"));
+
+                    // 2. 调用ASR服务识别音频内容
+                    AIChatService.ASRRawTextInfo asrText = aiChatService.callASRService(wavFile);
+                    // 3. 识别结果写入消息内容
+                    message.setContent(asrText.getText());
+                    message.setAsrResult(asrText);
+                } catch (Exception ex) {
+                    // 识别失败，写入提示
+                    message.setContent("[语音识别失败]");
+                } finally {
+                    // 可选：删除临时文件
+                    if (audioFile != null && audioFile.exists()) {
+                        audioFile.delete();
+                    }
+                }
+            }
+                
+
+            ChatMessage chatMessage = new ChatMessage();
+            // clone message for save
+            chatMessage.setSessionId(message.getSessionId());
+            chatMessage.setConversationId(message.getConversationId());
+            chatMessage.setSenderId(message.getSenderId());
+            chatMessage.setSenderType(message.getSenderType());
+            chatMessage.setReceiverId(message.getReceiverId());
+            chatMessage.setReceiverType(message.getReceiverType());
+            chatMessage.setContent(message.getContent());
+            chatMessage.setMsgType(message.getMsgType());
+            chatMessage.setCreatedAt(message.getCreatedAt());
+            chatMessage.setIsRead(message.getIsRead());
+            chatMessage.setIsDeleted(message.getIsDeleted());
+            chatMessage.setAsrResult(message.getAsrResult());
+
             // 1. 保存用户消息
-            chatService.sendMessage(message);
+            chatService.sendMessage(chatMessage);
             // 2. 推送给接收方
-            WebSocketMessage<ChatMessage> wsMsg = WebSocketMessage.chat(message);
-            webSocketService.sendMessageToUser(message.getSenderId(), wsMsg);
+            WebSocketMessage<ChatMessage> wsMsg = WebSocketMessage.chat(chatMessage);
+            webSocketService.sendMessageToUser(chatMessage.getSenderId(), wsMsg);
 
             // 3. 检查是否需要AI回复，异步处理（手动新建线程）
             if ("robot".equalsIgnoreCase(message.getReceiverType()) || isRobotId(message.getReceiverId())) {
@@ -39,9 +110,36 @@ public class ChatController {
             }
 
             // 4. 立即返回，仅包含用户消息
-            return ResponseEntity.ok(new EventResponse(200, "消息发送成功", List.of(message)));
+            return ResponseEntity.ok(new EventResponse(200, "消息发送成功", null));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new EventResponse(400, "消息发送失败: " + e.getMessage(), null));
+        }
+    }
+
+    private File convertAudioToWav(File audioFile, String wavFileName) throws IOException {
+        // 使用FFmpeg将webm音频文件转换为wav格式
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder(ffmpegPath, "-i", audioFile.getAbsolutePath(), wavFileName);
+            processBuilder.redirectErrorStream(true);
+            processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
+            processBuilder.inheritIO();
+            Process process = processBuilder.start();
+            process.waitFor();
+
+            // 检查转换结果
+            File wavFile = new File(wavFileName);
+            if (!wavFile.exists() || wavFile.length() == 0) {
+                throw new IOException("转换后的音频文件不存在或为空");
+            }
+
+            // 检查转换后的文件是否为wav格式
+            if (!wavFile.getName().toLowerCase().endsWith(".wav")) {
+                throw new IOException("转换后的音频文件不是wav格式");
+            }
+            return wavFile;
+        } catch (Exception e) {
+            throw new IOException("转换音频文件失败: " + e.getMessage());
         }
     }
 

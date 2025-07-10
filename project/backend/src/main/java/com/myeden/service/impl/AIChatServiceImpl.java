@@ -18,6 +18,18 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Base64;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpEntity;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class AIChatServiceImpl implements AIChatService {
@@ -32,8 +44,14 @@ public class AIChatServiceImpl implements AIChatService {
     @Autowired
     private DifyService difyService;
 
+    @Autowired
+    private RestTemplate restTemplate;
+
     @Value("${dify.image.apiKey}")
     private String apiKey;
+
+    @Value("${asr.server}")
+    private String asrServerUrl;
 
     /**
      * 获取时间段描述
@@ -136,6 +154,10 @@ public class AIChatServiceImpl implements AIChatService {
                 }
             }
 
+            if (userMessage.getAsrResult() != null && userMessage.getAsrResult().getEmotion() != null && !"NEUTRAL".equals(userMessage.getAsrResult().getEmotion())) {
+                userMessage.setContent(userMessage.getContent() + ", 对方情绪是: " + userMessage.getAsrResult().getEmotion());
+            }
+
             DifyService.DifyChatResult result = promptService.generateChatReply(robot, userMessage, buildPostContext(robot));
             ChatMessage aiMsg = new ChatMessage();
             aiMsg.setSessionId(userMessage.getSessionId());
@@ -162,6 +184,58 @@ public class AIChatServiceImpl implements AIChatService {
             aiMsg.setCreatedAt(LocalDateTime.now());
             aiMsg.setIsRead(false);
             return aiMsg;
+        }
+    }
+
+    /**
+     * 调用ASR服务识别音频（RestTemplate实现，无需新依赖）
+     * @param audioFile 音频文件
+     * @param key 文件名
+     * @param lang 语言
+     * @return 识别文本
+     */
+    private AIChatService.ASRRawTextInfo callASRService(File audioFile, String key, String lang) throws IOException {
+        String url = asrServerUrl;
+        LinkedMultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+
+        FileSystemResource fileResource = new FileSystemResource(audioFile);
+        body.add("files", fileResource);
+        body.add("keys", key);
+        body.add("lang", lang);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity =
+                new HttpEntity<>(body, headers);
+
+        String respStr = restTemplate.postForObject(url, requestEntity, String.class);
+
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(respStr);
+        if (root.has("result") && root.get("result").isArray() && root.get("result").size() > 0) {
+            JsonNode first = root.get("result").get(0);
+            String rawText = first.get("raw_text").asText();
+            // 解析结构化对象
+            AIChatService.ASRRawTextInfo info = AIChatService.parseASRRawText(rawText);
+            return info;
+        }
+        return null;
+    }
+
+    @Override
+    public AIChatService.ASRRawTextInfo callASRService(File audioFile) {
+        try {
+            AIChatService.ASRRawTextInfo info = callASRService(audioFile, "voice", "zh");
+            return info;
+        } catch (Exception ex) {
+            AIChatService.ASRRawTextInfo info = new AIChatService.ASRRawTextInfo();
+            info.setText("[语音识别失败]");
+            return info;
+        } finally {
+            if (audioFile != null && audioFile.exists()) {
+                audioFile.delete();
+            }
         }
     }
 } 

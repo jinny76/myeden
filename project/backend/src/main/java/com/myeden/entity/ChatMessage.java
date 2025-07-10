@@ -2,6 +2,9 @@ package com.myeden.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import com.myeden.service.AIChatService;
+
 import org.springframework.data.mongodb.core.index.Indexed;
 import java.time.LocalDateTime;
 
@@ -58,6 +61,12 @@ public class ChatMessage {
     /** 图片base64 */
     private String imageBase64;
 
+    /** 语音base64 */
+    private String audioBase64;
+
+    /** 语音识别结果 */
+    private AIChatService.ASRRawTextInfo asrResult;
+
     // 构造方法
     public ChatMessage() {
         this.createdAt = LocalDateTime.now();
@@ -73,6 +82,7 @@ public class ChatMessage {
         this.receiverType = receiverType;
         this.content = content;
         this.imageBase64 = imageBase64;
+        this.audioBase64 = audioBase64;
     }
 
     // Getter和Setter
@@ -102,6 +112,10 @@ public class ChatMessage {
     public void setIsDeleted(Boolean isDeleted) { this.isDeleted = isDeleted; }
     public String getImageBase64() { return imageBase64; }
     public void setImageBase64(String imageBase64) { this.imageBase64 = imageBase64; }
+    public String getAudioBase64() { return audioBase64; }
+    public void setAudioBase64(String audioBase64) { this.audioBase64 = audioBase64; }
+    public AIChatService.ASRRawTextInfo getAsrResult() { return asrResult; }
+    public void setAsrResult(AIChatService.ASRRawTextInfo asrResult) { this.asrResult = asrResult; }
     // 业务方法
     /** 标记为已读 */
     public void markAsRead() {
@@ -129,7 +143,6 @@ public class ChatMessage {
                 ", msgType='" + msgType + '\'' +
                 ", isRead=" + isRead +
                 ", isDeleted=" + isDeleted +
-                ", imageBase64='" + imageBase64 + '\'' +
                 ", createdAt=" + createdAt +
                 '}';
     }

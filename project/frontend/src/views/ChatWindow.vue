@@ -8,9 +8,25 @@
     </div>
     <div class="chat-messages" ref="messagesContainer">
       <div v-if="loadingHistory" class="loading-history">历史消息加载中...</div>
-      <div v-for="msg in messages" :key="msg.id" :class="['chat-message', msg.senderType]">
+      <div v-for="msg in messages" :key="msg.id" :class="['chat-message', msg.senderType, { 'voice-message': msg.asrResult }]">
         <el-avatar :src="getAvatar(msg)" />
-        <div class="message-content">{{ msg.content }}</div>
+        <div class="message-content">
+          <template v-if="msg.asrResult">           
+            {{ msg.asrResult.text || msg.content }}
+            <span v-if="msg.asrResult.emotion && msg.asrResult.emotion !== 'NEUTRAL'" class="emotion-label">
+              <template v-if="msg.asrResult.emotion === 'HAPPY'">😊</template>
+              <template v-else-if="msg.asrResult.emotion === 'SAD'">😢</template>
+              <template v-else-if="msg.asrResult.emotion === 'ANGRY'">😠</template>
+              <template v-else-if="msg.asrResult.emotion === 'SURPRISED'">😲</template>
+              <template v-else-if="msg.asrResult.emotion === 'DISGUSTED'">😒</template>
+              <template v-else-if="msg.asrResult.emotion === 'FEARFUL'">😨</template>              
+              <template v-else-if="msg.asrResult.emotion === 'CONFUSED'">😕</template>
+            </span>
+          </template>
+          <template v-else>
+            {{ msg.content }}
+          </template>
+        </div>
       </div>
       <div v-if="loading" class="loading">加载中...</div>
       <div v-if="isRobotReplying" class="replying-tip">
@@ -19,6 +35,16 @@
       </div>
     </div>
     <div class="chat-input" style="position:relative;">
+      <el-button
+        class="voice-btn"
+        @touchstart.prevent="startRecording"
+        @touchend.prevent="stopRecording"
+        @mousedown.prevent="startRecording"
+        @mouseup.prevent="stopRecording"
+      >
+        <el-icon><Microphone /></el-icon>
+      </el-button>
+      <span v-if="isRecording" class="recording-tip">正在录音，松手发送</span>
       <el-input v-model="input" @keyup.enter="sendMessage" placeholder="输入消息..." />
       <el-button type="primary" @click="sendMessage">发送</el-button>
       <!-- 浮动摄像头图标 -->
@@ -58,7 +84,7 @@ import { getRobotById } from '@/api/robot'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { useUserStore } from '@/stores/user'
 import { useWebSocketStore } from '@/stores/websocket'
-import { Back, VideoCamera, Refresh } from '@element-plus/icons-vue'
+import { Back, VideoCamera, Refresh, Microphone } from '@element-plus/icons-vue'
 import { message } from '@/utils/message'
 
 const route = useRoute()
@@ -168,6 +194,49 @@ const switchCamera = async () => {
       videoRef.value.srcObject = stream.value
     }
   }
+}
+
+const isRecording = ref(false)
+const recorder = ref(null)
+const audioChunks = ref([])
+const recordStartY = ref(0)
+
+const startRecording = async (e) => {
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    message.error('当前浏览器不支持录音')
+    return
+  }
+  isRecording.value = true
+  audioChunks.value = []
+  try {
+    const streamObj = await navigator.mediaDevices.getUserMedia({ audio: true })
+    recorder.value = new MediaRecorder(streamObj)
+    recorder.value.ondataavailable = (event) => {
+      if (event.data.size > 0) audioChunks.value.push(event.data)
+    }
+    recorder.value.onstop = async () => {
+      const blob = new Blob(audioChunks.value, { type: 'audio/webm' })
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const base64Audio = reader.result
+        await sendChatMessage(robotId.value, null, conversationId.value, null, base64Audio)
+        isRecording.value = false
+      }
+      reader.readAsDataURL(blob)
+    }
+    recorder.value.start()
+    if (e && e.touches) recordStartY.value = e.touches[0].clientY
+  } catch (err) {
+    message.error('无法访问麦克风: ' + err.message)
+    isRecording.value = false
+  }
+}
+
+const stopRecording = () => {
+  if (recorder.value && recorder.value.state !== 'inactive') {
+    recorder.value.stop()
+  }
+  isRecording.value = false
 }
 
 const sendMessage = async () => {
@@ -496,6 +565,53 @@ function handleAIChatMessage(e) {
   object-fit: contain;
   background: #000;
   border-radius: 12px;
+}
+
+.voice-btn {
+  margin-right: 8px;
+  background: transparent !important;
+  color: #67c23a;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.recording-tip {
+  position: absolute;
+  left: 50%;
+  top: -40px;
+  transform: translateX(-50%);
+  background: #23272e;
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: 18px;
+  font-size: 1rem;
+  z-index: 20;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.voice-message .message-content {
+  background: linear-gradient(90deg, #f7d774 0%, #ffe9b0 100%);
+  color: #333;
+  border: 1px solid #f7d774;
+  position: relative;
+}
+.voice-label {
+  color: #e67e22;
+  font-weight: bold;
+  margin-right: 6px;
+}
+.emotion-label {
+  color: #67c23a;
+  margin-left: 8px;
+  font-size: 0.95em;
 }
 
 @media (max-width: 600px) {

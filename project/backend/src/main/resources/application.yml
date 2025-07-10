@@ -119,6 +119,10 @@ dify:
   data:
     apiKey: app-WykrFiNbfUTbRMtbSgAEHlAU
 
+# ASR语音识别服务配置
+asr:
+  server: http://192.168.1.44:50000/api/v1/asr
+
 # 机器人行为配置
 robot:
   behavior:
@@ -180,3 +184,6 @@ springdoc:
     display-request-duration: true
   default-produces-media-type: application/json
   default-consumes-media-type: application/json 
+
+ffmpeg:
+  path: ../../ffmpeg/bin/ffmpeg.exe
