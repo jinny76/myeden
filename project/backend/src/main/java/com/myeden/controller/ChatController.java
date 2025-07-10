@@ -31,7 +31,7 @@ public class ChatController {
             chatService.sendMessage(message);
             // 2. 推送给接收方
             WebSocketMessage<ChatMessage> wsMsg = WebSocketMessage.chat(message);
-            webSocketService.sendMessageToUser(message.getReceiverId(), wsMsg);
+            webSocketService.sendMessageToUser(message.getSenderId(), wsMsg);
 
             // 3. 检查是否需要AI回复，异步处理（手动新建线程）
             if ("robot".equalsIgnoreCase(message.getReceiverType()) || isRobotId(message.getReceiverId())) {

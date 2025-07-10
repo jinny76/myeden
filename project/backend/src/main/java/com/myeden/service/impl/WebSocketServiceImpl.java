@@ -119,7 +119,7 @@ public class WebSocketServiceImpl implements WebSocketService {
             String messageJson = objectMapper.writeValueAsString(message);
             
             // 广播给所有订阅者
-            messagingTemplate.convertAndSend("/topic/broadcast", messageJson);
+            messagingTemplate.convertAndSend("/topic/" + userId + "/queue/messages", messageJson);
             
             log.info("广播AI消息: type={}, messageId={}", 
                     message.getType(), message.getMessageId());
@@ -156,7 +156,7 @@ public class WebSocketServiceImpl implements WebSocketService {
             // 发送给用户组
             for (String userId : userIds) {
                 if (isUserOnline(userId)) {
-                    messagingTemplate.convertAndSendToUser(userId, "/queue/messages", messageJson);
+                    messagingTemplate.convertAndSend("/topic/" + userId + "/queue/messages", messageJson);
                 }
             }
             

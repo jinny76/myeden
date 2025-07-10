@@ -339,7 +339,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
     const userStore = useUserStore()
     if (userStore.userInfo?.userId) {
       const userId = userStore.userInfo.userId
-      subscribe(`/user/${userId}/queue/messages`, handleUserMessage, `user-messages-${userId}`)
+      subscribe(`/topic/${userId}/queue/messages`, handleUserMessage, `user-messages-${userId}`)
     } else {
       console.warn('未检测到用户ID，无法订阅个人消息')
     }
@@ -467,6 +467,9 @@ export const useWebSocketStore = defineStore('websocket', () => {
           })
         }
       } else {
+        if (wsMessage.type === 'CHAT') {
+          window.dispatchEvent(new CustomEvent('ai-chat-message', { detail: wsMessage.data }))
+        }
         // 其他用户消息不显示提示，只记录日志
         console.log('📢 收到其他用户消息，不显示提示:', wsMessage.title, wsMessage.content)
       }

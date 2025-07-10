@@ -5,6 +5,7 @@ import com.myeden.model.WebSocketMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -133,5 +134,20 @@ public class WebSocketController {
         } catch (Exception e) {
             return EventResponse.error("发送心跳消息失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 测试消息推送
+     * 
+     * @return 操作结果
+     */
+    @PostMapping("/message")
+    public EventResponse sendMessage(@RequestParam String userId, @RequestParam String message) {
+        WebSocketMessage<String> wsMessage = new WebSocketMessage<>();
+        wsMessage.setData(message);
+        List<String> users = new ArrayList<>();
+        users.add(userId);
+        webSocketService.sendMessageToUsers(users, wsMessage);
+        return EventResponse.success("测试消息推送成功", "测试消息推送成功");
     }
 } 
