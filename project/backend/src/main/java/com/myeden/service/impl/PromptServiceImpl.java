@@ -1365,6 +1365,11 @@ public class PromptServiceImpl implements PromptService {
             } catch (Exception e) {
                 lastException = e;
                 log.error("AI调用失败:", e);
+                try {
+                    Thread.sleep(10000);
+                } catch (InterruptedException e1) {
+                    log.error("线程中断:", e1);
+                }
             }
         }
         // 多次失败，抛出异常
