@@ -147,7 +147,7 @@ public class PromptServiceImpl implements PromptService {
                 link = dataInfo.getLinkInfo();
             }
 
-            List<AIAnalysisResult> aiAnalysisResults = aiAnalysisService.findByAiTagAndTime("青花瓷", null, null);
+            List<AIAnalysisResult> aiAnalysisResults = aiAnalysisService.findByAiTagAndTime(selectedTopic.getContent(), null, null);
             if (aiAnalysisResults != null && !aiAnalysisResults.isEmpty()) {
                 AIAnalysisResult aiAnalysisResult = aiAnalysisResults.get(0);
                 prompt.append("\n本次主题背景：" + aiAnalysisResult.getAiSummary());
@@ -1653,7 +1653,7 @@ public class PromptServiceImpl implements PromptService {
                 RobotConfig.Topic aiTopic = selectRandomTopic(robot);
                 prompt.append(String.format("\n本次对话主题：%s\n", aiTopic.getContent()));
 
-                List<AIAnalysisResult> aiAnalysisResults = aiAnalysisService.findByAiTagAndTime("青花瓷", null, null);
+                List<AIAnalysisResult> aiAnalysisResults = aiAnalysisService.findByAiTagAndTime(aiTopic.getContent(), null, null);
                 if (aiAnalysisResults != null && !aiAnalysisResults.isEmpty()) {
                     AIAnalysisResult aiAnalysisResult = aiAnalysisResults.get(0);
                     prompt.append("\n本次主题背景：" + aiAnalysisResult.getAiSummary());

@@ -55,6 +55,9 @@ public class ChatMessage {
     /** 是否删除（软删除） */
     private Boolean isDeleted = false;
 
+    /** 图片base64 */
+    private String imageBase64;
+
     // 构造方法
     public ChatMessage() {
         this.createdAt = LocalDateTime.now();
@@ -69,6 +72,7 @@ public class ChatMessage {
         this.receiverId = receiverId;
         this.receiverType = receiverType;
         this.content = content;
+        this.imageBase64 = imageBase64;
     }
 
     // Getter和Setter
@@ -96,7 +100,8 @@ public class ChatMessage {
     public void setIsRead(Boolean isRead) { this.isRead = isRead; }
     public Boolean getIsDeleted() { return isDeleted; }
     public void setIsDeleted(Boolean isDeleted) { this.isDeleted = isDeleted; }
-
+    public String getImageBase64() { return imageBase64; }
+    public void setImageBase64(String imageBase64) { this.imageBase64 = imageBase64; }
     // 业务方法
     /** 标记为已读 */
     public void markAsRead() {
@@ -124,6 +129,7 @@ public class ChatMessage {
                 ", msgType='" + msgType + '\'' +
                 ", isRead=" + isRead +
                 ", isDeleted=" + isDeleted +
+                ", imageBase64='" + imageBase64 + '\'' +
                 ", createdAt=" + createdAt +
                 '}';
     }

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.ResourceAccessException;
 
+import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -175,6 +176,7 @@ public class DifyServiceImpl implements DifyService {
         }
     }
 
+    @Override
     /**
      * 调用Dify工作流识别图片内容，返回识别文字结果
      * @param imagePath 本地图片路径
@@ -186,6 +188,13 @@ public class DifyServiceImpl implements DifyService {
     public DifyImageResult recognizeImageByWorkflow(String imagePath, String apiKey, String userId, String variableName) {
         DifyImageResult result = new DifyImageResult();
         try {
+            if (imagePath.startsWith("data:image/")) {
+                String imageBase64 = imagePath.substring(imagePath.indexOf(",") + 1);
+                File tempFile = File.createTempFile("image", ".png");
+                java.nio.file.Files.write(tempFile.toPath(), java.util.Base64.getDecoder().decode(imageBase64));
+                imagePath = tempFile.getAbsolutePath();
+            }
+
             // 1. 上传图片文件，获取upload_file_id
             String uploadUrl = difyConfig.getUrl() + "/files/upload";
             HttpHeaders uploadHeaders = new HttpHeaders();

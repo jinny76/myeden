@@ -9,6 +9,7 @@ import com.myeden.service.ExternalDataCacheService;
 import com.myeden.service.PromptService;
 import com.myeden.service.DifyService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -27,6 +28,12 @@ public class AIChatServiceImpl implements AIChatService {
 
     @Autowired
     private ExternalDataCacheService externalDataCacheService;
+
+    @Autowired
+    private DifyService difyService;
+
+    @Value("${dify.image.apiKey}")
+    private String apiKey;
 
     /**
      * 获取时间段描述
@@ -120,6 +127,15 @@ public class AIChatServiceImpl implements AIChatService {
         }
         try {
             // 直接调用PromptService统一生成AI回复
+
+            if (userMessage.getImageBase64() != null && !userMessage.getImageBase64().isEmpty()) {
+                // 调用Dify的图片识别接口
+                DifyImageResult result = difyService.recognizeImageByWorkflow(userMessage.getImageBase64(), apiKey, userMessage.getSenderId(), "image");
+                if (result.isSuccess()) {
+                    userMessage.setContent(userMessage.getContent() + "\n(你在聊天视频窗口看到了：" + result.getText() + ")");
+                }
+            }
+
             DifyService.DifyChatResult result = promptService.generateChatReply(robot, userMessage, buildPostContext(robot));
             ChatMessage aiMsg = new ChatMessage();
             aiMsg.setSessionId(userMessage.getSessionId());

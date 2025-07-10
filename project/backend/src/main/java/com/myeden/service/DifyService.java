@@ -1,6 +1,7 @@
 package com.myeden.service;
 
 import com.myeden.entity.Robot;
+import com.myeden.service.impl.DifyImageResult;
 
 /**
  * Dify API集成服务接口
@@ -77,6 +78,8 @@ public interface DifyService {
         public boolean success;
         public String error;
     }
+
+    DifyImageResult recognizeImageByWorkflow(String imagePath, String apiKey, String userId, String variableName);
 
     String recognizeFileWorkflow(String filePath, String apiKey, String userId, String variableName);
 } 

@@ -18,10 +18,26 @@
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
       </div>
     </div>
-    <div class="chat-input">
+    <div class="chat-input" style="position:relative;">
       <el-input v-model="input" @keyup.enter="sendMessage" placeholder="输入消息..." />
       <el-button type="primary" @click="sendMessage">发送</el-button>
+      <!-- 浮动摄像头图标 -->
+      <span
+        class="camera-icon"
+        :class="{ active: cameraActive }"
+        @click="toggleCamera"
+        title="视频聊天"
+      >
+        <el-icon>
+          <VideoCamera />
+        </el-icon>
+      </span>
     </div>
+    <!-- 摄像头视频窗口浮动显示在右上角，仅在cameraActive时显示 -->
+    <div v-if="cameraActive" class="floating-video-window">
+      <video ref="videoRef" autoplay playsinline muted style="display:block;" />
+    </div>
+    <canvas ref="canvasRef" style="display:none"></canvas>
   </div>
 </template>
 
@@ -33,7 +49,8 @@ import { getRobotById } from '@/api/robot'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { useUserStore } from '@/stores/user'
 import { useWebSocketStore } from '@/stores/websocket'
-import { Back } from '@element-plus/icons-vue'
+import { Back, VideoCamera } from '@element-plus/icons-vue'
+import { message } from '@/utils/message'
 
 const route = useRoute()
 const robotId = ref('')
@@ -102,18 +119,59 @@ const onScroll = () => {
   }
 }
 
+// 摄像头相关
+const cameraActive = ref(false)
+const stream = ref(null)
+const videoRef = ref(null)
+const canvasRef = ref(null)
+
+/**
+ * 切换摄像头开关
+ */
+const toggleCamera = async () => {
+  if (cameraActive.value) {
+    // 关闭摄像头
+    if (stream.value) {
+      stream.value.getTracks().forEach(track => track.stop())
+    }
+    cameraActive.value = false
+    stream.value = null
+    message.info('摄像头已关闭')
+  } else {
+    try {
+      stream.value = await navigator.mediaDevices.getUserMedia({ video: true })
+      cameraActive.value = true
+      await nextTick()
+      if (videoRef.value) {
+        videoRef.value.srcObject = stream.value
+      }
+      message.success('摄像头已打开')
+    } catch (err) {
+      message.error('无法访问摄像头: ' + err.message)
+    }
+  }
+}
+
 const sendMessage = async () => {
   if (!input.value.trim()) return
-  const res = await sendChatMessage(robotId.value, input.value, conversationId.value)
+  let imageBase64 = null
+  if (cameraActive.value && videoRef.value && canvasRef.value) {
+    const video = videoRef.value
+    const canvas = canvasRef.value
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      imageBase64 = canvas.toDataURL('image/png')
+    }
+  }
+  // 假设sendChatMessage支持imageBase64参数
+  const res = await sendChatMessage(robotId.value, input.value, conversationId.value, imageBase64)
   if (res.code === 200) {
-    /* if (Array.isArray(res.data)) {
-      messages.value.push(...res.data)
-    } else {
-      messages.value.push(res.data)
-    } */
     input.value = ''
     scrollToBottom()
-    isRobotReplying.value = true // 用户发消息后，显示“天使正在回复...”
+    isRobotReplying.value = true
   }
 }
 
@@ -373,6 +431,46 @@ function handleAIChatMessage(e) {
 
 .el-button:hover {
   background: linear-gradient(135deg, #1eae98 0%, #3eb575 100%);
+}
+
+.camera-icon {
+  position: absolute;
+  right: 80px;
+  top: 58%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 22px;
+  color: #888;
+  transition: color 0.2s;
+  z-index: 2;
+}
+.camera-icon.active {
+  color: #67c23a;
+}
+
+.floating-video-window {
+  position: fixed;
+  top: 80px;
+  right: 10px;
+  width: 260px;
+  aspect-ratio: 4/3;
+  min-width: 180px;
+  max-width: 320px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  z-index: 10;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.floating-video-window video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  border-radius: 12px;
 }
 
 @media (max-width: 600px) {
