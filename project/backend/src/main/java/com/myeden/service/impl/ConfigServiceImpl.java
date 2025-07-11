@@ -378,6 +378,7 @@ public class ConfigServiceImpl implements ConfigService {
         robot.setEducation(robotConfig.getEducation());
         robot.setRelationship(robotConfig.getRelationship());
         robot.setFamily(robotConfig.getFamily());
+        robot.setAppKey(robotConfig.getAppKey());
         
         // 性格特征列表
         if (robotConfig.getTraits() != null && !robotConfig.getTraits().isEmpty()) {

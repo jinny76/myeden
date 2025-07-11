@@ -93,6 +93,28 @@ public class RobotConfig {
         private List<ActiveHours> activeHours;
         private boolean isActive;
         
+        /**
+         * 机器人关联的AI服务密钥或唯一标识
+         * 用于链接特定AI
+         */
+        private String appKey;
+
+        /**
+         * 获取机器人AI服务的appKey
+         * @return appKey AI服务密钥或唯一标识
+         */
+        public String getAppKey() {
+            return appKey;
+        }
+
+        /**
+         * 设置机器人AI服务的appKey
+         * @param appKey AI服务密钥或唯一标识
+         */
+        public void setAppKey(String appKey) {
+            this.appKey = appKey;
+        }
+        
         public String getId() { return id; }
         public void setId(String id) { this.id = id; }
         
