@@ -1904,7 +1904,21 @@ const getTopLevelComments = (post) => {
 /**
  * 根据性别和年龄推断TTS voice_type
  */
-function getVoiceType(gender, age) {
+function getVoiceType(gender, age, id) {
+  const index = parseInt(id.substring(6)) % 10;
+  const voiceFemale = [
+    'zh_female_roumeinvyou_emo_v2_mars_bigtts',
+    'zh_female_meilinvyou_emo_v2_mars_bigtts',
+    'zh_female_shuangkuaisisi_emo_v2_mars_bigtts',
+    'zh_female_tianxinxiaomei_emo_v2_mars_bigtts',
+    'zh_female_gaolengyujie_emo_v2_mars_bigtts',
+    'zh_female_tianmeitaozi_mars_bigtts',
+    'zh_female_qingxinnvsheng_mars_bigtts',
+    'zh_female_kailangjiejie_moon_bigtts',
+    'zh_female_tianmeiyueyue_moon_bigtts',
+    'ICL_zh_female_wenrouwenya_tob',
+  ]
+
   if (!gender) gender = 'female'
   if (!age) age = 20
   if (gender === 'male') {
@@ -1915,7 +1929,7 @@ function getVoiceType(gender, age) {
   } else {
     if (age <= 12) return 'zh_female_linjianvhai_moon_bigtts'
     if (age <= 18) return 'zh_female_tianxinxiaomei_emo_v2_mars_bigtts'
-    if (age <= 45) return 'zh_female_meilinvyou_emo_v2_mars_bigtts'
+    if (age <= 45) return voiceFemale[index]
     return 'ICL_zh_female_heainainai_tob'
   }
 }
@@ -1934,7 +1948,7 @@ const playSpeech = async (text, author = {}) => {
   }
   // 1. 优先调用后端TTS接口
   try {
-    const voiceType = getVoiceType(author.gender, author.age)
+    const voiceType = getVoiceType(author.gender, author.age, author.id)
     const resp = await tts(text, voiceType)
     if (resp.code === 200) {
       const data = resp.data
@@ -1969,15 +1983,15 @@ const playSpeech = async (text, author = {}) => {
  */
 const getAuthorGenderAge = (item) => {
   if (item.authorGender && item.authorAge) {
-    return { gender: item.authorGender, age: item.authorAge }
+    return { gender: item.authorGender, age: item.authorAge, id: item.authorId }
   }
   if (item.authorType === 'robot' && item.authorId && robotList.value.length > 0) {
     const robot = robotList.value.find(r => r.id == item.authorId)
     if (robot) {
-      return { gender: robot.gender || 'female', age: robot.age || 20 }
+      return { gender: robot.gender || 'female', age: robot.age || 20, id: robot.id }
     }
   }
-  return { gender: 'female', age: 20 }
+  return { gender: 'female', age: 20, id: 'robot_001' }
 }
 </script>
 

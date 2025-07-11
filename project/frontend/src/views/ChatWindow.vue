@@ -324,17 +324,22 @@ function handleAIChatMessage(e) {
   if (
     (msg.senderId === robotId.value && msg.receiverId === userStore.userInfo?.userId) ||
     (msg.senderId === userStore.userInfo?.userId && msg.receiverId === robotId.value)
-  ) {
-    messages.value.push(msg)
+  ) {    
     conversationId.value = msg.conversationId
-    scrollToBottom()
+    
     if (msg.senderType === 'ai' || msg.senderType === 'robot') {
-      isRobotReplying.value = false
       // 如果上一条消息是自己发的语音，自动朗读AI回复
-      const lastMsg = messages.value[messages.value.length - 2]
+      const lastMsg = messages.value[messages.value.length - 1]
       if (lastMsg && lastMsg.senderType === 'user' && lastMsg.asrResult) {
-        playSpeech(msg.content, )
+        playSpeech(msg)
+      }  else {
+        messages.value.push(msg)
+        scrollToBottom()
+        isRobotReplying.value = false
       }
+    } else {
+      messages.value.push(msg)
+      scrollToBottom()     
     }
   }
 }
@@ -342,6 +347,19 @@ function handleAIChatMessage(e) {
 function getVoiceType() {
   const gender = robot.value?.gender
   const age = robot.value?.age
+  const index = parseInt(robot.value?.id.substring(6)) % 10;
+  const voiceFemale = [
+    'zh_female_roumeinvyou_emo_v2_mars_bigtts',
+    'zh_female_meilinvyou_emo_v2_mars_bigtts',
+    'zh_female_shuangkuaisisi_emo_v2_mars_bigtts',
+    'zh_female_tianxinxiaomei_emo_v2_mars_bigtts',
+    'zh_female_gaolengyujie_emo_v2_mars_bigtts',
+    'zh_female_tianmeitaozi_mars_bigtts',
+    'zh_female_qingxinnvsheng_mars_bigtts',
+    'zh_female_kailangjiejie_moon_bigtts',
+    'zh_female_tianmeiyueyue_moon_bigtts',
+    'ICL_zh_female_wenrouwenya_tob',
+  ]
 
   if (!gender) gender = 'female'
   if (!age) age = 20
@@ -353,29 +371,35 @@ function getVoiceType() {
   } else {
     if (age <= 12) return 'zh_female_linjianvhai_moon_bigtts'
     if (age <= 18) return 'zh_female_tianxinxiaomei_emo_v2_mars_bigtts'
-    if (age <= 45) return 'zh_female_meilinvyou_emo_v2_mars_bigtts'
+    if (age <= 45) return voiceFemale[index]
     return 'ICL_zh_female_heainainai_tob'
   }
 }
 
-const playSpeech = async (text) => {
-  if (!text || typeof text !== 'string') {
+const playSpeech = async (msg) => {
+  if (!msg.content || typeof msg.content !== 'string') {
     message.warning('无可朗读内容')
     return
   }
   // 1. 优先调用后端TTS接口
   try {
     const voiceType = getVoiceType()
-    const resp = await tts(text, voiceType)
+    const resp = await tts(msg.content, voiceType)
     if (resp.code === 200) {
       const data = resp.data
       const audioUrl = data.url.replace('/uploads/', '/api/v1/files/')
       const audio = new Audio(audioUrl)
-      audio.play()
+      messages.value.push(msg)
+      scrollToBottom()
+      isRobotReplying.value = false
+      audio.play()      
       return
     }
   } catch (e) {
     // TTS接口失败降级
+    messages.value.push(msg)
+    scrollToBottom()
+    isRobotReplying.value = false
     console.warn('TTS接口失败，降级为speechSynthesis', e)
       // 2. 降级为浏览器speechSynthesis
     if (!window.speechSynthesis) {
@@ -383,7 +407,7 @@ const playSpeech = async (text) => {
       return
     }
     window.speechSynthesis.cancel()
-    const utter = new window.SpeechSynthesisUtterance(text)
+    const utter = new window.SpeechSynthesisUtterance(msg.content)
     utter.rate = 1
     utter.pitch = 1
     utter.volume = 1
