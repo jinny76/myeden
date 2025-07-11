@@ -285,7 +285,9 @@ public class WorldServiceImpl implements WorldService {
             return new RobotDetail(
                     robot.getRobotId(), // 使用业务逻辑的robotId而不是MongoDB的id
                     robot.getName(),
-                    robot.getName(), // 使用name作为nickname
+                    robot.getNickname(),
+                    robot.getGender(),
+                    robot.getAge(),
                     robot.getAvatar(),
                     robot.getPersonality(),
                     robot.getDescription(), // 使用description作为description

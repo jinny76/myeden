@@ -1,2 +1,3 @@
 /.vscode
 /project/backend/external_data_cache.json
+/project/backend/src/main/resources/config/api.json

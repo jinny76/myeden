@@ -301,6 +301,8 @@ public interface WorldService {
         private String id;
         private String name;
         private String nickname;
+        private String gender;
+        private int age;
         private String avatar;
         private String personality;
         private String description;
@@ -313,13 +315,15 @@ public interface WorldService {
         private List<ActiveHours> activeHours;
         private boolean isActive;
         
-        public RobotDetail(String id, String name, String nickname, String avatar, String personality,
+        public RobotDetail(String id, String name, String nickname, String gender, int age, String avatar, String personality,
                          String description, String background, String example, List<String> traits, List<String> interests,
                          SpeakingStyle speakingStyle, BehaviorPatterns behaviorPatterns, 
                          List<ActiveHours> activeHours, boolean isActive) {
             this.id = id;
             this.name = name;
             this.nickname = nickname;
+            this.gender = gender;
+            this.age = age;
             this.avatar = avatar;
             this.personality = personality;
             this.description = description;
@@ -337,6 +341,8 @@ public interface WorldService {
         public String getId() { return id; }
         public String getName() { return name; }
         public String getNickname() { return nickname; }
+        public String getGender() { return gender; }
+        public int getAge() { return age; }
         public String getAvatar() { return avatar; }
         public String getPersonality() { return personality; }
         public String getDescription() { return description; }

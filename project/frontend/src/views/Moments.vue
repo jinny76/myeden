@@ -542,6 +542,7 @@ import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, Swit
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment } from '@/api/comment'
 import { createPost, searchPosts, getPostDetail, queryPosts } from '@/api/post'
+import { tts } from '@/api/tts'
 
 // 响应式数据
 const router = useRouter()
@@ -1901,91 +1902,64 @@ const getTopLevelComments = (post) => {
 }
 
 /**
- * 语音合成播放文本
+ * 根据性别和年龄推断TTS voice_type
+ */
+function getVoiceType(gender, age) {
+  if (!gender) gender = 'female'
+  if (!age) age = 20
+  if (gender === 'male') {
+    if (age <= 12) return 'zh_male_linjiananhai_moon_bigtts'
+    if (age <= 18) return 'zh_male_linjiananhai_moon_bigtts'
+    if (age <= 45) return 'zh_male_junlangnanyou_emo_v2_mars_bigtts'
+    return 'ICL_zh_male_youmodaye_tob'
+  } else {
+    if (age <= 12) return 'zh_female_linjianvhai_moon_bigtts'
+    if (age <= 18) return 'zh_female_tianxinxiaomei_emo_v2_mars_bigtts'
+    if (age <= 45) return 'zh_female_meilinvyou_emo_v2_mars_bigtts'
+    return 'ICL_zh_female_heainainai_tob'
+  }
+}
+
+/**
+ * 语音合成播放文本（优先TTS接口，失败降级为浏览器speechSynthesis）
  * @param {string} text - 要朗读的文本内容
  * @param {Object} [author] - 作者信息（可选），用于选择voice
  * @param {string} [author.gender] - 性别 'male' | 'female'
  * @param {number} [author.age] - 年龄
  */
-let cachedVoices = null // 缓存voices，避免重复获取
-let index = 0;
-const playSpeech = (text, author = {}) => {
-  if (!window.speechSynthesis) {
-    message.warning('当前浏览器不支持语音朗读')
-    return
-  }
+const playSpeech = async (text, author = {}) => {
   if (!text || typeof text !== 'string') {
     message.warning('无可朗读内容')
     return
   }
-  // 停止当前朗读
-  window.speechSynthesis.cancel()
-  // 获取所有可用voice，仅首次获取，后续用缓存
-  /* if (!cachedVoices) {
-    cachedVoices = window.speechSynthesis.getVoices()
-    // 监听voiceschanged事件，异步加载时更新缓存
-    if (cachedVoices.length === 0) {
-      window.speechSynthesis.onvoiceschanged = () => {
-        cachedVoices = window.speechSynthesis.getVoices()
-      }
+  // 1. 优先调用后端TTS接口
+  try {
+    const voiceType = getVoiceType(author.gender, author.age)
+    const resp = await tts(text, voiceType)
+    if (resp.code === 200) {
+      const data = resp.data
+      const audioUrl = data.url.replace('/uploads/', '/api/v1/files/')
+      const audio = new Audio(audioUrl)
+      audio.play()
+      return
     }
-  }
-  const voices = cachedVoices || []
-  let selectedVoice = null
-  // 语音选择策略
-  const gender = author.gender || 'female'
-  const age = author.age || 20
-  // 优先中文语音
-  const preferredVoices = voices.filter(v => v.name && (v.name.includes('Mainland') || v.name.startsWith('Online')))
-  console.log('author', author)
-  console.log('preferredVoices', preferredVoices)
-  // 性别优先
-  if (gender === 'male') {
-    if (age <= 12) {
-      // 儿童音
-      selectedVoice = preferredVoices.find(v => v.name.includes('Yunxia'))
-    } else if (age <= 25) {
-      // 青年音
-      selectedVoice = preferredVoices.find(v => v.name.includes('Yunxi'))
-    } else {
-      // 成年音
-      selectedVoice = preferredVoices.find(v => v.name.includes('Yunyang'))
+  } catch (e) {
+    // TTS接口失败降级
+    console.warn('TTS接口失败，降级为speechSynthesis', e)
+      // 2. 降级为浏览器speechSynthesis
+    if (!window.speechSynthesis) {
+      message.warning('当前浏览器不支持语音朗读')
+      return
     }
-  } else {
-    if (age <= 12) {
-      // 儿童音
-      selectedVoice = preferredVoices.find(v => v.name.includes('Xiaoyi'))
-    } else if (age <= 25) {
-      // 青年音
-      selectedVoice = preferredVoices.find(v => v.name.includes('Xiaoyi'))
-    } else {
-      // 成年音
-      selectedVoice = preferredVoices.find(v => v.name.includes('Xiaoyi'))
-    }
-  } */
-
-  // 判空处理：如果voices为空，直接不指定voice，仅指定lang
-  const utter = new window.SpeechSynthesisUtterance(text)
-  /* if (voices.length > 0 && selectedVoice) {
-    utter.voice = selectedVoice
-    utter.lang = selectedVoice?.lang || 'zh-CN'
-    console.log('selectedVoice', selectedVoice, text)
-  } else {
+    window.speechSynthesis.cancel()
+    const utter = new window.SpeechSynthesisUtterance(text)
+    utter.rate = 1
+    utter.pitch = 1
+    utter.volume = 1
     utter.lang = 'zh-CN'
-    // 仅首次提示
-    if (!window._speechVoiceWarned) {      
-      window._speechVoiceWarned = true
-    }
-  } */
-  utter.rate = 1
-  utter.pitch = 1
-  utter.volume = 1
-  utter.onerror = (e) => {
-    //message.error('语音播放失败')
-    //console.error('SpeechSynthesis error:', e)
+    utter.onerror = (e) => {}
+    window.speechSynthesis.speak(utter)
   }
-  console.log('text', text)
-  window.speechSynthesis.speak(utter)
 }
 
 /**
