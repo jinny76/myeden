@@ -1952,7 +1952,7 @@ const playSpeech = async (text, author = {}) => {
     const resp = await tts(text, voiceType)
     if (resp.code === 200) {
       const data = resp.data
-      const audioUrl = data.url.replace('/uploads/', '/api/v1/files/')
+      const audioUrl = data.url.replace('./uploads/', '/api/v1/files/')
       const audio = new Audio(audioUrl)
       audio.play()
       return

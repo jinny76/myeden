@@ -138,7 +138,7 @@ public class TTSController {
                 fos.write(audioBytes);
             }
             // 5. 返回URL字符串
-            String url = "/uploads/voices/" + fileName;
+            String url = voicesDir + fileName;
             Map<String, Object> result = new HashMap<>();
             result.put("url", url);
             result.put("duration", respNode.path("addition").path("duration").asText(""));

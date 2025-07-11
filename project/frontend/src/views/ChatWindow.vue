@@ -10,7 +10,12 @@
       <div v-if="loadingHistory" class="loading-history">历史消息加载中...</div>
       <div v-for="msg in messages" :key="msg.id" :class="['chat-message', msg.senderType, { 'voice-message': msg.asrResult }]">
         <el-avatar :src="getAvatar(msg)" />
-        <div class="message-content">
+        <div 
+          class="message-content"
+          :class="{ 'clickable': msg.senderType === 'robot' || msg.senderType === 'ai' }"
+          @click="handleMessageClick(msg)"
+          :title="(msg.senderType === 'robot' || msg.senderType === 'ai') ? '点击播放语音' : ''"
+        >
           <template v-if="msg.asrResult">           
             {{ msg.asrResult.text || msg.content }}
             <span v-if="msg.asrResult.emotion && msg.asrResult.emotion !== 'NEUTRAL'" class="emotion-label">
@@ -25,7 +30,7 @@
           </template>
           <template v-else>
             {{ msg.content }}
-          </template>
+          </template>          
         </div>
       </div>
       <div v-if="loading" class="loading">加载中...</div>
@@ -84,7 +89,7 @@ import { getRobotById } from '@/api/robot'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { useUserStore } from '@/stores/user'
 import { useWebSocketStore } from '@/stores/websocket'
-import { Back, VideoCamera, Refresh, Microphone } from '@element-plus/icons-vue'
+import { Back, VideoCamera, Refresh, Microphone, VideoPlay } from '@element-plus/icons-vue'
 import { message } from '@/utils/message'
 import { tts } from '@/api/tts'
 
@@ -344,7 +349,7 @@ function handleAIChatMessage(e) {
   }
 }
 
-function getVoiceType() {
+function getVoiceType(msg) {
   const gender = robot.value?.gender
   const age = robot.value?.age
   const index = parseInt(robot.value?.id.substring(6)) % 10;
@@ -376,6 +381,74 @@ function getVoiceType() {
   }
 }
 
+/**
+ * 处理消息点击事件
+ * @param {Object} msg - 消息对象
+ */
+const handleMessageClick = async (msg) => {
+  // 只有机器人或AI消息才可点击播放
+  if (msg.senderType !== 'robot' && msg.senderType !== 'ai') {
+    return
+  }
+  
+  // 检查是否有内容可播放
+  if (!msg.content || typeof msg.content !== 'string') {
+    message.warning('无可播放内容')
+    return
+  }
+  
+  // 调用播放语音功能
+  await playMessageSpeech(msg)
+}
+
+/**
+ * 播放消息语音
+ * @param {Object} msg - 消息对象
+ */
+const playMessageSpeech = async (msg) => {
+  if (!msg.content || typeof msg.content !== 'string') {
+    message.warning('无可朗读内容')
+    return
+  }
+  
+  // 1. 优先调用后端TTS接口
+  try {
+    const voiceType = getVoiceType(msg)
+    const resp = await tts(msg.content, voiceType)
+    if (resp.code === 200) {
+      const data = resp.data
+      const audioUrl = data.url.replace('./uploads/', '/api/v1/files/')
+      const audio = new Audio(audioUrl)
+      
+      // 监听播放错误事件
+      audio.onerror = (e) => {
+        console.error('音频播放失败:', e)
+      }
+      
+      await audio.play()
+      return
+    }
+  } catch (e) {
+    console.warn('TTS接口失败，降级为speechSynthesis', e)
+    // 2. 降级为浏览器speechSynthesis
+    if (!window.speechSynthesis) {
+      message.warning('当前浏览器不支持语音朗读')
+      return
+    }
+    
+    window.speechSynthesis.cancel()
+    const utter = new window.SpeechSynthesisUtterance(msg.content)
+    utter.rate = 1
+    utter.pitch = 1
+    utter.volume = 1
+    utter.lang = 'zh-CN'
+    utter.onerror = (e) => {
+      console.error('语音合成失败:', e)
+    }
+    window.speechSynthesis.speak(utter)
+  }
+}
+
 const playSpeech = async (msg) => {
   if (!msg.content || typeof msg.content !== 'string') {
     message.warning('无可朗读内容')
@@ -387,7 +460,7 @@ const playSpeech = async (msg) => {
     const resp = await tts(msg.content, voiceType)
     if (resp.code === 200) {
       const data = resp.data
-      const audioUrl = data.url.replace('/uploads/', '/api/v1/files/')
+      const audioUrl = data.url.replace('./uploads/', '/api/v1/files/')
       const audio = new Audio(audioUrl)
       messages.value.push(msg)
       scrollToBottom()
@@ -517,6 +590,47 @@ const playSpeech = async (msg) => {
   border-top-right-radius: 18px;
   align-self: flex-start;
   border: 1px solid #23272b;
+  position: relative;
+}
+
+/* 可点击的机器人消息样式 */
+.message-content.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.message-content.clickable:hover {
+  background: #2a2f35 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.message-content.clickable:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+/* 播放图标样式 */
+.play-icon {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  color: #67c23a;
+  font-size: 14px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.message-content.clickable:hover .play-icon {
+  opacity: 1;
+  color: #85ce61;
+}
+
+/* 播放时的动画效果 */
+.message-content.clickable:active .play-icon {
+  transform: translateY(-50%) scale(0.9);
 }
 
 .loading {
@@ -772,6 +886,16 @@ const playSpeech = async (msg) => {
   .el-avatar {
     width: 32px !important;
     height: 32px !important;
+  }
+  
+  /* 移动端播放图标样式调整 */
+  .play-icon {
+    font-size: 12px;
+    right: 6px;
+  }
+  
+  .message-content.clickable:hover {
+    transform: none;
   }
 }
 </style> 
