@@ -446,12 +446,12 @@ function getVoiceType(msg) {
   if (!gender) gender = 'female'
   if (!age) age = 20
   if (gender === 'male') {
-    if (age <= 12) return 'zh_male_linjiananhai_moon_bigtts'
+    if (age <= 12) return 'zh_male_naiqimengwa_mars_bigtts'
     if (age <= 18) return 'zh_male_linjiananhai_moon_bigtts'
     if (age <= 45) return 'zh_male_junlangnanyou_emo_v2_mars_bigtts'
     return 'ICL_zh_male_youmodaye_tob'
   } else {
-    if (age <= 12) return 'zh_female_linjianvhai_moon_bigtts'
+    if (age <= 12) return 'zh_female_mengyatou_mars_bigtts'
     if (age <= 18) return 'zh_female_tianxinxiaomei_emo_v2_mars_bigtts'
     if (age <= 45) return voiceFemale[index]
     return 'ICL_zh_female_heainainai_tob'
