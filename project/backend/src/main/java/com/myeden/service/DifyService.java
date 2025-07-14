@@ -22,7 +22,7 @@ public interface DifyService {
      * @param userId 机器人信息（用于API配置）
      * @return 生成的内容
      */
-    DifyChatResult callDifyApi(String prompt, String userId);
+    DifyChatResult callDifyApi(String prompt, String userId, String appKey);
     
     /**
      * 调用Dify API，支持传递conversationId以实现多轮对话
@@ -31,7 +31,7 @@ public interface DifyService {
      * @param conversationId 会话ID（可为null或空字符串，表示无上下文）
      * @return Dify API返回的回复内容
      */
-    DifyChatResult callDifyApi(String prompt, String userId, String conversationId);
+    DifyChatResult callDifyApi(String prompt, String userId, String conversationId, String appKey);
     
     /**
      * 检查Dify API连接状态

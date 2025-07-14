@@ -17,7 +17,7 @@
           :title="(msg.senderType === 'robot' || msg.senderType === 'ai') ? '点击播放语音' : ''"
         >
           <template v-if="msg.asrResult">           
-            {{ msg.asrResult.text || msg.content }}
+            {{ msg.asrResult.text || getContent(msg.content) }}
             <span v-if="msg.asrResult.emotion && msg.asrResult.emotion !== 'NEUTRAL'" class="emotion-label">
               <template v-if="msg.asrResult.emotion === 'HAPPY'">😊</template>
               <template v-else-if="msg.asrResult.emotion === 'SAD'">😢</template>
@@ -29,7 +29,7 @@
             </span>
           </template>
           <template v-else>
-            {{ msg.content }}
+            {{ getContent(msg.content) }}
           </template>          
         </div>
       </div>
@@ -78,6 +78,19 @@
       <video ref="videoRef" autoplay playsinline muted style="display:block;" />
     </div>
     <canvas ref="canvasRef" style="display:none"></canvas>
+    <!-- 全屏视频播放蒙层 -->
+    <div v-if="showFullVideo" class="fullscreen-video-mask" @click="onFullVideoEnded">
+      <video
+        ref="fullVideoRef"
+        :src="fullVideoUrl"
+        class="fullscreen-video"
+        @ended="onFullVideoEnded"
+        @canplay="onFullVideoCanPlay"
+        autoplay
+        playsinline
+        webkit-playsinline
+      ></video>
+    </div>
   </div>
 </template>
 
@@ -116,6 +129,26 @@ const params = ref({
   limit: pageSize,
   offset: 0
 })
+
+const getContent = (msg) => {
+  if (!msg) return ''
+
+  let parts = msg.split('|')
+  if (parts.length > 1) {
+    return parts[0]
+  }
+  return msg
+}
+
+const getEmotion = (msg) => {
+  if (!msg) return null
+
+  let parts = msg.split('|')
+  if (parts.length > 1) {
+    return parts[1]
+  }
+  return null;
+}
 
 const loadHistory = async (append = false) => {
   if (loadingHistory.value || !hasMoreHistory.value) return
@@ -291,6 +324,49 @@ function goToWorld() {
   router.push('/world')
 }
 
+const showFullVideo = ref(false)
+const fullVideoUrl = ref('')
+const fullVideoRef = ref(null)
+
+/**
+ * 播放全屏视频
+ * @param {string} url 视频地址
+ */
+function playFullVideo(url) {
+  fullVideoUrl.value = url
+  showFullVideo.value = true
+  nextTick(() => {
+    if (fullVideoRef.value) {
+      fullVideoRef.value.currentTime = 0
+      fullVideoRef.value.play()
+    }
+  })
+}
+
+function onFullVideoEnded() {
+  showFullVideo.value = false
+  fullVideoUrl.value = ''
+}
+
+function onFullVideoCanPlay() {
+  // 可选：自动全屏
+  const video = fullVideoRef.value
+  if (video && video.requestFullscreen) {
+    video.requestFullscreen()
+  }
+}
+
+/**
+ * 过滤括号内容，只保留非括号部分
+ * @param {string} text
+ * @returns {string}
+ */
+function filterBracketText(text) {
+  if (!text) return ''
+  // 去除所有中英文括号内的内容，包括多组
+  return text.replace(/\([^\)]*\)|（[^）]*）/g, '').replace(/\s+/g, ' ').trim()
+}
+
 onMounted(async () => {
   // 确保 robotId 始终为字符串
   robotId.value = typeof route.params.robotId === 'string'
@@ -341,6 +417,7 @@ function handleAIChatMessage(e) {
         messages.value.push(msg)
         scrollToBottom()
         isRobotReplying.value = false
+        playEmotion(msg.content)
       }
     } else {
       messages.value.push(msg)
@@ -353,9 +430,7 @@ function getVoiceType(msg) {
   const gender = robot.value?.gender
   const age = robot.value?.age
   const index = parseInt(robot.value?.id.substring(6)) % 10;
-  const voiceFemale = [
-    'zh_female_roumeinvyou_emo_v2_mars_bigtts',
-    'zh_female_meilinvyou_emo_v2_mars_bigtts',
+  const voiceFemale = [    
     'zh_female_shuangkuaisisi_emo_v2_mars_bigtts',
     'zh_female_tianxinxiaomei_emo_v2_mars_bigtts',
     'zh_female_gaolengyujie_emo_v2_mars_bigtts',
@@ -363,6 +438,8 @@ function getVoiceType(msg) {
     'zh_female_qingxinnvsheng_mars_bigtts',
     'zh_female_kailangjiejie_moon_bigtts',
     'zh_female_tianmeiyueyue_moon_bigtts',
+    'zh_female_meilinvyou_emo_v2_mars_bigtts',
+    'zh_female_roumeinvyou_emo_v2_mars_bigtts',
     'ICL_zh_female_wenrouwenya_tob',
   ]
 
@@ -401,6 +478,9 @@ const handleMessageClick = async (msg) => {
   await playMessageSpeech(msg)
 }
 
+// 全局音频播放控制
+let currentAudio = null
+
 /**
  * 播放消息语音
  * @param {Object} msg - 消息对象
@@ -410,21 +490,28 @@ const playMessageSpeech = async (msg) => {
     message.warning('无可朗读内容')
     return
   }
-  
+  // 打断当前音频
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio.currentTime = 0
+    currentAudio = null
+  }
+  if (window.speechSynthesis) window.speechSynthesis.cancel()
   // 1. 优先调用后端TTS接口
   try {
     const voiceType = getVoiceType(msg)
-    const resp = await tts(msg.content, voiceType)
+    const textToRead = filterBracketText(getContent(msg.content))
+    const resp = await tts(textToRead, voiceType)
     if (resp.code === 200) {
       const data = resp.data
       const audioUrl = data.url.replace('./uploads/', '/api/v1/files/')
       const audio = new Audio(audioUrl)
-      
+      currentAudio = audio
       // 监听播放错误事件
       audio.onerror = (e) => {
         console.error('音频播放失败:', e)
       }
-      
+      playEmotion(msg.content)
       await audio.play()
       return
     }
@@ -435,9 +522,9 @@ const playMessageSpeech = async (msg) => {
       message.warning('当前浏览器不支持语音朗读')
       return
     }
-    
     window.speechSynthesis.cancel()
-    const utter = new window.SpeechSynthesisUtterance(msg.content)
+    const textToRead = filterBracketText(getContent(msg.content))
+    const utter = new window.SpeechSynthesisUtterance(textToRead)
     utter.rate = 1
     utter.pitch = 1
     utter.volume = 1
@@ -446,6 +533,23 @@ const playMessageSpeech = async (msg) => {
       console.error('语音合成失败:', e)
     }
     window.speechSynthesis.speak(utter)
+    playEmotion(msg.content)
+  }
+}
+
+/**
+ * 播放情绪视频
+ * @param {Object} msg - 消息对象
+ */
+const playEmotion = async (msg) => {
+  const emotion = getEmotion(msg)
+  if (emotion) {
+    const videoUrl = `/api/v1/files/video/${robotId.value}_${emotion}.mp4`
+    // check if video exists
+    const resp = await fetch(videoUrl)
+    if (resp.status === 200) {
+      playFullVideo(videoUrl)
+    }
   }
 }
 
@@ -454,18 +558,28 @@ const playSpeech = async (msg) => {
     message.warning('无可朗读内容')
     return
   }
+  // 打断当前音频
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio.currentTime = 0
+    currentAudio = null
+  }
+  if (window.speechSynthesis) window.speechSynthesis.cancel()
   // 1. 优先调用后端TTS接口
   try {
     const voiceType = getVoiceType()
-    const resp = await tts(msg.content, voiceType)
+    const textToRead = filterBracketText(getContent(msg.content))
+    const resp = await tts(textToRead, voiceType)
     if (resp.code === 200) {
       const data = resp.data
       const audioUrl = data.url.replace('./uploads/', '/api/v1/files/')
       const audio = new Audio(audioUrl)
+      currentAudio = audio
       messages.value.push(msg)
       scrollToBottom()
       isRobotReplying.value = false
-      audio.play()      
+      audio.play()
+      playEmotion(msg.content)
       return
     }
   } catch (e) {
@@ -474,19 +588,20 @@ const playSpeech = async (msg) => {
     scrollToBottom()
     isRobotReplying.value = false
     console.warn('TTS接口失败，降级为speechSynthesis', e)
-      // 2. 降级为浏览器speechSynthesis
     if (!window.speechSynthesis) {
       message.warning('当前浏览器不支持语音朗读')
       return
     }
     window.speechSynthesis.cancel()
-    const utter = new window.SpeechSynthesisUtterance(msg.content)
+    const textToRead = filterBracketText(getContent(msg.content))
+    const utter = new window.SpeechSynthesisUtterance(textToRead)
     utter.rate = 1
     utter.pitch = 1
     utter.volume = 1
     utter.lang = 'zh-CN'
     utter.onerror = (e) => {}
     window.speechSynthesis.speak(utter)
+    playEmotion(msg.content)
   }
 }
 </script>
@@ -814,6 +929,27 @@ const playSpeech = async (msg) => {
   color: #67c23a;
   margin-left: 8px;
   font-size: 0.95em;
+}
+
+.fullscreen-video-mask {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fullscreen-video {
+  max-width: 90vw;
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  background: #000;
+  pointer-events: none;
+  display: block;
+  margin: auto;
 }
 
 @media (max-width: 600px) {

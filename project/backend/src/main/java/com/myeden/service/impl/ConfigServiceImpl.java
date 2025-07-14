@@ -518,6 +518,7 @@ public class ConfigServiceImpl implements ConfigService {
         existing.setEducation(newConfig.getEducation());
         existing.setRelationship(newConfig.getRelationship());
         existing.setFamily(newConfig.getFamily());
+        existing.setAppKey(newConfig.getAppKey());
         
         // 更新性格特征列表
         if (newConfig.getTraits() != null) {

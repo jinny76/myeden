@@ -1433,6 +1433,9 @@ const goToPostDetail = (post) => {
   console.log('明细页功能已被移除')
 }
 
+// WebSocket事件处理函数 - 仅在支持增量刷新时启用
+let handlePostUpdate, handleCommentUpdate, handleRobotAction;
+
 // 生命周期
 onMounted(async () => {
   await robotStore.fetchRobotList()
@@ -1465,9 +1468,6 @@ onMounted(async () => {
   
   // 添加点击外部关闭移动端菜单的监听
   document.addEventListener('click', handleClickOutside)
-
-  // WebSocket事件处理函数 - 仅在支持增量刷新时启用
-  let handlePostUpdate, handleCommentUpdate, handleRobotAction
   
   if (window.canIncrementalRefresh !== false) {
     handlePostUpdate = async () => {

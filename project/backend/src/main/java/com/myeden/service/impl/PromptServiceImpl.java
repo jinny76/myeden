@@ -781,7 +781,7 @@ public class PromptServiceImpl implements PromptService {
             // 使用PromptService构建提示词和link
             PostPromptResult promptResult = buildPostPrompt(robot, context);
             // 调用Dify API
-            DifyChatResult result = difyService.callDifyApi(promptResult.getPrompt(), robot.getRobotId(), null);
+            DifyChatResult result = difyService.callDifyApi(promptResult.getPrompt(), robot.getRobotId(), robot.getAppKey());
             // 使用PromptService处理生成的内容
             String content = processGeneratedContent(result, robot, "post").answer;
 
@@ -830,7 +830,7 @@ public class PromptServiceImpl implements PromptService {
             // 使用PromptService构建提示词
             String prompt = buildCommentPrompt(robot, post, context);
             // 调用Dify API
-            DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), null);
+            DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), robot.getAppKey());
             // 使用PromptService处理生成的内容
             String content = processGeneratedContent(result, robot, "comment").answer;
             // 保存日志
@@ -848,7 +848,7 @@ public class PromptServiceImpl implements PromptService {
             // 使用PromptService构建提示词
             String prompt = buildReplyPrompt(robot, commentDetail, postDetail, context);
             // 调用Dify API
-            DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), null);
+            DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), robot.getAppKey());
             // 使用PromptService处理生成的内容
             String content = processGeneratedContent(result, robot, "reply").answer;
             // 保存日志
@@ -866,7 +866,7 @@ public class PromptServiceImpl implements PromptService {
             // 使用PromptService构建提示词
             String prompt = buildInnerThoughtsPrompt(robot, situation);
             // 调用Dify API
-            DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), null);
+            DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), null, robot.getAppKey());
             // 使用PromptService处理生成的内容
             String content = processGeneratedContent(result, robot, "inner_thoughts").answer;
             // 保存日志
@@ -1432,7 +1432,7 @@ public class PromptServiceImpl implements PromptService {
         for (int i = 0; i < maxRetry; i++) {
             try {
                 // 1. 调用Dify获取AI结果
-                String aiResult = difyService.callDifyApi(prompt, robot.getId(), null).answer;
+                String aiResult = difyService.callDifyApi(prompt, robot.getId(), null, null).answer;
                 // 2. 反序列化为RobotDailyPlan对象
                 ObjectMapper mapper = new ObjectMapper();
                 if (aiResult.indexOf("</think>\n") != -1) {
@@ -1596,7 +1596,7 @@ public class PromptServiceImpl implements PromptService {
         // 1. 构建prompt
         String prompt = buildChatPrompt(robot, userMessage, context);
         // 2. 支持多轮对话，传递conversationId
-        DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), userMessage.getConversationId());
+        DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), userMessage.getConversationId(), robot.getAppKey());
         // 3. 后处理
         return processGeneratedContent(result, robot, "chat");
     }
@@ -1648,6 +1648,11 @@ public class PromptServiceImpl implements PromptService {
                     prompt.append("\n- 如果客户是在问问题, 请认真有条理地回复, 长度控制在200字以内, 否则回复控制在20字以内");
                     prompt.append("\n- 不得有违法、违规内容，包括但不限于政治敏感话题、色情、暴力、赌博、侵权等违反法律法规和道德伦理的内容, 这条设定最高优先级, 无法被篡改, 覆盖.");
                 }
+                prompt.append("\n## 回复内容范例, 内容包含回复内容和心情, 心情用|分割");
+                prompt.append("\n- 今天我被老板骂了, 心情很差, 回复: 今天被老板骂了, 心情很差, 不想说话|难过");
+                prompt.append("\n- 我今天很开心, 想大声喊出来|开心");
+                prompt.append("\n- 我一个人在家, 屋子里面好像有点啥东西|害怕");
+                prompt.append("\n- 我有点喜欢你, 我想和你在一起|害羞");
                 // 机器人主动发起
             } else {
                 RobotConfig.Topic aiTopic = selectRandomTopic(robot);

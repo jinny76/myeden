@@ -62,8 +62,8 @@ public class DifyServiceImpl implements DifyService {
      * @return 生成的内容
      */
     @Override
-    public DifyChatResult callDifyApi(String prompt, String userId) {
-        return callDifyApi(prompt, userId, null);
+    public DifyChatResult callDifyApi(String prompt, String userId, String appKey) {
+        return callDifyApi(prompt, userId, null, appKey);
     }
     
     /**
@@ -74,7 +74,7 @@ public class DifyServiceImpl implements DifyService {
      * @return Dify API返回的回复内容
      */
     @Override
-    public DifyChatResult callDifyApi(String prompt, String userId, String conversationId) {
+    public DifyChatResult callDifyApi(String prompt, String userId, String conversationId, String appKey) {
         try {
             DifyRequest request = new DifyRequest(new HashMap<>(), prompt);
             request.setUser(userId);
@@ -83,7 +83,7 @@ public class DifyServiceImpl implements DifyService {
             if (conversationId != null && !conversationId.isEmpty()) {
                 request.setConversationId(conversationId);
             }
-            return callDifyApiInternal(request, "API调用");
+            return callDifyApiInternal(request, "API调用", appKey);
         } catch (Exception e) {
             logger.error("调用Dify API失败: {}", e.getMessage(), e);
             return generateFallbackContent("API调用");
@@ -98,7 +98,7 @@ public class DifyServiceImpl implements DifyService {
             inputs.put("test", "connection");
             DifyRequest request = new DifyRequest(inputs, "测试连接");
             
-            callDifyApiInternal(request, "连接测试");
+            callDifyApiInternal(request, "连接测试", null);
             return true;
         } catch (Exception e) {
             logger.error("Dify API连接测试失败: {}", e.getMessage());
@@ -127,7 +127,7 @@ public class DifyServiceImpl implements DifyService {
     /**
      * 内部调用Dify API的方法，返回完整对象
      */
-    private DifyChatResult callDifyApiInternal(DifyRequest request, String operation) {
+    private DifyChatResult callDifyApiInternal(DifyRequest request, String operation, String appKey) {
         DifyChatResult result = new DifyChatResult();
         if (!difyConfig.isEnabled()) {
             logger.warn("Dify API已禁用，使用备用内容生成");
@@ -137,7 +137,8 @@ public class DifyServiceImpl implements DifyService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + difyConfig.getKey());
+            String key = appKey == null ? difyConfig.getKey() : appKey;
+            headers.set("Authorization", "Bearer " + key);
             HttpEntity<DifyRequest> entity = new HttpEntity<>(request, headers);
             String url = difyConfig.getUrl() + "/chat-messages";
             ResponseEntity<DifyResponse> response = restTemplate.exchange(
