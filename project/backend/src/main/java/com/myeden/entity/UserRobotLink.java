@@ -58,11 +58,6 @@ public class UserRobotLink {
     private String status = "active";
     
     /**
-     * 链接强度：1-10，默认5
-     */
-    private Integer strength = 5;
-    
-    /**
      * 最后互动时间
      */
     private LocalDateTime lastInteractionTime;
@@ -76,6 +71,22 @@ public class UserRobotLink {
      * 用户自定义印象内容，影响机器人对用户的评论和回复，支持多行文本，最大建议500字
      */
     private String impression;
+    
+    /**
+     * 熟悉度积分，决定等级成长
+     */
+    private Integer familiarityScore = 0;
+    
+    /**
+     * 熟悉度等级，枚举或数值型
+     * 0-陌生人，1-10-初识，11-30-朋友，31-60-好友，60+-密友
+     */
+    private Integer familiarityLevel = 0;
+    
+    /**
+     * 是否有待沟通消息
+     */
+    private Boolean hasPendingMessage = false;
     
     /**
      * 创建时间
@@ -142,15 +153,6 @@ public class UserRobotLink {
         this.updatedAt = LocalDateTime.now();
     }
     
-    public Integer getStrength() {
-        return strength;
-    }
-    
-    public void setStrength(Integer strength) {
-        this.strength = strength;
-        this.updatedAt = LocalDateTime.now();
-    }
-    
     public LocalDateTime getLastInteractionTime() {
         return lastInteractionTime;
     }
@@ -175,6 +177,33 @@ public class UserRobotLink {
 
     public void setImpression(String impression) {
         this.impression = impression;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    public Integer getFamiliarityScore() {
+        return familiarityScore;
+    }
+    
+    public void setFamiliarityScore(Integer familiarityScore) {
+        this.familiarityScore = familiarityScore;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    public Integer getFamiliarityLevel() {
+        return familiarityLevel;
+    }
+    
+    public void setFamiliarityLevel(Integer familiarityLevel) {
+        this.familiarityLevel = familiarityLevel;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    public Boolean getHasPendingMessage() {
+        return hasPendingMessage;
+    }
+    
+    public void setHasPendingMessage(Boolean hasPendingMessage) {
+        this.hasPendingMessage = hasPendingMessage;
         this.updatedAt = LocalDateTime.now();
     }
     
@@ -227,22 +256,94 @@ public class UserRobotLink {
     }
     
     /**
-     * 更新链接强度
+     * 增加熟悉度积分
      */
-    public void updateStrength(Integer newStrength) {
-        if (newStrength != null && newStrength >= 1 && newStrength <= 10) {
-            this.strength = newStrength;
+    public void addFamiliarityScore(Integer points) {
+        if (points != null && points > 0) {
+            this.familiarityScore += points;
+            updateFamiliarityLevel();
             this.updatedAt = LocalDateTime.now();
         }
     }
     
     /**
-     * 获取链接强度等级
+     * 更新熟悉度等级
      */
-    public String getStrengthLevel() {
-        if (strength >= 8) return "strong";
-        if (strength >= 5) return "medium";
-        return "weak";
+    public void updateFamiliarityLevel() {
+        Integer oldLevel = this.familiarityLevel;
+        if (familiarityScore >= 60) {
+            this.familiarityLevel = 4; // 密友
+        } else if (familiarityScore >= 31) {
+            this.familiarityLevel = 3; // 好友
+        } else if (familiarityScore >= 11) {
+            this.familiarityLevel = 2; // 朋友
+        } else if (familiarityScore >= 1) {
+            this.familiarityLevel = 1; // 初识
+        } else {
+            this.familiarityLevel = 0; // 陌生人
+        }
+        
+        // 如果等级升级了，更新印象描述
+        if (oldLevel < this.familiarityLevel) {
+            updateImpressionByLevel();
+        }
+        
+        // 如果等级升级了，触发主动沟通机制
+        if (oldLevel < this.familiarityLevel && this.familiarityLevel >= 3) {
+            this.hasPendingMessage = true;
+        }
+    }
+    
+    /**
+     * 根据熟悉度等级更新印象描述
+     */
+    private void updateImpressionByLevel() {
+        switch (familiarityLevel) {
+            case 1:
+                this.impression = "刚刚认识的新朋友，还在相互了解中";
+                break;
+            case 2:
+                this.impression = "已经比较熟悉，可以进行日常聊天";
+                break;
+            case 3:
+                this.impression = "关系很好的朋友，经常互动交流";
+                break;
+            case 4:
+                this.impression = "非常亲密的伙伴，彼此信任和依赖";
+                break;
+            default:
+                this.impression = "还不太熟悉的陌生人";
+                break;
+        }
+    }
+    
+    /**
+     * 获取熟悉度等级名称
+     */
+    public String getFamiliarityLevelName() {
+        switch (familiarityLevel) {
+            case 1: return "初识";
+            case 2: return "朋友";
+            case 3: return "好友";
+            case 4: return "密友";
+            default: return "陌生人";
+        }
+    }
+    
+    /**
+     * 检查是否可以主动沟通
+     */
+    public boolean canInitiateChat() {
+        return familiarityLevel >= 3; // 好友及以上可以主动沟通
+    }
+    
+    /**
+     * 获取主动沟通频率
+     */
+    public String getChatFrequency() {
+        if (familiarityLevel >= 4) return "frequent"; // 密友：频繁沟通
+        if (familiarityLevel >= 3) return "normal";   // 好友：正常沟通
+        return "none"; // 其他：不主动沟通
     }
     
     @Override
@@ -252,7 +353,6 @@ public class UserRobotLink {
                 ", userId='" + userId + '\'' +
                 ", robotId='" + robotId + '\'' +
                 ", status='" + status + '\'' +
-                ", strength=" + strength +
                 ", lastInteractionTime=" + lastInteractionTime +
                 ", interactionCount=" + interactionCount +
                 ", createdAt=" + createdAt +

@@ -192,6 +192,11 @@ public class Robot {
     private String appKey;
 
     /**
+     * 机器人内心困境，仅用于chat
+     */
+    private String hiddenTrouble;
+
+    /**
      * 获取机器人AI服务的appKey
      * @return appKey AI服务密钥或唯一标识
      */
@@ -205,6 +210,13 @@ public class Robot {
      */
     public void setAppKey(String appKey) {
         this.appKey = appKey;
+    }
+    
+    public String getHiddenTrouble() {
+        return hiddenTrouble;
+    }
+    public void setHiddenTrouble(String hiddenTrouble) {
+        this.hiddenTrouble = hiddenTrouble;
     }
     
     // 内部类：活跃时间段

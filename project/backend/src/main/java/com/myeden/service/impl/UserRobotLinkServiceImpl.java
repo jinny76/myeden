@@ -125,7 +125,6 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
                 savedLink.getUserId(),
                 savedLink.getRobotId(),
                 savedLink.getStatus(),
-                savedLink.getStrength(),
                 "链接创建成功"
             );
             
@@ -210,27 +209,6 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
     }
     
     @Override
-    public boolean updateLinkStrength(String userId, String robotId, Integer strength) {
-        try {
-            logger.info("更新用户机器人链接强度，用户ID: {}, 机器人ID: {}, 强度: {}", userId, robotId, strength);
-            // 查找链接
-            Optional<UserRobotLink> linkOpt = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
-            if (linkOpt.isEmpty()) {
-                logger.warn("用户机器人链接不存在，用户ID: {}, 机器人ID: {}", userId, robotId);
-                return false;
-            }
-            UserRobotLink link = linkOpt.get();
-            link.updateStrength(strength);
-            userRobotLinkRepository.save(link);
-            logger.info("用户机器人链接强度更新成功");
-            return true;
-        } catch (Exception e) {
-            logger.error("更新用户机器人链接强度失败", e);
-            throw e;
-        }
-    }
-    
-    @Override
     public boolean incrementInteraction(String userId, String robotId) {
         try {
             logger.info("增加用户机器人互动次数，用户ID: {}, 机器人ID: {}", userId, robotId);
@@ -259,7 +237,7 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
             List<UserRobotLink> links = userRobotLinkRepository.findByUserId(userId);
             
             List<LinkSummary> summaries = links.stream()
-                .map(this::convertToLinkSummary)
+                .map(this::convertToLinkSummaryWithFamiliarity)
                 .collect(Collectors.toList());
             
             logger.info("获取用户链接列表成功，总数: {}", summaries.size());
@@ -284,7 +262,7 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
             }
             
             List<LinkSummary> summaries = links.stream()
-                .map(this::convertToLinkSummary)
+                .map(this::convertToLinkSummaryWithFamiliarity)
                 .collect(Collectors.toList());
             
             logger.info("获取用户激活链接列表成功，总数: {}", summaries.size());
@@ -304,7 +282,7 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
             List<UserRobotLink> links = userRobotLinkRepository.findByRobotId(robotId);
             
             List<LinkSummary> summaries = links.stream()
-                .map(this::convertToLinkSummary)
+                .map(this::convertToLinkSummaryWithFamiliarity)
                 .collect(Collectors.toList());
             
             logger.info("获取机器人链接列表成功，总数: {}", summaries.size());
@@ -324,7 +302,7 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
             List<UserRobotLink> links = userRobotLinkRepository.findByRobotIdAndStatus(robotId, "active");
             
             List<LinkSummary> summaries = links.stream()
-                .map(this::convertToLinkSummary)
+                .map(this::convertToLinkSummaryWithFamiliarity)
                 .collect(Collectors.toList());
             
             logger.info("获取机器人激活链接列表成功，总数: {}", summaries.size());
@@ -374,31 +352,6 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
     }
     
     @Override
-    public LinkSummary getStrongestLink(String userId) {
-        try {
-            logger.info("获取用户最强链接，用户ID: {}", userId);
-            
-            Pageable pageable = PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "strength"));
-            Page<UserRobotLink> linkPage = userRobotLinkRepository.findTopByUserIdOrderByStrengthDesc(userId, pageable);
-            
-            if (linkPage.hasContent()) {
-                UserRobotLink link = linkPage.getContent().get(0);
-                LinkSummary summary = convertToLinkSummary(link);
-                
-                logger.info("获取用户最强链接成功");
-                return summary;
-            }
-            
-            logger.info("用户没有链接");
-            return null;
-            
-        } catch (Exception e) {
-            logger.error("获取用户最强链接失败", e);
-            throw e;
-        }
-    }
-    
-    @Override
     public LinkSummary getMostActiveLink(String userId) {
         try {
             logger.info("获取用户最活跃链接，用户ID: {}", userId);
@@ -419,57 +372,6 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
             
         } catch (Exception e) {
             logger.error("获取用户最活跃链接失败", e);
-            throw e;
-        }
-    }
-    
-    @Override
-    public LinkStatistics getLinkStatistics(String userId) {
-        try {
-            logger.info("获取用户链接统计，用户ID: {}", userId);
-            
-            long totalLinks = userRobotLinkRepository.countByUserId(userId);
-            long activeLinks = userRobotLinkRepository.countByUserIdAndStatus(userId, "active");
-            long inactiveLinks = totalLinks - activeLinks;
-            
-            // 计算平均强度
-            List<UserRobotLink> links = userRobotLinkRepository.findByUserId(userId);
-            double averageStrength = links.stream()
-                .mapToInt(UserRobotLink::getStrength)
-                .average()
-                .orElse(0.0);
-            
-            // 计算总互动次数
-            long totalInteractions = links.stream()
-                .mapToLong(link -> link.getInteractionCount())
-                .sum();
-            
-            // 获取最强和最活跃的机器人ID
-            String strongestRobotId = null;
-            String mostActiveRobotId = null;
-            
-            if (!links.isEmpty()) {
-                strongestRobotId = links.stream()
-                    .max((a, b) -> Integer.compare(a.getStrength(), b.getStrength()))
-                    .map(UserRobotLink::getRobotId)
-                    .orElse(null);
-                
-                mostActiveRobotId = links.stream()
-                    .max((a, b) -> Integer.compare(a.getInteractionCount(), b.getInteractionCount()))
-                    .map(UserRobotLink::getRobotId)
-                    .orElse(null);
-            }
-            
-            LinkStatistics statistics = new LinkStatistics(
-                userId, totalLinks, activeLinks, inactiveLinks,
-                averageStrength, totalInteractions, strongestRobotId, mostActiveRobotId
-            );
-            
-            logger.info("获取用户链接统计成功");
-            return statistics;
-            
-        } catch (Exception e) {
-            logger.error("获取用户链接统计失败", e);
             throw e;
         }
     }
@@ -510,8 +412,6 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
             robotName,
             robotAvatar,
             link.getStatus(),
-            link.getStrength(),
-            link.getStrengthLevel(),
             link.getInteractionCount(),
             link.getLastInteractionTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
             link.getImpression()
@@ -539,10 +439,6 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
             robotName,
             robotAvatar,
             link.getStatus(),
-            link.getStrength(),
-            link.getStrengthLevel(),
-            link.getInteractionCount(),
-            link.getLastInteractionTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
             link.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
             link.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         );
@@ -553,5 +449,203 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
      */
     private String generateLinkId() {
         return "link_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);
+    }
+    
+    // 熟悉度相关方法实现
+    
+    @Override
+    public boolean addFamiliarityScore(String userId, String robotId, Integer points) {
+        try {
+            logger.info("增加熟悉度积分，用户ID: {}, 机器人ID: {}, 积分: {}", userId, robotId, points);
+            
+            if (points == null || points <= 0) {
+                logger.warn("积分值无效: {}", points);
+                return false;
+            }
+            
+            Optional<UserRobotLink> linkOpt = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
+            if (linkOpt.isEmpty()) {
+                logger.warn("用户{}与机器人{}之间不存在链接关系", userId, robotId);
+                return false;
+            }
+            
+            UserRobotLink link = linkOpt.get();
+            Integer oldLevel = link.getFamiliarityLevel();
+            link.addFamiliarityScore(points);
+            userRobotLinkRepository.save(link);
+            
+            // 检查是否升级
+            if (link.getFamiliarityLevel() > oldLevel) {
+                logger.info("用户{}与机器人{}熟悉度等级从{}升级到{}", userId, robotId, oldLevel, link.getFamiliarityLevel());
+            }
+            
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("增加熟悉度积分失败", e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean addFamiliarityScoreByAction(String userId, String robotId, String actionType) {
+        try {
+            logger.info("根据行为增加熟悉度积分，用户ID: {}, 机器人ID: {}, 行为类型: {}", userId, robotId, actionType);
+            
+            // 根据行为类型计算积分
+            Integer points = calculatePointsByAction(actionType);
+            if (points == null || points <= 0) {
+                logger.warn("未知的行为类型或积分为0: {}", actionType);
+                return false;
+            }
+            
+            return addFamiliarityScore(userId, robotId, points);
+            
+        } catch (Exception e) {
+            logger.error("根据行为增加熟悉度积分失败", e);
+            return false;
+        }
+    }
+    
+    @Override
+    public List<LinkSummary> getPendingChatLinks(String userId) {
+        try {
+            List<UserRobotLink> links = userRobotLinkRepository.findByUserIdAndHasPendingMessageTrue(userId);
+            return links.stream().map(this::convertToLinkSummaryWithFamiliarity).collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("获取待沟通链接失败", e);
+            return List.of();
+        }
+    }
+    
+    @Override
+    public boolean clearPendingMessage(String userId, String robotId) {
+        try {
+            Optional<UserRobotLink> linkOpt = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
+            if (linkOpt.isEmpty()) {
+                return false;
+            }
+            
+            UserRobotLink link = linkOpt.get();
+            link.setHasPendingMessage(false);
+            userRobotLinkRepository.save(link);
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("清除待沟通消息标记失败", e);
+            return false;
+        }
+    }
+    
+    @Override
+    public List<LinkSummary> getProactiveChatLinks(String userId) {
+        try {
+            List<UserRobotLink> links = userRobotLinkRepository.findActiveLinksForProactiveChat(userId);
+            return links.stream().map(this::convertToLinkSummaryWithFamiliarity).collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("获取可主动沟通链接失败", e);
+            return List.of();
+        }
+    }
+    
+    @Override
+    public FamiliarityStatistics getFamiliarityStatistics(String userId) {
+        try {
+            // 统计各等级数量
+            Long totalFriends = userRobotLinkRepository.countByUserIdAndFamiliarityLevelGreaterThanEqual(userId, 2); // 朋友及以上
+            Long closeFriends = userRobotLinkRepository.countByUserIdAndFamiliarityLevelGreaterThanEqual(userId, 3); // 好友及以上
+            Long intimateFriends = userRobotLinkRepository.countByUserIdAndFamiliarityLevel(userId, 4); // 密友
+            Long pendingMessages = (long) userRobotLinkRepository.findByUserIdAndHasPendingMessageTrue(userId).size();
+            
+            // 计算平均熟悉度积分
+            List<UserRobotLink> allLinks = userRobotLinkRepository.findByUserId(userId);
+            Double averageScore = allLinks.stream()
+                .mapToInt(link -> link.getFamiliarityScore() != null ? link.getFamiliarityScore() : 0)
+                .average()
+                .orElse(0.0);
+            
+            // 找到最高熟悉度的机器人
+            String highestFamiliarityRobotId = allLinks.stream()
+                .max((l1, l2) -> Integer.compare(
+                    l1.getFamiliarityScore() != null ? l1.getFamiliarityScore() : 0,
+                    l2.getFamiliarityScore() != null ? l2.getFamiliarityScore() : 0))
+                .map(UserRobotLink::getRobotId)
+                .orElse(null);
+            
+            return new FamiliarityStatistics(userId, totalFriends, closeFriends, intimateFriends, 
+                                           pendingMessages, averageScore, highestFamiliarityRobotId, null);
+            
+        } catch (Exception e) {
+            logger.error("获取熟悉度统计失败", e);
+            return new FamiliarityStatistics(userId, 0L, 0L, 0L, 0L, 0.0, null, null);
+        }
+    }
+    
+    @Override
+    public List<LinkSummary> getLinksForWorldModule(String userId, int pageSize) {
+        try {
+            // 使用PageRequest创建分页，按熟悉度优先级排序
+            Pageable pageable = PageRequest.of(0, pageSize, 
+                Sort.by(Sort.Direction.DESC, "hasPendingMessage")
+                    .and(Sort.by(Sort.Direction.DESC, "familiarityLevel"))
+                    .and(Sort.by(Sort.Direction.DESC, "familiarityScore")));
+            
+            Page<UserRobotLink> linksPage = userRobotLinkRepository.findByUserIdForWorldModule(userId, pageable);
+            return linksPage.getContent().stream()
+                .map(this::convertToLinkSummaryWithFamiliarity)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("获取世界模块链接失败", e);
+            return List.of();
+        }
+    }
+    
+    /**
+     * 根据行为类型计算积分
+     */
+    private Integer calculatePointsByAction(String actionType) {
+        switch (actionType.toLowerCase()) {
+            case "comment":
+                return 3; // 评论获得3分
+            case "reply":
+                return 2; // 回复获得2分
+            case "chat":
+                return 5; // 聊天获得5分
+            case "like":
+                return 1; // 点赞获得1分
+            default:
+                return 0;
+        }
+    }
+    
+    /**
+     * 转换为带熟悉度信息的链接摘要
+     */
+    private LinkSummary convertToLinkSummaryWithFamiliarity(UserRobotLink link) {
+        // 获取机器人信息
+        String robotName = "";
+        String robotAvatar = "";
+        Optional<Robot> robotOpt = robotRepository.findByRobotId(link.getRobotId());
+        if (robotOpt.isPresent()) {
+            Robot robot = robotOpt.get();
+            robotName = robot.getName();
+            robotAvatar = robot.getAvatar();
+        }
+        
+        return new LinkSummary(
+            link.getLinkId(),
+            link.getUserId(),
+            link.getRobotId(),
+            robotName,
+            robotAvatar,
+            link.getStatus(),
+            link.getInteractionCount(),
+            link.getLastInteractionTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+            link.getImpression(),
+            link.getFamiliarityScore(),
+            link.getFamiliarityLevel(),
+            link.getFamiliarityLevelName(),
+            link.getHasPendingMessage()
+        );
     }
 } 

@@ -124,6 +124,11 @@ public class User {
     private Boolean isFirstLogin = true;
     
     /**
+     * 用户积分，默认0
+     */
+    private Integer points = 0;
+    
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;
@@ -295,6 +300,15 @@ public class User {
     
     public void setIsFirstLogin(Boolean isFirstLogin) {
         this.isFirstLogin = isFirstLogin;
+    }
+    
+    public Integer getPoints() {
+        return points;
+    }
+    
+    public void setPoints(Integer points) {
+        this.points = points;
+        this.updatedAt = LocalDateTime.now();
     }
     
     public LocalDateTime getCreatedAt() {
@@ -533,6 +547,50 @@ public class User {
         if (this.role == null) {
             this.role = UserRole.USER;
             this.updatedAt = LocalDateTime.now();
+        }
+    }
+    
+    /**
+     * 增加积分
+     */
+    public void addPoints(Integer pointsToAdd) {
+        if (pointsToAdd != null && pointsToAdd > 0) {
+            this.points += pointsToAdd;
+            this.updatedAt = LocalDateTime.now();
+        }
+    }
+    
+    /**
+     * 扣除积分
+     */
+    public void deductPoints(Integer pointsToDeduct) {
+        if (pointsToDeduct != null && pointsToDeduct > 0) {
+            this.points = Math.max(0, this.points - pointsToDeduct);
+            this.updatedAt = LocalDateTime.now();
+        }
+    }
+    
+    /**
+     * 获取积分等级
+     */
+    public String getPointsLevel() {
+        if (points >= 1000) return "diamond";
+        if (points >= 500) return "gold";
+        if (points >= 200) return "silver";
+        if (points >= 50) return "bronze";
+        return "novice";
+    }
+    
+    /**
+     * 获取积分等级名称
+     */
+    public String getPointsLevelName() {
+        switch (getPointsLevel()) {
+            case "diamond": return "钻石用户";
+            case "gold": return "黄金用户";
+            case "silver": return "白银用户";
+            case "bronze": return "青铜用户";
+            default: return "新手用户";
         }
     }
     

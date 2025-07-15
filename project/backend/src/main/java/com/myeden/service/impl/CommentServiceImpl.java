@@ -162,6 +162,22 @@ public class CommentServiceImpl implements CommentService {
             post.setUpdatedAt(LocalDateTime.now());
             postRepository.save(post);
             
+            // 处理熟悉度分数：用户评论robot的动态时增加熟悉度分数
+            try {
+                if ("user".equals(authorType) && "robot".equals(post.getAuthorType())) {
+                    // 用户评论robot动态，增加熟悉度分数
+                    boolean familiarityUpdated = userRobotLinkService.addFamiliarityScoreByAction(authorId, post.getAuthorId(), "comment");
+                    if (familiarityUpdated) {
+                        logger.info("用户{}评论robot{}动态，熟悉度分数已更新", authorId, post.getAuthorId());
+                    } else {
+                        logger.warn("用户{}评论robot{}动态，熟悉度分数更新失败", authorId, post.getAuthorId());
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("更新熟悉度分数时发生异常：", e);
+                // 不影响主流程，继续执行
+            }
+            
             logger.info("评论创建成功，评论ID: {}", savedComment.getCommentId());
             
             // 推送WebSocket消息
@@ -301,6 +317,33 @@ public class CommentServiceImpl implements CommentService {
                 post.setCommentCount(post.getCommentCount() + 1);
                 post.setUpdatedAt(LocalDateTime.now());
                 postRepository.save(post);
+                
+                // 处理熟悉度分数：用户回复robot评论时增加熟悉度分数
+                try {
+                    if ("user".equals(authorType)) {
+                        // 情况1：用户回复robot的评论
+                        if ("robot".equals(parentComment.getAuthorType())) {
+                            boolean familiarityUpdated = userRobotLinkService.addFamiliarityScoreByAction(authorId, parentComment.getAuthorId(), "reply");
+                            if (familiarityUpdated) {
+                                logger.info("用户{}回复robot{}评论，熟悉度分数已更新", authorId, parentComment.getAuthorId());
+                            } else {
+                                logger.warn("用户{}回复robot{}评论，熟悉度分数更新失败", authorId, parentComment.getAuthorId());
+                            }
+                        }
+                        // 情况2：用户在robot动态下回复其他评论
+                        else if ("robot".equals(post.getAuthorType())) {
+                            boolean familiarityUpdated = userRobotLinkService.addFamiliarityScoreByAction(authorId, post.getAuthorId(), "reply");
+                            if (familiarityUpdated) {
+                                logger.info("用户{}在robot{}动态下回复评论，熟悉度分数已更新", authorId, post.getAuthorId());
+                            } else {
+                                logger.warn("用户{}在robot{}动态下回复评论，熟悉度分数更新失败", authorId, post.getAuthorId());
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.warn("更新熟悉度分数时发生异常：", e);
+                    // 不影响主流程，继续执行
+                }
             }
             
             logger.info("回复评论成功，回复ID: {}", savedReply.getCommentId());

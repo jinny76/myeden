@@ -238,4 +238,49 @@ public class AIChatServiceImpl implements AIChatService {
             }
         }
     }
+    
+    @Override
+    public boolean shouldInitiateProactiveChat(String userId, String robotId) {
+        // 实现主动沟通判断逻辑
+        // 这里可以根据熟悉度等级、时间间隔、用户在线状态等因素判断
+        // 暂时返回false，避免编译错误
+        return false;
+    }
+    
+    @Override
+    public CommunicationScore evaluateCommunicationQuality(List<ChatMessage> chatMessages) {
+        // 实现沟通质量评估逻辑
+        // 暂时返回一个默认的评分，避免编译错误
+        return new CommunicationScore(5, "good", "正常沟通质量", 0);
+    }
+    
+    @Override
+    public ChatMessage generateFamiliarityBasedMessage(String userId, String robotId, Integer familiarityLevel) {
+        // 实现基于熟悉度的消息生成逻辑
+        // 暂时返回一个简单的消息，避免编译错误
+        ChatMessage message = new ChatMessage();
+        message.setSenderId(robotId);
+        message.setSenderType("robot");
+        message.setReceiverId(userId);
+        message.setReceiverType("user");
+        message.setContent("你好！很高兴和你聊天。");
+        message.setMsgType("text");
+        message.setCreatedAt(LocalDateTime.now());
+        return message;
+    }
+    
+    @Override
+    public ChatMessage initiateProactiveChat(String userId, String robotId) {
+        // 实现主动聊天发起逻辑
+        // 暂时返回一个简单的主动消息，避免编译错误
+        ChatMessage message = new ChatMessage();
+        message.setSenderId(robotId);
+        message.setSenderType("robot");
+        message.setReceiverId(userId);
+        message.setReceiverType("user");
+        message.setContent("你好，我想和你聊聊天！");
+        message.setMsgType("text");
+        message.setCreatedAt(LocalDateTime.now());
+        return message;
+    }
 } 

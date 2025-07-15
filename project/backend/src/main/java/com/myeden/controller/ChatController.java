@@ -15,8 +15,11 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
 import com.myeden.service.AIChatService;
+import com.myeden.service.UserRobotLinkService;
 import com.myeden.controller.EventResponse;
 import org.springframework.http.ResponseEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/v1/chat")
@@ -27,6 +30,10 @@ public class ChatController {
     private WebSocketService webSocketService;
     @Autowired
     private AIChatService aiChatService;
+    @Autowired
+    private UserRobotLinkService userRobotLinkService;
+    
+    private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
 
     @Value("${ffmpeg.path}")
     private String ffmpegPath;
@@ -104,12 +111,27 @@ public class ChatController {
             WebSocketMessage<ChatMessage> wsMsg = WebSocketMessage.chat(chatMessage);
             webSocketService.sendMessageToUser(chatMessage.getSenderId(), wsMsg);
 
-            // 3. 检查是否需要AI回复，异步处理（手动新建线程）
+            // 3. 增加用户与机器人熟悉度积分（如果是用户对机器人说话）
+            if ("user".equals(message.getSenderType()) && 
+                ("robot".equalsIgnoreCase(message.getReceiverType()) || isRobotId(message.getReceiverId()))) {
+                try {
+                    boolean familiarityUpdated = userRobotLinkService.addFamiliarityScoreByAction(
+                        message.getSenderId(), message.getReceiverId(), "chat");
+                    if (familiarityUpdated) {
+                        logger.info("用户{}与机器人{}聊天熟悉度积分已更新", message.getSenderId(), message.getReceiverId());
+                    }
+                } catch (Exception e) {
+                    logger.warn("更新聊天熟悉度积分失败，用户ID: {}, 机器人ID: {}", 
+                        message.getSenderId(), message.getReceiverId(), e);
+                }
+            }
+
+            // 4. 检查是否需要AI回复，异步处理（手动新建线程）
             if ("robot".equalsIgnoreCase(message.getReceiverType()) || isRobotId(message.getReceiverId())) {
                 new Thread(() -> aiReplyAsync(message)).start();
             }
 
-            // 4. 立即返回，仅包含用户消息
+            // 5. 立即返回，仅包含用户消息
             return ResponseEntity.ok(new EventResponse(200, "消息发送成功", null));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new EventResponse(400, "消息发送失败: " + e.getMessage(), null));

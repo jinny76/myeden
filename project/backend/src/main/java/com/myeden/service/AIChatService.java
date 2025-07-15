@@ -6,6 +6,44 @@ import com.myeden.entity.ChatMessage;
 
 public interface AIChatService {
     ChatMessage generateAIReply(ChatMessage userMessage);
+    
+    /**
+     * 机器人主动发起沟通
+     * 当用户熟悉度达到好友等级后，机器人可主动分享内心困境
+     * 
+     * @param userId 用户ID
+     * @param robotId 机器人ID
+     * @return 主动沟通消息
+     */
+    ChatMessage initiateProactiveChat(String userId, String robotId);
+    
+    /**
+     * 根据熟悉度等级生成不同深度的沟通内容
+     * 
+     * @param userId 用户ID
+     * @param robotId 机器人ID
+     * @param familiarityLevel 熟悉度等级
+     * @return 沟通消息
+     */
+    ChatMessage generateFamiliarityBasedMessage(String userId, String robotId, Integer familiarityLevel);
+    
+    /**
+     * 对沟通质量进行心理学评分
+     * 评分范围：0-10，用于用户积分奖励
+     * 
+     * @param chatMessages 聊天消息列表
+     * @return 沟通评分
+     */
+    CommunicationScore evaluateCommunicationQuality(java.util.List<ChatMessage> chatMessages);
+    
+    /**
+     * 检查是否应该触发主动沟通
+     * 
+     * @param userId 用户ID
+     * @param robotId 机器人ID
+     * @return 是否应该主动沟通
+     */
+    boolean shouldInitiateProactiveChat(String userId, String robotId);
 
     /**
      * 调用ASR服务识别音频内容
@@ -57,5 +95,34 @@ public interface AIChatService {
             info.setText(rawText);
         }
         return info;
+    }
+    
+    /**
+     * 沟通评分结果类
+     */
+    class CommunicationScore {
+        private Integer score;           // 评分：0-10
+        private String quality;          // 质量等级：poor/fair/good/excellent
+        private String feedback;         // 评分反馈
+        private Integer pointsAwarded;   // 奖励积分
+        
+        public CommunicationScore(Integer score, String quality, String feedback, Integer pointsAwarded) {
+            this.score = score;
+            this.quality = quality;
+            this.feedback = feedback;
+            this.pointsAwarded = pointsAwarded;
+        }
+        
+        // Getter方法
+        public Integer getScore() { return score; }
+        public String getQuality() { return quality; }
+        public String getFeedback() { return feedback; }
+        public Integer getPointsAwarded() { return pointsAwarded; }
+        
+        // Setter方法
+        public void setScore(Integer score) { this.score = score; }
+        public void setQuality(String quality) { this.quality = quality; }
+        public void setFeedback(String feedback) { this.feedback = feedback; }
+        public void setPointsAwarded(Integer pointsAwarded) { this.pointsAwarded = pointsAwarded; }
     }
 } 

@@ -98,6 +98,12 @@ public class RobotConfig {
          * 用于链接特定AI
          */
         private String appKey;
+        
+        /**
+         * robot的内心隐瞒困境，仅用于chat
+         * 当用户达到好友熟悉度后，robot可主动分享内心困境
+         */
+        private String hiddenTrouble;
 
         /**
          * 获取机器人AI服务的appKey
@@ -113,6 +119,22 @@ public class RobotConfig {
          */
         public void setAppKey(String appKey) {
             this.appKey = appKey;
+        }
+        
+        /**
+         * 获取机器人的内心困境
+         * @return hiddenTrouble 内心困境描述
+         */
+        public String getHiddenTrouble() {
+            return hiddenTrouble;
+        }
+        
+        /**
+         * 设置机器人的内心困境
+         * @param hiddenTrouble 内心困境描述
+         */
+        public void setHiddenTrouble(String hiddenTrouble) {
+            this.hiddenTrouble = hiddenTrouble;
         }
         
         public String getId() { return id; }

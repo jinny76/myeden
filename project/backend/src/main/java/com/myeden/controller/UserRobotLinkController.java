@@ -200,49 +200,6 @@ public class UserRobotLinkController {
     }
     
     /**
-     * 更新链接强度
-     * @param robotId 机器人ID
-     * @param request 更新强度请求
-     * @return 更新结果
-     */
-    @PutMapping("/{robotId}/strength")
-    public ResponseEntity<EventResponse> updateLinkStrength(@PathVariable String robotId, @RequestBody UpdateStrengthRequest request) {
-        try {
-            logger.info("收到更新用户机器人链接强度请求，机器人ID: {}, 强度: {}", robotId, request.getStrength());
-            
-            // 获取当前用户信息
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String currentUserId = authentication.getName();
-            
-            // 更新链接强度
-            boolean result = userRobotLinkService.updateLinkStrength(currentUserId, robotId, request.getStrength());
-            
-            if (result) {
-                logger.info("用户机器人链接强度更新成功");
-                return ResponseEntity.ok(new EventResponse(
-                    200,
-                    "链接强度更新成功",
-                    null
-                ));
-            } else {
-                return ResponseEntity.badRequest().body(new EventResponse(
-                    400,
-                    "链接不存在或更新失败",
-                    null
-                ));
-            }
-            
-        } catch (Exception e) {
-            logger.error("更新用户机器人链接强度失败", e);
-            return ResponseEntity.badRequest().body(new EventResponse(
-                400,
-                "更新链接强度失败: " + e.getMessage(),
-                null
-            ));
-        }
-    }
-    
-    /**
      * 更新用户-机器人连接对象（如impression字段）
      * @param robotId 机器人ID
      * @param updateData 前端传递的部分更新数据
@@ -380,47 +337,6 @@ public class UserRobotLinkController {
     }
     
     /**
-     * 获取用户最强链接
-     * @return 最强链接
-     */
-    @GetMapping("/strongest")
-    public ResponseEntity<EventResponse> getStrongestLink() {
-        try {
-            logger.info("收到获取用户最强链接请求");
-            
-            // 获取当前用户信息
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String currentUserId = authentication.getName();
-            
-            // 获取最强链接
-            UserRobotLinkService.LinkSummary link = userRobotLinkService.getStrongestLink(currentUserId);
-            
-            if (link != null) {
-                logger.info("获取用户最强链接成功");
-                return ResponseEntity.ok(new EventResponse(
-                    200,
-                    "获取最强链接成功",
-                    link
-                ));
-            } else {
-                return ResponseEntity.ok(new EventResponse(
-                    200,
-                    "用户没有链接",
-                    null
-                ));
-            }
-            
-        } catch (Exception e) {
-            logger.error("获取用户最强链接失败", e);
-            return ResponseEntity.badRequest().body(new EventResponse(
-                400,
-                "获取最强链接失败: " + e.getMessage(),
-                null
-            ));
-        }
-    }
-    
-    /**
      * 获取用户最活跃链接
      * @return 最活跃链接
      */
@@ -456,40 +372,6 @@ public class UserRobotLinkController {
             return ResponseEntity.badRequest().body(new EventResponse(
                 400,
                 "获取最活跃链接失败: " + e.getMessage(),
-                null
-            ));
-        }
-    }
-    
-    /**
-     * 获取链接统计信息
-     * @return 统计信息
-     */
-    @GetMapping("/statistics")
-    public ResponseEntity<EventResponse> getLinkStatistics() {
-        try {
-            logger.info("收到获取用户链接统计请求");
-            
-            // 获取当前用户信息
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String currentUserId = authentication.getName();
-            
-            // 获取统计信息
-            UserRobotLinkService.LinkStatistics statistics = userRobotLinkService.getLinkStatistics(currentUserId);
-            
-            logger.info("获取用户链接统计成功");
-            
-            return ResponseEntity.ok(new EventResponse(
-                200,
-                "获取链接统计成功",
-                statistics
-            ));
-            
-        } catch (Exception e) {
-            logger.error("获取用户链接统计失败", e);
-            return ResponseEntity.badRequest().body(new EventResponse(
-                400,
-                "获取链接统计失败: " + e.getMessage(),
                 null
             ));
         }
@@ -537,6 +419,184 @@ public class UserRobotLinkController {
         }
     }
     
+    // 熟悉度相关API接口
+    
+    /**
+     * 增加熟悉度积分
+     * @param robotId 机器人ID
+     * @param request 积分请求
+     * @return 操作结果
+     */
+    @PostMapping("/{robotId}/familiarity/add-score")
+    public ResponseEntity<EventResponse> addFamiliarityScore(
+            @PathVariable String robotId, 
+            @RequestBody AddFamiliarityScoreRequest request) {
+        try {
+            logger.info("收到增加熟悉度积分请求，机器人ID: {}, 积分: {}", robotId, request.getPoints());
+            
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            boolean result = userRobotLinkService.addFamiliarityScore(currentUserId, robotId, request.getPoints());
+            
+            if (result) {
+                return ResponseEntity.ok(EventResponse.success(null, "熟悉度积分增加成功"));
+            } else {
+                return ResponseEntity.badRequest().body(EventResponse.error(400, "链接不存在或积分增加失败"));
+            }
+            
+        } catch (Exception e) {
+            logger.error("增加熟悉度积分失败", e);
+            return ResponseEntity.badRequest().body(EventResponse.error(400, "积分增加失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 根据行为类型增加熟悉度积分
+     * @param robotId 机器人ID
+     * @param request 行为请求
+     * @return 操作结果
+     */
+    @PostMapping("/{robotId}/familiarity/action")
+    public ResponseEntity<EventResponse> addFamiliarityScoreByAction(
+            @PathVariable String robotId, 
+            @RequestBody FamiliarityActionRequest request) {
+        try {
+            logger.info("收到行为增加熟悉度积分请求，机器人ID: {}, 行为: {}", robotId, request.getActionType());
+            
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            boolean result = userRobotLinkService.addFamiliarityScoreByAction(currentUserId, robotId, request.getActionType());
+            
+            if (result) {
+                return ResponseEntity.ok(EventResponse.success(null, "熟悉度积分增加成功"));
+            } else {
+                return ResponseEntity.badRequest().body(EventResponse.error(400, "链接不存在或积分增加失败"));
+            }
+            
+        } catch (Exception e) {
+            logger.error("行为增加熟悉度积分失败", e);
+            return ResponseEntity.badRequest().body(EventResponse.error(400, "积分增加失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 获取有待沟通消息的机器人链接
+     * @return 待沟通链接列表
+     */
+    @GetMapping("/pending-chat")
+    public ResponseEntity<EventResponse> getPendingChatLinks() {
+        try {
+            logger.info("收到获取待沟通链接列表请求");
+            
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            List<UserRobotLinkService.LinkSummary> links = userRobotLinkService.getPendingChatLinks(currentUserId);
+            
+            return ResponseEntity.ok(EventResponse.success(links, "获取待沟通链接列表成功"));
+            
+        } catch (Exception e) {
+            logger.error("获取待沟通链接列表失败", e);
+            return ResponseEntity.badRequest().body(EventResponse.error(400, "获取失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 清除待沟通消息标记
+     * @param robotId 机器人ID
+     * @return 操作结果
+     */
+    @PostMapping("/{robotId}/clear-pending-message")
+    public ResponseEntity<EventResponse> clearPendingMessage(@PathVariable String robotId) {
+        try {
+            logger.info("收到清除待沟通消息标记请求，机器人ID: {}", robotId);
+            
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            boolean result = userRobotLinkService.clearPendingMessage(currentUserId, robotId);
+            
+            if (result) {
+                return ResponseEntity.ok(EventResponse.success(null, "待沟通消息标记清除成功"));
+            } else {
+                return ResponseEntity.badRequest().body(EventResponse.error(400, "链接不存在或清除失败"));
+            }
+            
+        } catch (Exception e) {
+            logger.error("清除待沟通消息标记失败", e);
+            return ResponseEntity.badRequest().body(EventResponse.error(400, "清除失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 获取可以主动沟通的机器人链接
+     * @return 可主动沟通链接列表
+     */
+    @GetMapping("/proactive-chat")
+    public ResponseEntity<EventResponse> getProactiveChatLinks() {
+        try {
+            logger.info("收到获取可主动沟通链接列表请求");
+            
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            List<UserRobotLinkService.LinkSummary> links = userRobotLinkService.getProactiveChatLinks(currentUserId);
+            
+            return ResponseEntity.ok(EventResponse.success(links, "获取可主动沟通链接列表成功"));
+            
+        } catch (Exception e) {
+            logger.error("获取可主动沟通链接列表失败", e);
+            return ResponseEntity.badRequest().body(EventResponse.error(400, "获取失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 获取熟悉度统计
+     * @return 熟悉度统计
+     */
+    @GetMapping("/familiarity-statistics")
+    public ResponseEntity<EventResponse> getFamiliarityStatistics() {
+        try {
+            logger.info("收到获取熟悉度统计请求");
+            
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            UserRobotLinkService.FamiliarityStatistics statistics = userRobotLinkService.getFamiliarityStatistics(currentUserId);
+            
+            return ResponseEntity.ok(EventResponse.success(statistics, "获取熟悉度统计成功"));
+            
+        } catch (Exception e) {
+            logger.error("获取熟悉度统计失败", e);
+            return ResponseEntity.badRequest().body(EventResponse.error(400, "获取失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 世界模块专用：获取按优先级排序的机器人链接
+     * @param size 页面大小，默认10
+     * @return 按优先级排序的链接列表
+     */
+    @GetMapping("/world-module")
+    public ResponseEntity<EventResponse> getLinksForWorldModule(@RequestParam(defaultValue = "10") int size) {
+        try {
+            logger.info("收到世界模块获取链接列表请求，页面大小: {}", size);
+            
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserId = authentication.getName();
+            
+            List<UserRobotLinkService.LinkSummary> links = userRobotLinkService.getLinksForWorldModule(currentUserId, size);
+            
+            return ResponseEntity.ok(EventResponse.success(links, "获取世界模块链接列表成功"));
+            
+        } catch (Exception e) {
+            logger.error("获取世界模块链接列表失败", e);
+            return ResponseEntity.badRequest().body(EventResponse.error(400, "获取失败: " + e.getMessage()));
+        }
+    }
+    
     /**
      * 创建链接请求类
      */
@@ -554,18 +614,34 @@ public class UserRobotLinkController {
     }
     
     /**
-     * 更新强度请求类
+     * 增加熟悉度积分请求类
      */
-    public static class UpdateStrengthRequest {
-        private Integer strength;
+    public static class AddFamiliarityScoreRequest {
+        private Integer points;
         
-        public UpdateStrengthRequest() {}
+        public AddFamiliarityScoreRequest() {}
         
-        public UpdateStrengthRequest(Integer strength) {
-            this.strength = strength;
+        public AddFamiliarityScoreRequest(Integer points) {
+            this.points = points;
         }
         
-        public Integer getStrength() { return strength; }
-        public void setStrength(Integer strength) { this.strength = strength; }
+        public Integer getPoints() { return points; }
+        public void setPoints(Integer points) { this.points = points; }
+    }
+    
+    /**
+     * 熟悉度行为请求类
+     */
+    public static class FamiliarityActionRequest {
+        private String actionType;
+        
+        public FamiliarityActionRequest() {}
+        
+        public FamiliarityActionRequest(String actionType) {
+            this.actionType = actionType;
+        }
+        
+        public String getActionType() { return actionType; }
+        public void setActionType(String actionType) { this.actionType = actionType; }
     }
 } 

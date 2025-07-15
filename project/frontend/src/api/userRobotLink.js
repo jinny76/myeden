@@ -99,20 +99,6 @@ export function getUserRobotLinkDetail(robotId) {
 }
 
 /**
- * 更新链接强度
- * @param {string} robotId 机器人ID
- * @param {number} strength 强度值
- * @returns {Promise} API响应
- */
-export function updateUserRobotLinkStrength(robotId, strength) {
-  return request({
-    url: `/user-robot-links/${robotId}/strength`,
-    method: 'put',
-    data: { strength }
-  })
-} 
-
-/**
  * 更新用户-机器人连接对象（如impression等字段）
  * @param {Object} link - 用户机器人连接对象，需包含robotId等唯一标识
  * @returns {Promise}

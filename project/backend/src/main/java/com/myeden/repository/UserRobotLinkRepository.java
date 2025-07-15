@@ -124,15 +124,6 @@ public interface UserRobotLinkRepository extends MongoRepository<UserRobotLink, 
     Page<UserRobotLink> findByRobotIdAndStatus(String robotId, String status, Pageable pageable);
     
     /**
-     * 查找指定强度以上的链接
-     * 
-     * @param userId 用户ID
-     * @param minStrength 最小强度
-     * @return 链接列表
-     */
-    List<UserRobotLink> findByUserIdAndStrengthGreaterThanEqual(String userId, Integer minStrength);
-    
-    /**
      * 查找最近有互动的链接
      * 
      * @param userId 用户ID
@@ -150,16 +141,6 @@ public interface UserRobotLinkRepository extends MongoRepository<UserRobotLink, 
      */
     @Query("{'userId': ?0}")
     Page<UserRobotLink> findTopByUserIdOrderByInteractionCountDesc(String userId, Pageable pageable);
-    
-    /**
-     * 查找链接强度最高的链接
-     * 
-     * @param userId 用户ID
-     * @param pageable 分页参数
-     * @return 链接列表
-     */
-    @Query("{'userId': ?0}")
-    Page<UserRobotLink> findTopByUserIdOrderByStrengthDesc(String userId, Pageable pageable);
     
     /**
      * 统计用户的链接数量
@@ -214,4 +195,107 @@ public interface UserRobotLinkRepository extends MongoRepository<UserRobotLink, 
      * @param robotId 机器人ID
      */
     void deleteByUserIdAndRobotId(String userId, String robotId);
+    
+    // 熟悉度相关查询方法
+    
+    /**
+     * 根据用户ID查找有待沟通消息的链接
+     * 
+     * @param userId 用户ID
+     * @return 有待沟通消息的链接列表
+     */
+    List<UserRobotLink> findByUserIdAndHasPendingMessageTrue(String userId);
+    
+    /**
+     * 根据机器人ID查找有待沟通消息的链接
+     * 
+     * @param robotId 机器人ID
+     * @return 有待沟通消息的链接列表
+     */
+    List<UserRobotLink> findByRobotIdAndHasPendingMessageTrue(String robotId);
+    
+    /**
+     * 根据用户ID和熟悉度等级查找链接
+     * 
+     * @param userId 用户ID
+     * @param familiarityLevel 熟悉度等级
+     * @return 指定等级的链接列表
+     */
+    List<UserRobotLink> findByUserIdAndFamiliarityLevel(String userId, Integer familiarityLevel);
+    
+    /**
+     * 根据用户ID查找指定熟悉度等级以上的链接
+     * 
+     * @param userId 用户ID
+     * @param minLevel 最小熟悉度等级
+     * @return 链接列表
+     */
+    List<UserRobotLink> findByUserIdAndFamiliarityLevelGreaterThanEqual(String userId, Integer minLevel);
+    
+    /**
+     * 根据用户ID查找指定熟悉度积分以上的链接
+     * 
+     * @param userId 用户ID
+     * @param minScore 最小熟悉度积分
+     * @return 链接列表
+     */
+    List<UserRobotLink> findByUserIdAndFamiliarityScoreGreaterThanEqual(String userId, Integer minScore);
+    
+    /**
+     * 根据用户ID按熟悉度等级降序查询链接（分页）
+     * 
+     * @param userId 用户ID
+     * @param pageable 分页参数
+     * @return 分页结果
+     */
+    @Query("{'userId': ?0}")
+    Page<UserRobotLink> findByUserIdOrderByFamiliarityLevelDesc(String userId, Pageable pageable);
+    
+    /**
+     * 根据用户ID按熟悉度积分降序查询链接（分页）
+     * 
+     * @param userId 用户ID
+     * @param pageable 分页参数
+     * @return 分页结果
+     */
+    @Query("{'userId': ?0}")
+    Page<UserRobotLink> findByUserIdOrderByFamiliarityScoreDesc(String userId, Pageable pageable);
+    
+    /**
+     * 查找可以主动沟通的机器人链接（好友及以上等级）
+     * 
+     * @param userId 用户ID
+     * @return 可主动沟通的链接列表
+     */
+    @Query("{'userId': ?0, 'familiarityLevel': {$gte: 3}, 'status': 'active'}")
+    List<UserRobotLink> findActiveLinksForProactiveChat(String userId);
+    
+    /**
+     * 世界模块专用：按优先级排序查询用户的机器人链接
+     * 优先级：有待沟通消息 > 熟悉度高 > 已链接
+     * 
+     * @param userId 用户ID
+     * @param pageable 分页参数
+     * @return 分页结果
+     */
+    @Query("{'userId': ?0, 'status': 'active'}")
+    Page<UserRobotLink> findByUserIdForWorldModule(String userId, Pageable pageable);
+    
+    /**
+     * 统计用户指定熟悉度等级的链接数量
+     * 
+     * @param userId 用户ID
+     * @param familiarityLevel 熟悉度等级
+     * @return 链接数量
+     */
+    long countByUserIdAndFamiliarityLevel(String userId, Integer familiarityLevel);
+    
+    /**
+     * 统计用户指定熟悉度等级以上的链接数量
+     * 
+     * @param userId 用户ID
+     * @param minLevel 最小熟悉度等级
+     * @return 链接数量
+     */
+    long countByUserIdAndFamiliarityLevelGreaterThanEqual(String userId, Integer minLevel);
 } 

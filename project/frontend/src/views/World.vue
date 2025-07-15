@@ -132,7 +132,34 @@
                 <div class="robot-avatar-section" 
                 @click="goToChat(robot)">
                   <div class="robot-avatar">
-                    <el-avatar :src="getRobotAvatarUrl(robot)" :size="80" />
+                    <!-- 熟悉度进度环 - 套在头像外侧 -->
+                    <div class="avatar-progress-ring" v-if="isRobotLinkCreated(robot.id)">
+                      <svg class="avatar-progress-circle" viewBox="0 0 100 100">
+                        <!-- 背景圆环 -->
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="46"
+                          fill="none"
+                          stroke="rgba(255, 255, 255, 0.1)"
+                          stroke-width="4"
+                        />
+                        <!-- 进度圆环 -->
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="46"
+                          fill="none"
+                          :stroke="getFamiliarityColor(robot.id)"
+                          stroke-width="4"
+                          stroke-linecap="round"
+                          :stroke-dasharray="289"
+                          :stroke-dashoffset="289 - (289 * getFamiliarityProgress(robot.id))"
+                          class="avatar-progress-bar"
+                        />
+                      </svg>
+                    </div>
+                    <el-avatar :src="getRobotAvatarUrl(robot)" :size="80" :title="getFamiliarityTooltip(robot.id)" />
                     <div class="robot-status" :class="{ active: robot.active }">
                       <el-icon v-if="robot.active" class="status-icon">
                         <CircleCheck />
@@ -144,7 +171,7 @@
                     </div>
                   </div>
                   <div class="robot-quick-info">
-                    <h3>{{ robot.name }}</h3>
+                    <h3 :title="getFamiliarityTooltip(robot.id)">{{ robot.name }}</h3>
                     <!-- <div class="robot-personality">
                       <el-tag size="small" type="info" style="width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ robot.personality }}</el-tag>
                     </div> -->
@@ -400,7 +427,6 @@ const toggleRobotLink = async (robot) => {
           robotId: robotId,
           active: true,
           status: 'active',
-          strength: response.data.strength || 1,
           createdAt: response.data.createdAt
         })
         message.success(`已创建与 ${robot.name} 的链接`)
@@ -513,6 +539,59 @@ async function saveImpression() {
 
 const goToChat = (robot) => {
   router.push(`/chat/${robot.id}`)
+}
+
+// 熟悉度相关方法
+const getFamiliarityProgress = (robotId) => {
+  const link = userRobotLinks.value.get(robotId)
+  if (!link) return 0
+  // 以每个等级10分为例，计算当前等级内的进度
+  const score = link.familiarityScore || 0
+  const level = link.familiarityLevel || 0
+  let min = 0, max = 0
+  if (level === 0) { min = 0; max = 1 }
+  else if (level === 1) { min = 1; max = 10 }
+  else if (level === 2) { min = 11; max = 30 }
+  else if (level === 3) { min = 31; max = 60 }
+  else if (level === 4) { min = 61; max = 100 }
+  // 进度百分比
+  return max > min ? (score - min) / (max - min) : 0
+}
+
+const getFamiliarityLevelText = (robotId) => {
+  const link = userRobotLinks.value.get(robotId)
+  if (!link) return '陌生人'
+  return link.familiarityLevelName || '陌生人'
+}
+
+const getFamiliarityColor = (robotId) => {
+  const link = userRobotLinks.value.get(robotId)
+  if (!link) return '#666'
+  const level = link.familiarityLevel || 0
+  const colors = {
+    0: '#8B5CF6', // 陌生人-紫
+    1: '#06B6D4', // 初识-青
+    2: '#10B981', // 朋友-绿
+    3: '#F59E0B', // 好友-黄
+    4: '#EF4444'  // 密友-红
+  }
+  return colors[level] || '#666'
+}
+
+// 新增方法getFamiliarityTooltip(robotId): 返回如“朋友（11-30分）：已经比较熟悉，可以进行日常聊天”
+const getFamiliarityTooltip = (robotId) => {
+  const link = userRobotLinks.value.get(robotId)
+  if (!link) return '陌生人（0分）：还不太熟悉的陌生人'
+  const level = link.familiarityLevel || 0
+  const name = link.familiarityLevelName || '陌生人'
+  const score = link.familiarityScore || 0
+  let range = '', desc = ''
+  if (level === 0) { range = '0分'; desc = '还不太熟悉的陌生人' }
+  else if (level === 1) { range = '1-10分'; desc = '刚刚认识的新朋友，还在相互了解中' }
+  else if (level === 2) { range = '11-30分'; desc = '已经比较熟悉，可以进行日常聊天' }
+  else if (level === 3) { range = '31-60分'; desc = '关系很好的朋友，经常互动交流' }
+  else if (level === 4) { range = '61分及以上'; desc = '非常亲密的伙伴，彼此信任和依赖' }
+  return `${name}（${range}，当前${score}分）：${desc}`
 }
 </script>
 
@@ -1210,6 +1289,28 @@ const goToChat = (robot) => {
 .link-toggle-btn.linked .loading-spinner-small {
   border-color: rgba(255, 77, 79, 0.2);
   border-top-color: #ff4d4f;
+}
+
+/* 头像进度环样式 */
+.avatar-progress-ring {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 92px;
+  height: 92px;
+  z-index: 1;
+}
+
+.avatar-progress-circle {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.avatar-progress-bar {
+  transition: stroke-dashoffset 0.6s ease-in-out;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.2));
 }
 
 .impression-btn {

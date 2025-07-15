@@ -457,7 +457,8 @@ public class ConfigServiceImpl implements ConfigService {
             }
         }
 
-
+        // 在convertToRobot方法中同步hiddenTrouble
+        robot.setHiddenTrouble(robotConfig.getHiddenTrouble());
         
         // 设置默认值（仅当字段为空时）
         if (robot.getGender() == null) {
@@ -560,6 +561,9 @@ public class ConfigServiceImpl implements ConfigService {
         
         // 更新时间戳
         existing.setUpdatedAt(LocalDateTime.now());
+
+        // 在updateRobotFromConfig方法中同步hiddenTrouble
+        existing.setHiddenTrouble(newConfig.getHiddenTrouble());
     }
     
     @Override
