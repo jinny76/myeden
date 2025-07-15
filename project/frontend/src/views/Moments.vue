@@ -1935,6 +1935,17 @@ function getVoiceType(gender, age, id) {
 }
 
 /**
+ * 过滤括号内容，只保留非括号部分
+ * @param {string} text - 原始文本
+ * @returns {string} 过滤后的文本
+ */
+function filterBracketText(text) {
+  if (!text) return ''
+  // 去除所有中英文括号内的内容，包括多组
+  return text.replace(/\([^\)]*\)|（[^）]*）/g, '').replace(/\s+/g, ' ').trim()
+}
+
+/**
  * 语音合成播放文本（优先TTS接口，失败降级为浏览器speechSynthesis）
  * @param {string} text - 要朗读的文本内容
  * @param {Object} [author] - 作者信息（可选），用于选择voice
@@ -1946,10 +1957,16 @@ const playSpeech = async (text, author = {}) => {
     message.warning('无可朗读内容')
     return
   }
+  // 先过滤括号内容
+  const textToRead = filterBracketText(text)
+  if (!textToRead) {
+    message.warning('无可朗读内容')
+    return
+  }
   // 1. 优先调用后端TTS接口
   try {
     const voiceType = getVoiceType(author.gender, author.age, author.id)
-    const resp = await tts(text, voiceType)
+    const resp = await tts(textToRead, voiceType)
     if (resp.code === 200) {
       const data = resp.data
       const audioUrl = data.url.replace('./uploads/', '/api/v1/files/')
@@ -1960,13 +1977,13 @@ const playSpeech = async (text, author = {}) => {
   } catch (e) {
     // TTS接口失败降级
     console.warn('TTS接口失败，降级为speechSynthesis', e)
-      // 2. 降级为浏览器speechSynthesis
+    // 2. 降级为浏览器speechSynthesis
     if (!window.speechSynthesis) {
       message.warning('当前浏览器不支持语音朗读')
       return
     }
     window.speechSynthesis.cancel()
-    const utter = new window.SpeechSynthesisUtterance(text)
+    const utter = new window.SpeechSynthesisUtterance(textToRead)
     utter.rate = 1
     utter.pitch = 1
     utter.volume = 1
