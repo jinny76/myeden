@@ -44,6 +44,19 @@ public interface AIChatService {
      * @return 是否应该主动沟通
      */
     boolean shouldInitiateProactiveChat(String userId, String robotId);
+    
+    /**
+     * 发送聊天消息
+     * 
+     * @param userId 用户ID
+     * @param robotId 机器人ID
+     * @param content 消息内容
+     * @param imageBase64 图片base64（可选）
+     * @param audioBase64 音频base64（可选）
+     * @param conversationId 会话ID（可选）
+     * @return 发送的消息对象
+     */
+    ChatMessage sendChatMessage(String userId, String robotId, String content, String imageBase64, String audioBase64, String conversationId);
 
     /**
      * 调用ASR服务识别音频内容

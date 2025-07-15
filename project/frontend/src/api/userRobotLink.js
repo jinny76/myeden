@@ -110,4 +110,16 @@ export function updateUserRobotLink(link) {
     method: 'PUT',
     data: link
   })
+}
+
+/**
+ * 清除待沟通消息标记
+ * @param {string} robotId 机器人ID
+ * @returns {Promise} API响应
+ */
+export function clearPendingMessage(robotId) {
+  return request({
+    url: `/user-robot-links/${robotId}/clear-pending-message`,
+    method: 'post'
+  })
 } 

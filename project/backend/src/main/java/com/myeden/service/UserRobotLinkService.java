@@ -199,6 +199,16 @@ public interface UserRobotLinkService {
     boolean clearPendingMessage(String userId, String robotId);
     
     /**
+     * 设置待沟通消息标记
+     * 
+     * @param userId 用户ID
+     * @param robotId 机器人ID
+     * @param hasPendingMessage 是否有待沟通消息
+     * @return 是否成功
+     */
+    boolean setPendingMessage(String userId, String robotId, boolean hasPendingMessage);
+    
+    /**
      * 获取可以主动沟通的机器人链接（好友及以上等级）
      * 
      * @param userId 用户ID

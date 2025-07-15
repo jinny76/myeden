@@ -1515,8 +1515,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
      */
     private boolean sendProactiveChatMessage(Robot robot, String targetUserId, String content, boolean isConfessionTopic) {
         try {
-            // 调用AI聊天服务发起主动聊天
-            ChatMessage chatMessage = aiChatService.initiateProactiveChat(targetUserId, robot.getRobotId());
+            // 直接调用AI聊天服务发送消息，传入实际的聊天内容
+            ChatMessage chatMessage = aiChatService.sendChatMessage(targetUserId, robot.getRobotId(), content, null, null, null);
             
             if (chatMessage != null) {
                 // 更新用户与机器人的互动记录

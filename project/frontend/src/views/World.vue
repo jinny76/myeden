@@ -160,6 +160,8 @@
                       </svg>
                     </div>
                     <el-avatar :src="getRobotAvatarUrl(robot)" :size="80" :title="getFamiliarityTooltip(robot.id)" />
+                    <!-- 消息红点 -->
+                    <div v-if="hasUnreadMessage(robot.id)" class="message-red-dot"></div>
                     <div class="robot-status" :class="{ active: robot.active }">
                       <el-icon v-if="robot.active" class="status-icon">
                         <CircleCheck />
@@ -281,7 +283,8 @@ import {
   activateUserRobotLink, 
   deactivateUserRobotLink,
   getUserRobotLinks,
-  updateUserRobotLink
+  updateUserRobotLink,
+  clearPendingMessage
 } from '@/api/userRobotLink'
 import { getMyRobots } from '@/api/robotEditor'
 
@@ -576,7 +579,9 @@ async function saveImpression() {
   }
 }
 
-const goToChat = (robot) => {
+const goToChat = async (robot) => {
+  // 清除红点
+  await clearMessageRedDot(robot.id)
   router.push(`/chat/${robot.id}`)
 }
 
@@ -617,7 +622,7 @@ const getFamiliarityColor = (robotId) => {
   return colors[level] || '#666'
 }
 
-// 新增方法getFamiliarityTooltip(robotId): 返回如“朋友（11-30分）：已经比较熟悉，可以进行日常聊天”
+// 新增方法getFamiliarityTooltip(robotId): 返回如"朋友（11-30分）：已经比较熟悉，可以进行日常聊天"
 const getFamiliarityTooltip = (robotId) => {
   const link = userRobotLinks.value.get(robotId)
   if (!link) return '陌生人（0分）：还不太熟悉的陌生人'
@@ -631,6 +636,25 @@ const getFamiliarityTooltip = (robotId) => {
   else if (level === 3) { range = '31-60分'; desc = '关系很好的朋友，经常互动交流' }
   else if (level === 4) { range = '61分及以上'; desc = '非常亲密的伙伴，彼此信任和依赖' }
   return `${name}（${range}，当前${score}分）：${desc}`
+}
+
+// 消息红点相关方法
+const hasUnreadMessage = (robotId) => {
+  const link = userRobotLinks.value.get(robotId)
+  return link?.hasPendingMessage || false
+}
+
+const clearMessageRedDot = async (robotId) => {
+  try {
+    await clearPendingMessage(robotId)
+    // 更新本地状态
+    const link = userRobotLinks.value.get(robotId)
+    if (link) {
+      link.hasPendingMessage = false
+    }
+  } catch (error) {
+    console.error('清除消息红点失败:', error)
+  }
 }
 </script>
 
@@ -1338,6 +1362,35 @@ const getFamiliarityTooltip = (robotId) => {
   width: 92px;
   height: 92px;
   z-index: 1;
+}
+
+/* 消息红点样式 */
+.message-red-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  background: #ff4757;
+  border-radius: 50%;
+  border: 2px solid var(--color-bg);
+  z-index: 3;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .avatar-progress-circle {

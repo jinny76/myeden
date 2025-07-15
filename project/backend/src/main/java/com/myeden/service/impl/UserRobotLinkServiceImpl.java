@@ -538,6 +538,25 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
     }
     
     @Override
+    public boolean setPendingMessage(String userId, String robotId, boolean hasPendingMessage) {
+        try {
+            Optional<UserRobotLink> linkOpt = userRobotLinkRepository.findByUserIdAndRobotId(userId, robotId);
+            if (linkOpt.isEmpty()) {
+                return false;
+            }
+            
+            UserRobotLink link = linkOpt.get();
+            link.setHasPendingMessage(hasPendingMessage);
+            userRobotLinkRepository.save(link);
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("设置待沟通消息标记失败", e);
+            return false;
+        }
+    }
+    
+    @Override
     public List<LinkSummary> getProactiveChatLinks(String userId) {
         try {
             List<UserRobotLink> links = userRobotLinkRepository.findActiveLinksForProactiveChat(userId);

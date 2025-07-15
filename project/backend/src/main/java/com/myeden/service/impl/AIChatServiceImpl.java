@@ -8,9 +8,13 @@ import com.myeden.service.AIChatService;
 import com.myeden.service.ExternalDataCacheService;
 import com.myeden.service.PromptService;
 import com.myeden.service.DifyService;
+import com.myeden.service.ChatService;
+import com.myeden.service.UserRobotLinkService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -33,6 +37,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class AIChatServiceImpl implements AIChatService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(AIChatServiceImpl.class);
+    
     @Autowired
     private RobotRepository robotRepository;
     @Autowired
@@ -46,6 +53,12 @@ public class AIChatServiceImpl implements AIChatService {
 
     @Autowired
     private RestTemplate restTemplate;
+    
+    @Autowired
+    private ChatService chatService;
+    
+    @Autowired
+    private UserRobotLinkService userRobotLinkService;
 
     @Value("${dify.image.apiKey}")
     private String apiKey;
@@ -282,5 +295,81 @@ public class AIChatServiceImpl implements AIChatService {
         message.setMsgType("text");
         message.setCreatedAt(LocalDateTime.now());
         return message;
+    }
+    
+    @Override
+    public ChatMessage sendChatMessage(String userId, String robotId, String content, String imageBase64, String audioBase64, String conversationId) {
+        try {
+            // 获取机器人信息
+            Optional<Robot> robotOpt = robotRepository.findByRobotId(robotId);
+            if (robotOpt.isEmpty()) {
+                logger.error("机器人不存在: {}", robotId);
+                return null;
+            }
+            Robot robot = robotOpt.get();
+            
+            // 如果没有传入conversationId，说明是机器人主动发消息，需要建立会话上下文
+            if (conversationId == null || conversationId.trim().isEmpty()) {
+                try {
+                    // 创建一个临时的用户消息用于建立会话上下文
+                    ChatMessage contextMessage = new ChatMessage();
+                    contextMessage.setSenderId(userId);
+                    contextMessage.setSenderType("user");
+                    contextMessage.setReceiverId(robotId);
+                    contextMessage.setReceiverType("robot");
+                    contextMessage.setContent("开始对话"); // 临时内容，用于建立上下文
+                    contextMessage.setMsgType("text");
+                    contextMessage.setConversationId(null); // 新会话
+                    contextMessage.setCreatedAt(LocalDateTime.now());
+                    
+                    // 通过PromptService建立会话上下文，但使用机器人要发送的实际内容
+                    String context = buildPostContext(robot);
+                    
+                    // 创建包含机器人主动消息内容的prompt
+                    String proactivePrompt = String.format("你是%s，现在你想主动向用户发送消息：\"%s\"。请以自然的方式发送这条消息。", 
+                                                         robot.getName(), content);
+                    
+                    // 临时替换消息内容为proactive prompt
+                    contextMessage.setContent(proactivePrompt);
+                    
+                    // 调用PromptService生成AI回复以建立会话
+                    DifyService.DifyChatResult result = promptService.generateChatReply(robot, contextMessage, context);
+                    
+                    if (result != null && result.conversationId != null) {
+                        conversationId = result.conversationId;
+                        // 使用AI生成的内容而不是原始content，这样更自然
+                        content = result.answer;
+                    }
+                    
+                } catch (Exception e) {
+                    logger.warn("建立会话上下文失败，使用原始内容: {}", e.getMessage());
+                    // 如果失败，使用原始内容继续
+                }
+            }
+            
+            // 创建聊天消息
+            ChatMessage message = new ChatMessage();
+            message.setSenderId(robotId);
+            message.setSenderType("robot");
+            message.setReceiverId(userId);
+            message.setReceiverType("user");
+            message.setContent(content);
+            message.setMsgType("text");
+            message.setConversationId(conversationId);
+            message.setCreatedAt(LocalDateTime.now());
+            // 标记为机器人主动触发的消息
+            message.setIsProactiveMessage(true);
+            
+            // 保存消息到数据库
+            chatService.sendMessage(message);
+            
+            // 设置用户与机器人链接的 hasPendingMessage 为 true
+            userRobotLinkService.setPendingMessage(userId, robotId, true);
+            
+            return message;
+        } catch (Exception e) {
+            logger.error("发送聊天消息失败: {}", e.getMessage(), e);
+            return null;
+        }
     }
 } 

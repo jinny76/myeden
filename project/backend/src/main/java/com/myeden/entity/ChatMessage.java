@@ -67,6 +67,9 @@ public class ChatMessage {
     /** 语音识别结果 */
     private AIChatService.ASRRawTextInfo asrResult;
 
+    /** 是否为机器人主动触发的消息 */
+    private Boolean isProactiveMessage = false;
+
     // 构造方法
     public ChatMessage() {
         this.createdAt = LocalDateTime.now();
@@ -116,6 +119,9 @@ public class ChatMessage {
     public void setAudioBase64(String audioBase64) { this.audioBase64 = audioBase64; }
     public AIChatService.ASRRawTextInfo getAsrResult() { return asrResult; }
     public void setAsrResult(AIChatService.ASRRawTextInfo asrResult) { this.asrResult = asrResult; }
+    public Boolean getIsProactiveMessage() { return isProactiveMessage; }
+    public void setIsProactiveMessage(Boolean isProactiveMessage) { this.isProactiveMessage = isProactiveMessage; }
+    
     // 业务方法
     /** 标记为已读 */
     public void markAsRead() {
