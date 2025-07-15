@@ -3,6 +3,7 @@ package com.myeden.service.impl;
 import com.myeden.entity.Robot;
 import com.myeden.entity.Post;
 import com.myeden.entity.Comment;
+import com.myeden.entity.ChatMessage;
 import com.myeden.model.external.WeatherInfo;
 import com.myeden.repository.RobotRepository;
 import com.myeden.repository.PostRepository;
@@ -75,9 +76,44 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     @Autowired
     private SearchContentService searchContentService;
     
+    @Autowired
+    private AIChatService aiChatService;
+    
     private final Random random = new Random();
     private final ConcurrentHashMap<String, RobotDailyStats> dailyStats = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Object> localCache = new ConcurrentHashMap<>();
+    
+    /**
+     * 聊天提示词结果内部类
+     */
+    private static class ChatPromptResult {
+        private String prompt;
+        private boolean isConfessionTopic;
+        
+        public ChatPromptResult(String prompt, boolean isConfessionTopic) {
+            this.prompt = prompt;
+            this.isConfessionTopic = isConfessionTopic;
+        }
+        
+        public String getPrompt() { return prompt; }
+        public boolean isConfessionTopic() { return isConfessionTopic; }
+    }
+    
+    /**
+     * 主动聊天结果内部类
+     */
+    private static class ProactiveChatResult {
+        private String content;
+        private boolean isConfessionTopic;
+        
+        public ProactiveChatResult(String content, boolean isConfessionTopic) {
+            this.content = content;
+            this.isConfessionTopic = isConfessionTopic;
+        }
+        
+        public String getContent() { return content; }
+        public boolean isConfessionTopic() { return isConfessionTopic; }
+    }
     
     /**
      * 机器人每日行为统计内部类
@@ -86,6 +122,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         private int postCount = 0;
         private int commentCount = 0;
         private int replyCount = 0;
+        private int proactiveChatCount = 0;
         private LocalDateTime lastReset = LocalDateTime.now();
         
         public void incrementPost() {
@@ -100,6 +137,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             replyCount++;
         }
         
+        public void incrementProactiveChat() {
+            proactiveChatCount++;
+        }
+        
         public int getPostCount() {
             return postCount;
         }
@@ -111,6 +152,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         public int getReplyCount() {
             return replyCount;
         }
+        
+        public int getProactiveChatCount() {
+            return proactiveChatCount;
+        }
 
         public LocalDateTime getLastReset() {
             return lastReset;
@@ -120,6 +165,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             postCount = 0;
             commentCount = 0;
             replyCount = 0;
+            proactiveChatCount = 0;
             lastReset = LocalDateTime.now();
         }
     }
@@ -628,8 +674,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     @Override
     public String getRobotDailyStats(String robotId) {
         RobotDailyStats stats = getDailyStats(robotId);
-        return String.format("机器人%s今日统计 - 动态: %d, 评论: %d, 回复: %d", 
-                           robotId, stats.getPostCount(), stats.getCommentCount(), stats.getReplyCount());
+        return String.format("机器人%s今日统计 - 动态: %d, 评论: %d, 回复: %d, 主动聊天: %d", 
+                           robotId, stats.getPostCount(), stats.getCommentCount(), stats.getReplyCount(), stats.getProactiveChatCount());
     }
     
     @Override
@@ -662,15 +708,19 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 if (isRobotActive(robot)) {
                     // 随机触发机器人行为
                     double randomValue = random.nextDouble();
-                    if (randomValue < 0.25) {
+                    if (randomValue < 0.2) {
                         triggerRobotPost(robot.getRobotId());
-                    } else if (randomValue < 0.5) {
+                    } else if (randomValue < 0.4) {
                         // 随机选择一个今天的动态进行评论
                         triggerRobotCommentOnRecentPosts(robot.getRobotId());
-                    } else if (randomValue < 0.75) {
-                        // 随机选择一个斤天的评论进行回复
+                    } else if (randomValue < 0.6) {
+                        // 随机选择一个今天的评论进行回复
                         triggerRobotReplyOnRecentComments(robot.getRobotId());
+                    } else if (randomValue < 0.8) {
+                        // 主动发起聊天
+                        triggerRobotProactiveChat(robot.getRobotId());
                     }
+                    // 20%概率什么都不做
                 }
             }
         } catch (Exception e) {
@@ -1131,5 +1181,371 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
      */
     private String generatePostId() {
         return "post_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    
+    /**
+     * 触发机器人主动聊天
+     * 根据用户链接关系和熟悉度，主动发起聊天
+     * 
+     * @param robotId 机器人ID
+     */
+    private void triggerRobotProactiveChat(String robotId) {
+        try {
+            logger.info("开始触发机器人主动聊天，机器人ID: {}", robotId);
+            
+            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
+            if (robot == null) {
+                logger.warn("机器人不存在: {}", robotId);
+                return;
+            }
+            
+            // 检查机器人是否在活跃时间段
+            if (!isRobotActive(robot)) {
+                logger.info("机器人不在活跃时间段: {}", robotId);
+                return;
+            }
+            
+            // 检查今日主动聊天次数限制
+            RobotDailyStats stats = getDailyStats(robotId);
+            if (stats.getProactiveChatCount() >= 5) { // 每日最多5次主动聊天
+                logger.info("机器人今日主动聊天次数已达上限: {}", robotId);
+                return;
+            }
+            
+            // 选择聊天对象
+            String targetUserId = selectProactiveChatTarget(robot);
+            if (targetUserId == null) {
+                logger.info("机器人 {} 没有合适的聊天对象", robotId);
+                return;
+            }
+            
+            // 生成聊天内容
+            ProactiveChatResult chatResult = generateProactiveChatContent(robot, targetUserId);
+            if (chatResult == null || StringUtils.isBlank(chatResult.getContent())) {
+                logger.warn("机器人 {} 生成聊天内容失败", robotId);
+                return;
+            }
+            
+            // 发送聊天消息
+            boolean success = sendProactiveChatMessage(robot, targetUserId, chatResult.getContent(), chatResult.isConfessionTopic());
+            if (success) {
+                stats.incrementProactiveChat();
+                logger.info("机器人 {} 成功发起主动聊天，目标用户: {}, 类型: {}, 内容: {}", 
+                          robotId, targetUserId, chatResult.isConfessionTopic() ? "倾诉" : "普通", 
+                          chatResult.getContent().substring(0, Math.min(chatResult.getContent().length(), 100)));
+            } else {
+                logger.warn("机器人 {} 发送聊天消息失败", robotId);
+            }
+            
+        } catch (Exception e) {
+            logger.error("触发机器人主动聊天失败: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 选择主动聊天的目标用户
+     * 基于用户链接关系、熟悉度、最近互动时间等因素选择
+     * 
+     * @param robot 机器人对象
+     * @return 目标用户ID，如果没有合适的目标则返回null
+     */
+    private String selectProactiveChatTarget(Robot robot) {
+        try {
+            // 获取与机器人有链接的用户列表
+            List<UserRobotLinkService.LinkSummary> activeLinks = userRobotLinkService.getRobotActiveLinks(robot.getRobotId());
+            
+            if (activeLinks.isEmpty()) {
+                logger.debug("机器人 {} 没有活跃链接", robot.getName());
+                return null;
+            }
+            
+            // 过滤出适合主动聊天的用户
+            List<UserRobotLinkService.LinkSummary> eligibleUsers = activeLinks.stream()
+                .filter(link -> {
+                    // 检查熟悉度等级（至少需要初识以上）
+                    Integer familiarityLevel = link.getFamiliarityLevel();
+                    if (familiarityLevel == null || familiarityLevel < 1) {
+                        return false;
+                    }
+                    
+                    // 检查最近互动时间（避免过于频繁）
+                    String lastInteractionTime = link.getLastInteractionTime();
+                    if (lastInteractionTime != null) {
+                        try {
+                            LocalDateTime lastTime = LocalDateTime.parse(lastInteractionTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                            LocalDateTime twoHoursAgo = LocalDateTime.now().minusHours(2);
+                            if (lastTime.isAfter(twoHoursAgo)) {
+                                return false; // 2小时内有互动，跳过
+                            }
+                        } catch (Exception e) {
+                            logger.warn("解析最近互动时间失败: {}", lastInteractionTime);
+                        }
+                    }
+                    
+                    return true;
+                })
+                .collect(Collectors.toList());
+            
+            if (eligibleUsers.isEmpty()) {
+                logger.debug("机器人 {} 没有合适的聊天对象", robot.getName());
+                return null;
+            }
+            
+            // 按熟悉度和互动次数排序，优先选择熟悉度高的用户
+            eligibleUsers.sort((a, b) -> {
+                // 首先按熟悉度等级排序
+                int familiarityCompare = Integer.compare(
+                    b.getFamiliarityLevel() != null ? b.getFamiliarityLevel() : 0,
+                    a.getFamiliarityLevel() != null ? a.getFamiliarityLevel() : 0
+                );
+                if (familiarityCompare != 0) {
+                    return familiarityCompare;
+                }
+                
+                // 然后按互动次数排序
+                return Integer.compare(
+                    b.getInteractionCount() != null ? b.getInteractionCount() : 0,
+                    a.getInteractionCount() != null ? a.getInteractionCount() : 0
+                );
+            });
+            
+            // 从前几个候选用户中随机选择一个
+            int candidateCount = Math.min(3, eligibleUsers.size());
+            int selectedIndex = random.nextInt(candidateCount);
+            UserRobotLinkService.LinkSummary selectedLink = eligibleUsers.get(selectedIndex);
+            
+            logger.debug("机器人 {} 选择用户 {} 进行主动聊天，熟悉度等级: {}, 互动次数: {}", 
+                        robot.getName(), selectedLink.getUserId(), 
+                        selectedLink.getFamiliarityLevel(), selectedLink.getInteractionCount());
+            
+            return selectedLink.getUserId();
+            
+        } catch (Exception e) {
+            logger.error("选择主动聊天目标用户失败: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * 生成主动聊天内容
+     * 基于机器人性格、用户关系、当前上下文生成个性化的聊天内容
+     * 
+     * @param robot 机器人对象
+     * @param targetUserId 目标用户ID
+     * @return 生成的聊天内容结果
+     */
+    private ProactiveChatResult generateProactiveChatContent(Robot robot, String targetUserId) {
+        try {
+            // 获取用户关系信息
+            Optional<UserRobotLinkService.LinkSummary> linkOpt = userRobotLinkService.getRobotActiveLinks(robot.getRobotId())
+                .stream()
+                .filter(link -> link.getUserId().equals(targetUserId))
+                .findFirst();
+            
+            if (linkOpt.isEmpty()) {
+                logger.warn("找不到用户 {} 与机器人 {} 的链接信息", targetUserId, robot.getRobotId());
+                return null;
+            }
+            
+            UserRobotLinkService.LinkSummary link = linkOpt.get();
+            
+            // 构建聊天上下文
+            String context = buildProactiveChatContext(robot, link);
+            
+            // 根据熟悉度等级生成不同类型的聊天内容
+            ChatPromptResult promptResult = generateChatPrompt(robot, link, context);
+            
+            // 调用AI服务生成聊天内容
+            String chatContent = promptService.generateChatContent(robot, promptResult.getPrompt());
+            
+            if (StringUtils.isBlank(chatContent)) {
+                logger.warn("AI生成聊天内容为空，机器人: {}, 用户: {}", robot.getRobotId(), targetUserId);
+                return null;
+            }
+            
+            logger.debug("机器人 {} 生成主动聊天内容: {}", robot.getName(), chatContent);
+            return new ProactiveChatResult(chatContent, promptResult.isConfessionTopic());
+            
+        } catch (Exception e) {
+            logger.error("生成主动聊天内容失败: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * 构建主动聊天的上下文信息
+     * 
+     * @param robot 机器人对象
+     * @param link 用户链接信息
+     * @return 上下文字符串
+     */
+    private String buildProactiveChatContext(Robot robot, UserRobotLinkService.LinkSummary link) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalTime time = now.toLocalTime();
+        String weekDay = now.getDayOfWeek().toString();
+        String timeOfDay = getTimeOfDay(time);
+        
+        // 获取天气信息
+        WeatherInfo weatherInfo = getWeather(robot);
+        String weather = weatherInfo != null ? 
+            String.format("，天气%s, 温度%s", weatherInfo.getDescription(), weatherInfo.getTemperature()) : "";
+        
+        // 获取熟悉度信息
+        String familiarityInfo = "";
+        if (link.getFamiliarityLevel() != null && link.getFamiliarityLevelName() != null) {
+            familiarityInfo = String.format("，我们的关系是%s（等级%d）", 
+                link.getFamiliarityLevelName(), link.getFamiliarityLevel());
+        }
+        
+        // 获取最近互动信息
+        String lastInteractionInfo = "";
+        if (link.getLastInteractionTime() != null) {
+            try {
+                LocalDateTime lastTime = LocalDateTime.parse(link.getLastInteractionTime(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                long hoursAgo = java.time.Duration.between(lastTime, now).toHours();
+                if (hoursAgo < 24) {
+                    lastInteractionInfo = String.format("，我们上次互动是%d小时前", hoursAgo);
+                } else {
+                    lastInteractionInfo = String.format("，我们上次互动是%d天前", hoursAgo / 24);
+                }
+            } catch (Exception e) {
+                logger.warn("解析最近互动时间失败: {}", link.getLastInteractionTime());
+            }
+        }
+        
+        return String.format("现在是%s，%s，%s%s%s%s", 
+            now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
+            weekDay, timeOfDay, weather, familiarityInfo, lastInteractionInfo);
+    }
+    
+    /**
+     * 根据熟悉度等级生成聊天提示词
+     * 
+     * @param robot 机器人对象
+     * @param link 用户链接信息
+     * @param context 上下文信息
+     * @return 聊天提示词结果
+     */
+    private ChatPromptResult generateChatPrompt(Robot robot, UserRobotLinkService.LinkSummary link, String context) {
+        String basePrompt = String.format(
+            "你是%s，性格是%s。%s。现在你想主动和用户聊天。",
+            robot.getName(), robot.getPersonality(), context
+        );
+        
+        // 决定是否使用倾诉主题（1/3概率）
+        boolean useConfessionTopic = random.nextDouble() < 0.33;
+        String topicPrompt = "";
+        
+        if (useConfessionTopic && StringUtils.isNotBlank(robot.getHiddenTrouble())) {
+            // 使用倾诉主题
+            String[] troubles = robot.getHiddenTrouble().split("\\n");
+            if (troubles.length > 0) {
+                // 随机选择一个困境
+                String selectedTrouble = troubles[random.nextInt(troubles.length)].trim();
+                if (StringUtils.isNotBlank(selectedTrouble)) {
+                    topicPrompt = String.format("你内心有一些困扰：%s。", selectedTrouble);
+                    logger.debug("机器人 {} 选择倾诉主题: {}", robot.getName(), selectedTrouble);
+                }
+            }
+        }
+        
+        // 根据熟悉度等级生成不同的聊天策略
+        String strategyPrompt = "";
+        Integer familiarityLevel = link.getFamiliarityLevel();
+        if (familiarityLevel != null) {
+            if (useConfessionTopic && StringUtils.isNotBlank(topicPrompt)) {
+                // 倾诉主题的策略
+                switch (familiarityLevel) {
+                    case 1: // 初识
+                        strategyPrompt = "虽然你们刚认识，但你想试探性地分享一些轻微的困扰，看看对方的反应。语气要谨慎一些。";
+                        break;
+                    case 2: // 朋友
+                        strategyPrompt = "你们是朋友，你可以适当地分享一些个人困扰，寻求朋友的建议或倾听。";
+                        break;
+                    case 3: // 好友
+                        strategyPrompt = "你们关系很好，你可以更加开放地分享内心的困扰，寻求理解和支持。";
+                        break;
+                    case 4: // 密友
+                        strategyPrompt = "你们是很亲密的朋友，你可以完全敞开心扉，分享深层次的困扰和脆弱。";
+                        break;
+                    default:
+                        strategyPrompt = "你想分享一些内心的困扰，但要注意分寸。";
+                }
+            } else {
+                // 普通聊天主题的策略
+                switch (familiarityLevel) {
+                    case 1: // 初识
+                        strategyPrompt = "由于你们刚刚认识，请用友好但不过于亲密的语气打招呼，可以询问对方的近况或分享一些轻松的话题。";
+                        break;
+                    case 2: // 朋友
+                        strategyPrompt = "你们已经是朋友了，可以更加自然地聊天，分享一些有趣的见闻或询问对方的兴趣爱好。";
+                        break;
+                    case 3: // 好友
+                        strategyPrompt = "你们关系很好，可以主动分享更多个人的想法和感受，或者询问对方的生活状况。";
+                        break;
+                    case 4: // 密友
+                        strategyPrompt = "你们是很亲密的朋友，可以更加贴心地关心对方，分享深层次的想法或提供情感支持。";
+                        break;
+                    default:
+                        strategyPrompt = "保持友好和礼貌，适当地表达关心。";
+                }
+            }
+        }
+        
+        // 添加印象信息
+        String impressionPrompt = "";
+        if (StringUtils.isNotBlank(link.getImpression())) {
+            impressionPrompt = String.format("你对这个用户的印象是：%s。", link.getImpression());
+        }
+        
+        String finalPrompt = String.format("%s %s %s %s 请生成一条简短自然的聊天消息，不要太长，保持真实的情感表达。", 
+            basePrompt, topicPrompt, strategyPrompt, impressionPrompt);
+        
+        return new ChatPromptResult(finalPrompt, useConfessionTopic && StringUtils.isNotBlank(topicPrompt));
+    }
+    
+    /**
+     * 发送主动聊天消息
+     * 
+     * @param robot 机器人对象
+     * @param targetUserId 目标用户ID
+     * @param content 聊天内容
+     * @param isConfessionTopic 是否为倾诉主题
+     * @return 是否发送成功
+     */
+    private boolean sendProactiveChatMessage(Robot robot, String targetUserId, String content, boolean isConfessionTopic) {
+        try {
+            // 调用AI聊天服务发起主动聊天
+            ChatMessage chatMessage = aiChatService.initiateProactiveChat(targetUserId, robot.getRobotId());
+            
+            if (chatMessage != null) {
+                // 更新用户与机器人的互动记录
+                userRobotLinkService.incrementInteraction(targetUserId, robot.getRobotId());
+                
+                // 推送WebSocket消息通知
+                try {
+                    Map<String, Object> actionData = new HashMap<>();
+                    actionData.put("robotId", robot.getRobotId());
+                    actionData.put("robotName", robot.getName());
+                    actionData.put("actionType", "proactive_chat");
+                    actionData.put("chatType", isConfessionTopic ? "confession" : "normal");
+                    actionData.put("targetUserId", targetUserId);
+                    actionData.put("actionContent", content);
+                    actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                    
+                    webSocketService.pushRobotAction(actionData);
+                    logger.debug("WebSocket主动聊天消息推送成功");
+                } catch (Exception e) {
+                    logger.warn("WebSocket消息推送失败", e);
+                }
+                
+                return true;
+            }
+            
+            return false;
+        } catch (Exception e) {
+            logger.error("发送主动聊天消息失败: {}", e.getMessage(), e);
+            return false;
+        }
     }
 } 

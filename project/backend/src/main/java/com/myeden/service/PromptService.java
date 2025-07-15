@@ -166,4 +166,12 @@ public interface PromptService {
      * @return 生成的RobotDailyPlan对象
      */
     RobotDailyPlan generateDailyPlan(Robot robot, java.time.LocalDate planDate);
+    
+    /**
+     * 生成机器人主动聊天内容
+     * @param robot 机器人信息
+     * @param chatPrompt 聊天提示词
+     * @return 生成的聊天内容
+     */
+    String generateChatContent(Robot robot, String chatPrompt);
 }

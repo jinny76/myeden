@@ -1672,4 +1672,33 @@ public class PromptServiceImpl implements PromptService {
         }
         return prompt.toString();
     }
+    
+    @Override
+    public String generateChatContent(Robot robot, String chatPrompt) {
+        try {
+            log.info("开始生成机器人主动聊天内容，机器人ID: {}", robot.getRobotId());
+            
+            // 调用 Dify API 生成聊天内容
+            DifyChatResult result = difyService.callDifyApi(chatPrompt, robot.getId(), null, null);
+            
+            if (result != null && result.answer != null) {
+                String content = result.answer.trim();
+                
+                // 简单的内容清理
+                if (content.startsWith("\"") && content.endsWith("\"")) {
+                    content = content.substring(1, content.length() - 1);
+                }
+                
+                log.debug("机器人 {} 生成主动聊天内容: {}", robot.getName(), content);
+                return content;
+            }
+            
+            log.warn("Dify API 返回空结果，机器人ID: {}", robot.getRobotId());
+            return null;
+            
+        } catch (Exception e) {
+            log.error("生成机器人主动聊天内容失败: {}", e.getMessage(), e);
+            return null;
+        }
+    }
 } 
