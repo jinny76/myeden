@@ -335,7 +335,46 @@ const filteredRobots = computed(() => {
     })
   }
 
-  return robots
+  // 按照优先级排序：有消息最前 > 熟悉度由多到少 > 有link的在前面 > 在线状态
+  return robots.sort((a, b) => {
+    const aLink = userRobotLinks.value.get(a.id)
+    const bLink = userRobotLinks.value.get(b.id)
+    
+    // 1. 有待处理消息的优先级最高
+    const aHasPendingMessage = aLink?.hasPendingMessage || false
+    const bHasPendingMessage = bLink?.hasPendingMessage || false
+    
+    if (aHasPendingMessage !== bHasPendingMessage) {
+      return bHasPendingMessage ? 1 : -1
+    }
+    
+    // 2. 按熟悉度积分由多到少排序
+    const aFamiliarityScore = aLink?.familiarityScore || 0
+    const bFamiliarityScore = bLink?.familiarityScore || 0
+    
+    if (aFamiliarityScore !== bFamiliarityScore) {
+      return bFamiliarityScore - aFamiliarityScore
+    }
+    
+    // 3. 有link的在前面
+    const aHasLink = isRobotLinkCreated(a.id)
+    const bHasLink = isRobotLinkCreated(b.id)
+    
+    if (aHasLink !== bHasLink) {
+      return bHasLink ? 1 : -1
+    }
+    
+    // 4. 在线状态排序（在线在前）
+    const aActive = a.active || false
+    const bActive = b.active || false
+    
+    if (aActive !== bActive) {
+      return bActive ? 1 : -1
+    }
+    
+    // 5. 最后按机器人名称排序
+    return a.name.localeCompare(b.name)
+  })
 })
 
 // 检查机器人是否已链接

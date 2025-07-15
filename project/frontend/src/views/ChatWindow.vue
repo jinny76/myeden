@@ -367,6 +367,41 @@ function filterBracketText(text) {
   return text.replace(/\([^\)]*\)|（[^）]*）/g, '').replace(/\s+/g, ' ').trim()
 }
 
+// 聊天窗口背景音乐播放器
+let bgmAudio = null
+
+/**
+ * 播放背景音乐
+ * @param {string} robotId - 当前聊天机器人ID
+ */
+function playBgm(robotId) {
+  if (!robotId) return
+  stopBgm() // 先停止已有的背景音乐，防止多实例冲突
+  const url = `/api/v1/files/bgm/${robotId}.mp3`
+  bgmAudio = new Audio(url)
+  bgmAudio.loop = true // 循环播放
+  bgmAudio.volume = 0.4 // 音量较低，避免干扰语音消息
+  bgmAudio.onerror = () => {
+    // 加载失败时释放资源
+    bgmAudio = null
+  }
+  // 尝试自动播放（部分浏览器需用户交互后才能播放）
+  bgmAudio.play().catch(() => {
+    // 可在用户首次交互时再次尝试播放
+  })
+}
+
+/**
+ * 停止背景音乐
+ */
+function stopBgm() {
+  if (bgmAudio) {
+    bgmAudio.pause()
+    bgmAudio.currentTime = 0
+    bgmAudio = null
+  }
+}
+
 onMounted(async () => {
   // 确保 robotId 始终为字符串
   robotId.value = typeof route.params.robotId === 'string'
@@ -387,6 +422,7 @@ onMounted(async () => {
   if (messagesContainer.value) {
     messagesContainer.value.addEventListener('scroll', onScroll)
   }
+  playBgm(robotId.value) // 进入页面时自动播放背景音乐
 })
 
 onUnmounted(() => {
@@ -398,6 +434,7 @@ onUnmounted(() => {
   if (messagesContainer.value) {
     messagesContainer.value.removeEventListener('scroll', onScroll)
   }
+  stopBgm() // 离开页面时自动停止背景音乐
 })
 
 function handleAIChatMessage(e) {
@@ -417,7 +454,7 @@ function handleAIChatMessage(e) {
         messages.value.push(msg)
         scrollToBottom()
         isRobotReplying.value = false
-        playEmotion(msg.content)
+        //playEmotion(msg.content)
       }
     } else {
       messages.value.push(msg)
