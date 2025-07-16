@@ -113,6 +113,15 @@ const routes = [
         path: 'chat/:robotId',
         name: 'ChatWindow',
         component: () => import('@/views/ChatWindow.vue')
+      },
+      {
+        path: 'communication-report/:id',
+        name: 'CommunicationReportDetail',
+        component: () => import('@/views/CommunicationReportDetail.vue'),
+        meta: {
+          title: '沟通评估详情 - 我的伊甸园',
+          requiresAuth: true
+        }
       }
     ]
   }
