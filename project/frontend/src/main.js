@@ -61,6 +61,22 @@ app.use(router)
 // 挂载应用
 app.mount('#app')
 
+/**
+ * 注册 Service Worker，确保通知功能在支持的浏览器下可用
+ * 只在生产环境和支持的浏览器下注册
+ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => {
+        console.log('Service Worker 注册成功:', reg)
+      })
+      .catch(err => {
+        console.error('Service Worker 注册失败:', err)
+      })
+  })
+}
+
 // 开发环境下的调试信息
 if (import.meta.env.DEV) {
   console.log('🚀 我的伊甸园 - 开发环境启动成功')

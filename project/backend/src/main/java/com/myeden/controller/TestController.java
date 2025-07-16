@@ -3,20 +3,19 @@ package com.myeden.controller;
 import com.myeden.entity.Robot;
 import com.myeden.model.external.*;
 import com.myeden.repository.RobotRepository;
-import com.myeden.service.ExternalDataScheduler;
-import com.myeden.service.RobotService;
+import com.myeden.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.myeden.service.ExternalDataService;
-import com.myeden.service.ExternalDataCacheService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
@@ -67,6 +66,9 @@ public class TestController {
     
     @Autowired
     private DifyServiceImpl difyServiceImpl;
+
+    @Autowired
+    private WebSocketService webSocketService;
 
     /**
      * 公开测试接口
@@ -208,8 +210,7 @@ public class TestController {
      * 功能说明：
      * - 根据传入的城市名(city)获取该城市的天气信息
      * - 便于前后端联调和功能验证
-     * 
-     * @param city 城市名称（如"北京"、"上海"等），必填
+     *
      * @return 包含天气信息的响应Map
      */
     @GetMapping("/weather")
@@ -272,6 +273,21 @@ public class TestController {
         }
         response.put("timestamp", System.currentTimeMillis());
         return response;
+    }
+
+    @Operation(summary = "测试消息")
+    @PostMapping("/test-message")
+    public void sendChatMessage(String message) {
+        Map<String, Object> actionData = new HashMap<>();
+        actionData.put("robotId", "robot_001");
+        actionData.put("robotName", "Rainer");
+        actionData.put("actionType", "proactive_chat");
+        actionData.put("chatType", "confession");
+        actionData.put("targetUserId", "user_7235dd577d674815");
+        actionData.put("actionContent", message);
+        actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+
+        webSocketService.pushRobotAction(actionData);
     }
     
 } 

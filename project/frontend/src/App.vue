@@ -15,6 +15,7 @@ import { message } from '@/utils/message'
 import { getToken, removeToken } from '@/utils/auth'
 import ToastMessage from '@/components/ToastMessage.vue'
 import { sendUserOnlineMessage } from '@/api/websocket'
+import { notify } from '@/utils/notification'
 
 /**
  * 应用根组件
@@ -42,15 +43,6 @@ let lastNotificationTime = 0
 const NOTIFICATION_COOLDOWN = 5000 // 5秒冷却时间，与WebSocket Store保持一致
 let notificationTimeout = null
 
-// WebSocket帖子相关事件监听状态
-let postEventListeners = {
-  'post-update': null,
-  'comment-update': null,
-  'robot-post': null,
-  'robot-comment': null,
-  'robot-like': null,
-  'robot-reply': null
-}
 
 // 增量刷新能力检测
 const canIncrementalRefresh = ref(true) // 默认假设支持增量刷新
@@ -86,38 +78,6 @@ const startPostEventListeners = () => {
   }
   
   console.log('✅ 启动监听WebSocket帖子相关事件')
-  
-  // 定义事件处理函数
-  const handlePostUpdate = async () => {
-    console.log('📝 收到动态更新事件，执行增量刷新')
-    // 这里可以添加增量刷新逻辑
-  }
-  
-  const handleCommentUpdate = async () => {
-    console.log('💬 收到评论更新事件，执行增量刷新')
-    // 这里可以添加增量刷新逻辑
-  }
-  
-  const handleRobotAction = async () => {
-    console.log('🤖 收到机器人行为事件，执行增量刷新')
-    // 这里可以添加增量刷新逻辑
-  }
-  
-  // 注册事件监听器
-  postEventListeners['post-update'] = handlePostUpdate
-  postEventListeners['comment-update'] = handleCommentUpdate
-  postEventListeners['robot-post'] = handleRobotAction
-  postEventListeners['robot-comment'] = handleRobotAction
-  postEventListeners['robot-like'] = handleRobotAction
-  postEventListeners['robot-reply'] = handleRobotAction
-  
-  // 添加事件监听
-  Object.entries(postEventListeners).forEach(([eventType, handler]) => {
-    if (handler) {
-      window.addEventListener(eventType, handler)
-      console.log(`✅ 已启动监听事件: ${eventType}`)
-    }
-  })
 }
 
 /**
@@ -313,6 +273,44 @@ onMounted(async () => {
       message.error('操作失败，请稍后重试')
     })
     
+    let postEventListeners = {};
+
+    // 定义事件处理函数
+    const handlePostUpdate = async () => {
+      console.log('📝 收到动态更新事件，执行增量刷新')
+      // 这里可以添加增量刷新逻辑
+    }
+    
+    const handleCommentUpdate = async () => {
+      console.log('💬 收到评论更新事件，执行增量刷新')
+      // 这里可以添加增量刷新逻辑
+    }
+    
+    const handleRobotAction = async () => {
+      console.log('🤖 收到机器人行为事件，执行增量刷新')
+      // 这里可以添加增量刷新逻辑
+      if (event.detail.actionType === 'proactive_chat' && event.detail.targetUserId === userStore.userInfo.userId) {
+        notify(event.detail.robotName, {body: event.detail.actionContent, icon: "/api/v1/files/avatars/" + event.detail.robotId + ".png"})
+      }
+    }
+
+    // 注册事件监听器
+    postEventListeners['post-update'] = handlePostUpdate
+    postEventListeners['comment-update'] = handleCommentUpdate
+    postEventListeners['robot-post'] = handleRobotAction
+    postEventListeners['robot-comment'] = handleRobotAction
+    postEventListeners['robot-like'] = handleRobotAction
+    postEventListeners['robot-reply'] = handleRobotAction
+    postEventListeners['robot-proactive-chat'] = handleRobotAction
+
+    // 添加事件监听
+    Object.entries(postEventListeners).forEach(([eventType, handler]) => {
+      if (handler) {
+        window.addEventListener(eventType, handler)
+        console.log(`✅ 已启动监听事件: ${eventType}`)
+      }
+    })
+
     console.log('✅ 应用初始化完成')
   } catch (error) {
     console.error('❌ 应用初始化失败:', error)

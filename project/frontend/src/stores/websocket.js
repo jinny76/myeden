@@ -423,7 +423,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
           break
         case 'CHAT':
           window.dispatchEvent(new CustomEvent('ai-chat-message', { detail: wsMessage.data }))
-          break
+          break        
         default:
           console.log('未知消息类型:', wsMessage.type)
       }
@@ -691,6 +691,12 @@ export const useWebSocketStore = defineStore('websocket', () => {
       case 'reply':
         // 机器人回复
         window.dispatchEvent(new CustomEvent('robot-reply', { 
+          detail: actionData 
+        }))
+        break
+      case 'proactive_chat':
+        // 机器人主动聊天
+        window.dispatchEvent(new CustomEvent('robot-proactive-chat', { 
           detail: actionData 
         }))
         break
