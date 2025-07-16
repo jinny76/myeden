@@ -15,6 +15,7 @@ import com.myeden.service.RobotBehaviorService;
 import com.myeden.service.SearchContentService;
 import com.myeden.service.CommentService;
 import com.myeden.service.UserRobotLinkService;
+import com.myeden.service.ActivityService;
 import com.myeden.service.CommentService.CommentSummary;
 import com.myeden.model.PostQueryParams;
 import org.slf4j.Logger;
@@ -91,6 +92,9 @@ public class PostServiceImpl implements PostService {
     
     @Autowired
     private DifyServiceImpl difyServiceImpl;
+    
+    @Autowired
+    private ActivityService activityService;
 
     @Autowired
     private SearchContentService searchContentService;
@@ -196,6 +200,16 @@ public class PostServiceImpl implements PostService {
             Post savedPost = postRepository.save(post);
             
             logger.info("动态创建成功，动态ID: {}", savedPost.getPostId());
+            
+            // 记录用户活动（只记录用户的活动，不记录机器人的活动）
+            if ("user".equals(authorType)) {
+                try {
+                    ((ActivityServiceImpl) activityService).recordUserActivity(authorId, "post");
+                    logger.debug("用户发帖活动记录成功，用户ID: {}", authorId);
+                } catch (Exception e) {
+                    logger.warn("记录用户发帖活动失败", e);
+                }
+            }
             
             // 推送WebSocket消息
             try {
@@ -470,6 +484,14 @@ public class PostServiceImpl implements PostService {
             post.setLikeCount(post.getLikeCount() + 1);
             post.setUpdatedAt(LocalDateTime.now());
             postRepository.save(post);
+            
+            // 记录用户活动
+            try {
+                ((ActivityServiceImpl) activityService).recordUserActivity(userId, "like");
+                logger.debug("用户点赞活动记录成功，用户ID: {}", userId);
+            } catch (Exception e) {
+                logger.warn("记录用户点赞活动失败", e);
+            }
             
             logger.info("动态点赞成功");
             return true;

@@ -52,7 +52,7 @@ public interface PostRepository extends MongoRepository<Post, String> {
      * @return 动态列表
      */
     @Query(value = "{'authorId': ?0, 'isDeleted': false, $or: [{'visibility': 'public'}, {'authorId': ?1}, {'authorId': {$in: ?2}}]}", sort = "{'createdAt': -1}")
-    List<Post> findRecentPostsByAuthor(String authorId, int limit, String currentUserId, List<String> connectedRobotIds);
+    List<Post> findRecentPostsByAuthor(String authorId, String currentUserId, List<String> connectedRobotIds);
     
     /**
      * 根据关键字搜索动态（内容和作者ID）

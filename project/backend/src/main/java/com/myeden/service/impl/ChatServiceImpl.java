@@ -3,15 +3,24 @@ package com.myeden.service.impl;
 import com.myeden.entity.ChatMessage;
 import com.myeden.repository.ChatMessageRepository;
 import com.myeden.service.ChatService;
+import com.myeden.service.ActivityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.List;
 
 @Service
 public class ChatServiceImpl implements ChatService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(ChatServiceImpl.class);
+    
     @Autowired
     private ChatMessageRepository chatMessageRepository;
+    
+    @Autowired
+    private ActivityService activityService;
 
     @Override
     public void sendMessage(ChatMessage message) {
@@ -20,6 +29,16 @@ public class ChatServiceImpl implements ChatService {
         }
 
         chatMessageRepository.save(message);
+        
+        // 记录用户活动（只记录用户的活动，不记录机器人的活动）
+        if ("user".equals(message.getSenderType())) {
+            try {
+                ((ActivityServiceImpl) activityService).recordUserActivity(message.getSenderId(), "chat");
+                logger.debug("用户聊天活动记录成功，用户ID: {}", message.getSenderId());
+            } catch (Exception e) {
+                logger.warn("记录用户聊天活动失败", e);
+            }
+        }
     }
 
     @Override

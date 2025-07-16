@@ -13,6 +13,7 @@ import com.myeden.repository.CommentLikeRepository;
 import com.myeden.service.CommentService;
 import com.myeden.service.WebSocketService;
 import com.myeden.service.UserRobotLinkService;
+import com.myeden.service.ActivityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +68,9 @@ public class CommentServiceImpl implements CommentService {
     
     @Autowired
     private UserRobotLinkService userRobotLinkService;
+    
+    @Autowired
+    private ActivityService activityService;
     
     @Override
     public CommentResult createComment(String postId, String authorId, String authorType, String content, String innerThoughts, String visibility) {
@@ -161,6 +165,16 @@ public class CommentServiceImpl implements CommentService {
             post.setCommentCount(post.getCommentCount() + 1);
             post.setUpdatedAt(LocalDateTime.now());
             postRepository.save(post);
+            
+            // 记录用户活动（只记录用户的活动，不记录机器人的活动）
+            if ("user".equals(authorType)) {
+                try {
+                    ((ActivityServiceImpl) activityService).recordUserActivity(authorId, "comment");
+                    logger.debug("用户评论活动记录成功，用户ID: {}", authorId);
+                } catch (Exception e) {
+                    logger.warn("记录用户评论活动失败", e);
+                }
+            }
             
             // 处理熟悉度分数：用户评论robot的动态时增加熟悉度分数
             try {
@@ -309,6 +323,16 @@ public class CommentServiceImpl implements CommentService {
             parentComment.setReplyCount(parentComment.getReplyCount() + 1);
             parentComment.setUpdatedAt(LocalDateTime.now());
             commentRepository.save(parentComment);
+            
+            // 记录用户活动（只记录用户的活动，不记录机器人的活动）
+            if ("user".equals(authorType)) {
+                try {
+                    ((ActivityServiceImpl) activityService).recordUserActivity(authorId, "reply");
+                    logger.debug("用户回复活动记录成功，用户ID: {}", authorId);
+                } catch (Exception e) {
+                    logger.warn("记录用户回复活动失败", e);
+                }
+            }
             
             // 更新动态的评论数
             Optional<Post> postOpt = postRepository.findByPostIdAndIsDeletedFalse(parentComment.getPostId());

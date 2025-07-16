@@ -184,6 +184,11 @@
         </div>
       </div>
 
+      <!-- 活动贡献图 -->
+      <div class="contribution-section" v-if="isLoggedIn">
+        <ContributionGraph :userId="userStore.userInfo?.userId" />
+      </div>
+
       <!-- 最近动态预览 -->
       <div class="recent-posts-section" v-if="isLoggedIn">
         <div class="section-header">
@@ -265,6 +270,7 @@ import {
 } from '@element-plus/icons-vue'
 import { getPostList } from '@/api/post'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
+import ContributionGraph from '@/components/ContributionGraph.vue'
 
 // 响应式数据
 const router = useRouter()
@@ -811,6 +817,11 @@ watch(isLoggedIn, (newValue, oldValue) => {
   opacity: 1;
 }
 
+/* 贡献图区域 */
+.contribution-section {
+  margin-bottom: 80px;
+}
+
 /* 登录提示 */
 .login-prompt {
   margin-bottom: 80px;
@@ -1113,6 +1124,10 @@ watch(isLoggedIn, (newValue, oldValue) => {
   .feature-grid {
     grid-template-columns: 1fr;
   }
+  
+  .contribution-section {
+    margin-bottom: 60px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1260,6 +1275,10 @@ watch(isLoggedIn, (newValue, oldValue) => {
   .post-card {
     padding: 20px;
   }
+  
+  .contribution-section {
+    margin-bottom: 50px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1394,6 +1413,10 @@ watch(isLoggedIn, (newValue, oldValue) => {
   
   .icp {
     font-size: 0.8rem;
+  }
+  
+  .contribution-section {
+    margin-bottom: 40px;
   }
 }
 </style> 

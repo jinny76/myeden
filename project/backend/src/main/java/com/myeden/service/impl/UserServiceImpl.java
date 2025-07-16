@@ -337,7 +337,7 @@ public class UserServiceImpl implements UserService {
             List<String> connectedRobotIds = userRobotLinkService.getUserActiveLinks(userId).stream()
                 .map(UserRobotLinkService.LinkSummary::getRobotId)
                 .collect(Collectors.toList());
-            List<com.myeden.entity.Post> recentPosts = postRepository.findRecentPostsByAuthor(userId, 1, userId, connectedRobotIds);
+            List<com.myeden.entity.Post> recentPosts = postRepository.findRecentPostsByAuthor(userId, userId, connectedRobotIds);
             if (!recentPosts.isEmpty()) {
                 lastPostTime = recentPosts.get(0).getCreatedAt();
             }
