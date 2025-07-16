@@ -33,7 +33,7 @@
         <!-- Tooltip -->
         <div
           v-if="tooltip.visible"
-          ref="tooltip"
+          ref="tooltipRef"
           class="graph-tooltip"
           :style="{
             left: tooltip.x + 'px',
@@ -76,6 +76,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { getUserContributionData } from '@/api/activity'
+import { formatDateToYMD, formatDateToLocal, getDateBeforeDays } from '@/utils/dateHelper'
 
 const userStore = useUserStore()
 
@@ -90,6 +91,7 @@ const props = defineProps({
 // 响应式数据
 const activityData = ref([])
 const loading = ref(true)
+const tooltipRef = ref(null)
 const tooltip = reactive({
   visible: false,
   x: 0,
@@ -105,21 +107,19 @@ const totalActivities = computed(() => {
 })
 
 const startDate = computed(() => {
-  const date = new Date()
-  date.setDate(date.getDate() - 364) // 过去一年
-  return formatDate(date)
+  const date = getDateBeforeDays(364) // 过去一年
+  return formatDateToLocal(date)
 })
 
 const endDate = computed(() => {
-  return formatDate(new Date())
+  return formatDateToLocal(new Date())
 })
 
 // 生成过去一年的日期网格
 const weeks = computed(() => {
   const result = []
   const today = new Date()
-  const startDate = new Date(today)
-  startDate.setDate(today.getDate() - 364) // 过去一年
+  const startDate = getDateBeforeDays(364) // 过去一年
   
   // 找到起始日期所在周的星期一
   const startWeek = new Date(startDate)
@@ -146,7 +146,7 @@ const weeks = computed(() => {
         break
       }
       
-      const dateStr = formatDateKey(currentDay)
+      const dateStr = formatDateToYMD(currentDay)
       const dayData = activityData.value.find(d => d.date === dateStr)
       
       week.days.push({
@@ -172,17 +172,7 @@ const weeks = computed(() => {
 
 
 // 工具方法
-const formatDate = (date) => {
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
-
-const formatDateKey = (date) => {
-  return date.toISOString().split('T')[0]
-}
+// 移除了 formatDate 和 formatDateKey 函数，使用 dateHelper 中的时区安全版本
 
 const getDayLevel = (count) => {
   if (count === 0) return 0
@@ -223,7 +213,7 @@ const showTooltip = (event) => {
   tooltip.visible = true
   tooltip.x = rect.left - containerRect.left + rect.width / 2
   tooltip.y = rect.top - containerRect.top - 10
-  tooltip.date = formatDate(new Date(cell.dataset.date))
+  tooltip.date = formatDateToLocal(new Date(cell.dataset.date))
   tooltip.count = parseInt(cell.dataset.count) || 0
   
   // 解析活动数据
@@ -234,10 +224,9 @@ const showTooltip = (event) => {
   }
   
   nextTick(() => {
-    const tooltipEl = document.querySelector('.graph-tooltip')
-    if (tooltipEl) {
-      const tooltipRect = tooltipEl.getBoundingClientRect()
-      const containerRect = tooltipEl.closest('.graph-container').getBoundingClientRect()
+    if (tooltipRef.value) {
+      const tooltipRect = tooltipRef.value.getBoundingClientRect()
+      const containerRect = tooltipRef.value.closest('.graph-container').getBoundingClientRect()
       
       // 防止tooltip超出容器边界
       if (tooltip.x + tooltipRect.width > containerRect.width) {
@@ -324,7 +313,7 @@ const generateMockData = () => {
       
       if (activities.length > 0) {
         data.push({
-          date: formatDateKey(date),
+          date: formatDateToYMD(date),
           count: activities.reduce((sum, a) => sum + a.count, 0),
           activities
         })

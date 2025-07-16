@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { formatDateToYMD, getYearRange } from '@/utils/dateHelper'
 
 /**
  * 活动数据API
@@ -77,15 +78,9 @@ export const recordUserActivity = (userId, activityType) => {
  * @returns {Promise} 活动数据
  */
 export const getUserContributionData = (userId) => {
-  const endDate = new Date()
-  const startDate = new Date(endDate)
-  startDate.setDate(endDate.getDate() - 364) // 过去一年
+  const { startDate, endDate } = getYearRange()
   
-  return getUserActivityData(
-    userId,
-    startDate.toISOString().split('T')[0],
-    endDate.toISOString().split('T')[0]
-  )
+  return getUserActivityData(userId, startDate, endDate)
 }
 
 /**
@@ -95,15 +90,9 @@ export const getUserContributionData = (userId) => {
  * @returns {Promise} 活动统计
  */
 export const getUserActivityOverview = (userId) => {
-  const endDate = new Date()
-  const startDate = new Date(endDate)
-  startDate.setDate(endDate.getDate() - 364) // 过去一年
+  const { startDate, endDate } = getYearRange()
   
-  return getUserActivityStats(
-    userId,
-    startDate.toISOString().split('T')[0],
-    endDate.toISOString().split('T')[0]
-  )
+  return getUserActivityStats(userId, startDate, endDate)
 }
 
 /**
@@ -147,7 +136,7 @@ export const getUserRecentActivity = (userId, days = 30) => {
   
   return getUserActivityData(
     userId,
-    startDate.toISOString().split('T')[0],
-    endDate.toISOString().split('T')[0]
+    formatDateToYMD(startDate),
+    formatDateToYMD(endDate)
   )
 }
