@@ -117,8 +117,231 @@
             </div>
           </el-form-item>
         </el-form>
+        
+        <!-- 沟通评估区域 -->
+        <div class="divider">
+          <span>沟通能力评估</span>
+        </div>
+        
+        <!-- 个人积分和等级 -->
+        <div class="communication-stats-section">
+          <div class="setting-header">
+            <el-icon><ChatLineSquare /></el-icon>
+            <span>我的沟通水平</span>
+          </div>
+          
+          <div class="stats-card">
+            <div class="points-display">
+              <div class="points-value">{{ userStats.userLevel?.currentPoints || 0 }}</div>
+              <div class="points-label">积分</div>
+            </div>
+            <div class="level-info">
+              <div class="level-badge">
+                <span class="level-text">{{ userStats.userLevel?.levelName || '新手' }}</span>
+                <span class="level-number">Lv.{{ userStats.userLevel?.level || 1 }}</span>
+              </div>
+              <div class="level-description">{{ userStats.userLevel?.description || '开始您的沟通之旅' }}</div>
+              <div class="level-progress" v-if="userStats.userLevel?.nextLevelPoints > 0">
+                <div class="progress-bar">
+                  <div 
+                    class="progress-fill" 
+                    :style="{ width: userStats.userLevel?.progress + '%' }"
+                  ></div>
+                </div>
+                <div class="progress-text">
+                  距离下一级还需 {{ userStats.userLevel?.pointsToNextLevel || 0 }} 积分
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value">{{ userStats.totalReports || 0 }}</div>
+              <div class="stat-label">评估次数</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ userStats.averageScore?.toFixed(1) || '0.0' }}</div>
+              <div class="stat-label">平均分</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ userStats.totalPointsEarned || 0 }}</div>
+              <div class="stat-label">累计获得</div>
+            </div>
+          </div>        
+        </div>
+        
+        <!-- 最近报告 -->
+        <div class="recent-reports-section" v-if="recentReports.length > 0">
+          <div class="setting-header">
+            <el-icon><Document /></el-icon>
+            <span>最近评估</span>
+          </div>
+          
+          <div class="reports-list">
+            <div 
+              v-for="report in recentReports" 
+              :key="report.id"
+              class="report-item"
+              @click="viewReportDetail(report)"
+            >
+              <div class="report-header">
+                <div class="report-date">{{ formatDate(report.createdAt) }}</div>
+                <div class="report-score">
+                  <span class="score-value">{{ report.score }}</span>
+                  <span class="score-label">分</span>
+                </div>
+              </div>
+              <div class="report-scores">
+                <div class="score-item">
+                  <span class="score-name">沟通深度</span>
+                  <div class="score-bar">
+                    <div 
+                      class="score-fill" 
+                      :style="{ width: (report.depthScore / 10) * 100 + '%' }"
+                    ></div>
+                  </div>
+                  <span class="score-num">{{ report.depthScore }}</span>
+                </div>
+                <div class="score-item">
+                  <span class="score-name">情感表达</span>
+                  <div class="score-bar">
+                    <div 
+                      class="score-fill" 
+                      :style="{ width: (report.emotionScore / 10) * 100 + '%' }"
+                    ></div>
+                  </div>
+                  <span class="score-num">{{ report.emotionScore }}</span>
+                </div>
+                <div class="score-item">
+                  <span class="score-name">互动质量</span>
+                  <div class="score-bar">
+                    <div 
+                      class="score-fill" 
+                      :style="{ width: (report.interactionScore / 10) * 100 + '%' }"
+                    ></div>
+                  </div>
+                  <span class="score-num">{{ report.interactionScore }}</span>
+                </div>
+                <div class="score-item">
+                  <span class="score-name">语言表达</span>
+                  <div class="score-bar">
+                    <div 
+                      class="score-fill" 
+                      :style="{ width: (report.languageScore / 10) * 100 + '%' }"
+                    ></div>
+                  </div>
+                  <span class="score-num">{{ report.languageScore }}</span>
+                </div>
+                <div class="score-item">
+                  <span class="score-name">共情能力</span>
+                  <div class="score-bar">
+                    <div 
+                      class="score-fill" 
+                      :style="{ width: (report.empathyScore / 10) * 100 + '%' }"
+                    ></div>
+                  </div>
+                  <span class="score-num">{{ report.empathyScore }}</span>
+                </div>
+              </div>
+              <div class="report-points">
+                <el-icon><Star /></el-icon>
+                <span>获得 {{ report.pointsAwarded }} 积分</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+    
+    <!-- 报告详情弹窗 -->
+    <el-dialog
+      v-model="detailVisible"
+      :title="'沟通评估详情 - ' + formatDate(selectedReport?.createdAt)"
+      :width="dialogWidth"
+      :before-close="closeDetail"
+    >
+      <div v-if="selectedReport" class="report-detail">
+        <div class="detail-scores">
+          <div class="score-overview">
+            <div class="total-score">
+              <div class="score-circle">
+                <div class="score-number">{{ selectedReport.score }}</div>
+              </div>
+              <div class="score-description">总体评分</div>
+            </div>
+            <div class="score-breakdown">
+              <div class="breakdown-item">
+                <span class="item-name">沟通深度</span>
+                <span class="item-score">{{ selectedReport.depthScore }}/10</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="item-name">情感表达</span>
+                <span class="item-score">{{ selectedReport.emotionScore }}/10</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="item-name">互动质量</span>
+                <span class="item-score">{{ selectedReport.interactionScore }}/10</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="item-name">语言表达</span>
+                <span class="item-score">{{ selectedReport.languageScore }}/10</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="item-name">共情能力</span>
+                <span class="item-score">{{ selectedReport.empathyScore }}/10</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="detail-evaluation">
+          <h3>专业评价</h3>
+          <div class="evaluation-content">
+            {{ selectedReport.evaluation }}
+          </div>
+        </div>
+        
+        <div class="detail-suggestions">
+          <h3>改进建议</h3>
+          <div class="suggestions-content">
+            {{ selectedReport.suggestions }}
+          </div>
+        </div>
+        
+        <div class="detail-rewards">
+          <div class="reward-item">
+            <el-icon><Star /></el-icon>
+            <span>本次评估获得 {{ selectedReport.pointsAwarded }} 积分</span>
+          </div>
+        </div>
+        <!-- 聊天内容区块 -->
+        <div class="chat-history-block">
+          <h3>本次沟通内容</h3>
+          <div v-if="loadingChat" class="chat-loading">聊天内容加载中...</div>
+          <div v-else-if="chatMessages.length === 0" class="chat-empty">暂无聊天记录</div>
+          <div v-else class="chat-messages-list">
+            <div
+              v-for="msg in chatMessages"
+              :key="msg.id"
+              :class="['chat-message-item', msg.senderType === 'user' ? 'from-user' : 'from-robot']"
+            >
+              <div class="avatar-col">
+              </div>
+              <div class="bubble-col">
+                <div class="msg-bubble">
+                  {{ msg.content }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <template #footer>
+        <el-button @click="closeDetail">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -126,11 +349,17 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from '@/utils/message'
-import { Plus, Camera, Male, Female, User, Check, Brush } from '@element-plus/icons-vue'
+import { Plus, Camera, Male, Female, User, Check, Brush, ChatLineSquare, Star, Document } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useConfigStore } from '@/stores/config'
 import { userApi } from '@/api/user'
 import { getUserAvatarUrl, buildAvatarUrl, generateDefaultAvatar, handleAvatarError as handleAvatarErrorUtil } from '@/utils/avatar'
+import { 
+  getUserCommunicationStatistics, 
+  getUserCommunicationReports,
+  triggerCommunicationEvaluation 
+} from '@/api/communication'
+import { getChatHistoryByConversationId } from '@/api/chat' // 需实现此API
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -152,6 +381,22 @@ const formData = reactive({
   birthday: '',
   bio: ''
 })
+
+// 沟通报告数据
+const userStats = ref({
+  totalReports: 0,
+  averageScore: 0,
+  totalPointsEarned: 0,
+  userLevel: null
+})
+const recentReports = ref([])
+const detailVisible = ref(false)
+const selectedReport = ref(null)
+const evaluationLoading = ref(false)
+
+// 聊天内容
+const chatMessages = ref([])
+const loadingChat = ref(false)
 
 // 表单验证规则
 const profileRules = {
@@ -175,6 +420,9 @@ const theme = computed(() => configStore.config.theme.mode)
 const onThemeChange = (val) => { 
   configStore.updateTheme('mode', val)
 }
+
+// 弹窗宽度
+const dialogWidth = computed(() => window.innerWidth <= 600 ? '95vw' : '600px')
 
 // 初始化头像URL
 const initAvatarUrl = () => {
@@ -218,6 +466,7 @@ onMounted(() => {
   // 延迟初始化，确保路由守卫执行完成
   setTimeout(() => {
     initUserProfile()
+    loadCommunicationData()
   }, 100)
 })
 
@@ -317,12 +566,106 @@ const handleSave = async () => {
   }
 }
 
+// 加载沟通数据
+const loadCommunicationData = async () => {
+  if (!userStore.isLoggedIn) return
+  
+  try {
+    // 加载用户统计
+    const statsResponse = await getUserCommunicationStatistics()
+    if (statsResponse.code === 200) {
+      userStats.value = statsResponse.data
+    }
+    
+    // 加载最近的报告
+    const reportsResponse = await getUserCommunicationReports()
+    if (reportsResponse.code === 200) {
+      recentReports.value = reportsResponse.data.slice(0, 5) // 只显示最近5个
+    }
+  } catch (error) {
+    console.error('加载沟通数据失败:', error)
+  }
+}
+
+// 查看报告详情
+const viewReportDetail = (report) => {
+  selectedReport.value = report
+  detailVisible.value = true
+}
+
+// 关闭详情弹窗
+const closeDetail = () => {
+  detailVisible.value = false
+  selectedReport.value = null
+}
+
+// 格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
+// 手动触发评价
+const triggerEvaluation = async () => {
+  if (!userStore.isLoggedIn) {
+    message.error('请先登录')
+    return
+  }
+  
+  try {
+    evaluationLoading.value = true
+    
+    const response = await triggerCommunicationEvaluation()
+    
+    if (response.data.code === 200) {
+      const count = response.data.data || 0
+      if (count > 0) {
+        message.success(`成功评价了 ${count} 个今日对话`)
+        // 刷新数据
+        await loadCommunicationData()
+      } else {
+        message.info('今日暂无新对话需要评价')
+      }
+    } else {
+      message.error(response.data.message || '评价失败')
+    }
+  } catch (error) {
+    console.error('手动评价失败:', error)
+    message.error('评价失败，请重试')
+  } finally {
+    evaluationLoading.value = false
+  }
+}
+
 // 监听用户信息变化
 watch(() => userStore.userInfo, (newValue) => {
   if (newValue) {
     initUserProfile()
+    loadCommunicationData()
   }
 })
+
+// 监听弹窗打开和selectedReport变化，自动加载聊天内容
+watch(
+  () => detailVisible.value && selectedReport.value?.conversationId,
+  async (show) => {
+    if (show && selectedReport.value?.conversationId) {
+      loadingChat.value = true
+      const res = await getChatHistoryByConversationId(selectedReport.value.conversationId)
+      if (res.code === 200) {
+        chatMessages.value = res.data || []
+      } else {
+        chatMessages.value = []
+      }
+      loadingChat.value = false
+    }
+  }
+)
 
 // 处理头像错误
 const handleAvatarError = (event) => {
@@ -330,6 +673,7 @@ const handleAvatarError = (event) => {
   handleAvatarErrorUtil(event, nickname)
   message.error('头像加载失败，已切换到默认头像')
 }
+
 </script>
 
 <style scoped lang="scss">
@@ -928,5 +1272,543 @@ const handleAvatarError = (event) => {
     padding: 12px 16px;
     font-size: 0.95rem;
   }
+}
+
+/* 沟通评估区域样式 */
+.communication-stats-section,
+.recent-reports-section {
+  margin-bottom: 30px;
+  position: relative;
+  z-index: 2;
+}
+
+.stats-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: rgba(34, 211, 107, 0.3);
+    background: rgba(34, 211, 107, 0.05);
+    transform: translateY(-1px);
+  }
+}
+
+.points-display {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.points-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #22d36b, #4ade80);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.points-label {
+  font-size: 1rem;
+  color: var(--color-text);
+  opacity: 0.7;
+  margin-top: 5px;
+}
+
+.level-info {
+  text-align: center;
+}
+
+.level-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.level-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #22d36b;
+}
+
+.level-number {
+  font-size: 1rem;
+  color: var(--color-text);
+  opacity: 0.8;
+}
+
+.level-description {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  opacity: 0.7;
+  margin-bottom: 15px;
+}
+
+.level-progress {
+  width: 100%;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22d36b, #4ade80);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  opacity: 0.7;
+  text-align: center;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: rgba(34, 211, 107, 0.3);
+    background: rgba(34, 211, 107, 0.05);
+  }
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #22d36b;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.report-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  
+  &:hover {
+    border-color: rgba(34, 211, 107, 0.3);
+    background: rgba(34, 211, 107, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.report-date {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.report-score {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.score-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #22d36b;
+}
+
+.score-label {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.report-scores {
+  margin-bottom: 15px;
+}
+
+.score-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.score-name {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  min-width: 60px;
+}
+
+.score-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.score-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22d36b, #4ade80);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.score-num {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 20px;
+  text-align: center;
+}
+
+.report-points {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #f39c12;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* 弹窗样式 */
+.report-detail {
+  padding: 10px 0;
+}
+
+.detail-scores {
+  margin-bottom: 25px;
+}
+
+.score-overview {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+}
+
+.total-score {
+  text-align: center;
+  min-width: 120px;
+}
+
+.score-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #22d36b, #4ade80);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  position: relative;
+  margin: 0 auto 10px;
+}
+
+.score-number {
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.score-max {
+  font-size: 0.9rem;
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+}
+
+.score-description {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.score-breakdown {
+  flex: 1;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.breakdown-item:last-child {
+  border-bottom: none;
+}
+
+.item-name {
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.item-score {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #22d36b;
+}
+
+.detail-evaluation,
+.detail-suggestions {
+  margin-bottom: 20px;
+}
+
+.detail-evaluation h3,
+.detail-suggestions h3 {
+  margin: 0 0 10px;
+  color: var(--color-text);
+  font-size: 1.1rem;
+}
+
+.evaluation-content,
+.suggestions-content {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  border-radius: 8px;
+  line-height: 1.6;
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.detail-rewards {
+  padding: 12px 15px;
+  background: rgba(243, 156, 18, 0.1);
+  border: 1px solid rgba(243, 156, 18, 0.2);
+  border-radius: 8px;
+}
+
+.reward-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f39c12;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* 评价操作按钮 */
+.evaluation-actions {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: white;
+  box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .score-overview {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .score-item {
+    gap: 8px;
+  }
+  
+  .score-name {
+    min-width: 50px;
+  }
+  
+  .action-button {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+}
+
+/* 桌面端默认样式（如已存在可略） */
+.score-overview {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 32px;
+  justify-content: flex-start;
+}
+.score-circle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.score-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 120px;
+}
+
+/* 移动端适配 */
+@media (max-width: 600px) {
+  .score-overview {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+  }
+  .score-circle {
+    margin-bottom: 8px;
+  }
+  .score-breakdown {
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+  }
+  .breakdown-item {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    padding: 0 8px;
+  }
+  .score-number, .score-max, .score-description {
+    text-align: center;
+    width: 100%;
+  }
+}
+
+.chat-history-block {
+  margin-top: 18px;
+  border-radius: 8px;
+  padding: 12px 10px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.chat-messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-message-item {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.chat-message-item.from-user {
+  flex-direction: row-reverse;
+}
+.avatar-col {
+  flex-shrink: 0;
+}
+.msg-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #eee;
+}
+.bubble-col {
+  max-width: 70%;
+}
+.msg-bubble {
+  padding: 10px 16px;
+  border-radius: 18px;
+  font-size: 1rem;
+  line-height: 1.7;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  background: #f5f5f7;
+  color: #333;
+  word-break: break-word;
+}
+.chat-message-item.from-user .msg-bubble {
+  background: linear-gradient(135deg, #3eb575 0%, #1eae98 100%);
+  color: #fff;
+  border-bottom-right-radius: 6px;
+  border-bottom-left-radius: 18px;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+}
+.chat-message-item.from-robot .msg-bubble {
+  background: #23272b;
+  color: #e0e0e0;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 18px;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+}
+.chat-loading, .chat-empty {
+  color: #888;
+  text-align: center;
+  padding: 12px 0;
 }
 </style> 

@@ -166,13 +166,11 @@ const loadHistory = async (append = false) => {
       // 检查最后一条消息（显示在最下方的消息）是否是当天的机器人主动消息，如果是则复用conversationId
       if (newMsgs.length > 0) {
         const lastMsg = newMsgs[newMsgs.length - 1] // reverse后最新的消息在数组末尾
-        const today = new Date().toDateString()
-        const msgDate = new Date(lastMsg.createdAt).toDateString()
         // 如果最后一条消息是机器人主动消息，则无论何时都复用conversationId
-        // 如果是普通机器人消息，则只在今天复用conversationId
+        // 如果是普通机器人消息，则只在2小时内复用conversationId
         if (lastMsg.conversationId && 
             (lastMsg.senderType === 'robot' || lastMsg.senderType === 'ai')) {
-          if (lastMsg.isProactiveMessage || msgDate === today) {
+          if (lastMsg.isProactiveMessage || lastMsg.createdAt > Date.now() - 2 * 60 * 60 * 1000) {
             conversationId.value = lastMsg.conversationId
           }
         }

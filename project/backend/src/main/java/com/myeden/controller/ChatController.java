@@ -229,4 +229,17 @@ public class ChatController {
             return ResponseEntity.badRequest().body(new EventResponse(400, "获取历史消息失败: " + e.getMessage(), null));
         }
     }
+
+    /**
+     * 根据conversationId查询该会话的所有消息（按创建时间升序）
+     */
+    @GetMapping("/history/{conversationId}")
+    public ResponseEntity<EventResponse> getHistoryByConversationId(@PathVariable String conversationId) {
+        try {
+            List<ChatMessage> history = chatService.getHistoryByConversationId(conversationId);
+            return ResponseEntity.ok(new EventResponse(200, "获取会话历史消息成功", history));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new EventResponse(400, "获取会话历史消息失败: " + e.getMessage(), null));
+        }
+    }
 } 

@@ -20,4 +20,88 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
       sort = "{ 'createdAt': -1 }"
     )
     List<ChatMessage> findHistoryWithRobotBeforeDesc(String userId, String robotId, java.time.LocalDateTime before, Pageable pageable);
+    
+    /**
+     * 获取用户的所有不同对话ID
+     * 
+     * @param userId 用户ID
+     * @return 对话ID列表
+     */
+    @Query(value = "{ $or: [ { 'senderId': ?0 }, { 'receiverId': ?0 } ] }", fields = "{ 'conversationId': 1 }")
+    List<ChatMessage> findConversationIdsByUserId(String userId);
+    
+    /**
+     * 获取用户的所有不同对话ID（默认方法）
+     * 
+     * @param userId 用户ID
+     * @return 对话ID列表
+     */
+    default List<String> findDistinctConversationIdsByUserId(String userId) {
+        return findConversationIdsByUserId(userId).stream()
+            .map(ChatMessage::getConversationId)
+            .filter(id -> id != null && !id.trim().isEmpty())
+            .distinct()
+            .collect(java.util.stream.Collectors.toList());
+    }
+    
+    /**
+     * 根据对话ID获取消息，按创建时间升序排列
+     * 
+     * @param conversationId 对话ID
+     * @return 消息列表
+     */
+    List<ChatMessage> findByConversationIdOrderByCreatedAtAsc(String conversationId);
+    
+    /**
+     * 获取用户最新的N条消息
+     * 
+     * @param userId 用户ID
+     * @param limit 限制数量
+     * @return 消息列表
+     */
+    @Query(
+      value = "{ $or: [ { 'senderId': ?0 }, { 'receiverId': ?0 } ] }",
+      sort = "{ 'createdAt': -1 }"
+    )
+    List<ChatMessage> findTopByUserIdOrderByCreatedAtDesc(String userId, int limit);
+    
+    /**
+     * 获取用户在指定日期范围内的对话ID
+     * 
+     * @param userId 用户ID
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 对话消息列表
+     */
+    @Query(
+      value = "{ $and: [ { $or: [ { 'senderId': ?0 }, { 'receiverId': ?0 } ] }, { 'createdAt': { $gte: ?1, $lte: ?2 } } ] }",
+      fields = "{ 'conversationId': 1 }"
+    )
+    List<ChatMessage> findConversationIdsByUserIdAndDateRange(String userId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate);
+    
+    /**
+     * 获取用户在指定日期范围内的所有不同对话ID（默认方法）
+     * 
+     * @param userId 用户ID
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 对话ID列表
+     */
+    default List<String> findDistinctConversationIdsByUserIdAndDateRange(String userId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate) {
+        return findConversationIdsByUserIdAndDateRange(userId, startDate, endDate).stream()
+            .map(ChatMessage::getConversationId)
+            .filter(id -> id != null && !id.trim().isEmpty())
+            .distinct()
+            .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 查询指定用户在指定时间区间内的消息，按创建时间降序排列
+     * @param userId 用户ID
+     * @param start 开始时间
+     * @param end 结束时间
+     * @return 消息列表
+     */
+    @Query(value = "{ $or: [ { 'senderId': ?0 }, { 'receiverId': ?0 } ], 'createdAt': { $gte: ?1, $lte: ?2 } }", sort = "{ 'createdAt': -1 }")
+    List<ChatMessage> findByUserIdAndCreatedAtBetween(String userId, java.time.LocalDateTime start, java.time.LocalDateTime end);
 } 

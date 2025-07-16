@@ -9,4 +9,10 @@ public interface ChatService {
     List<ChatMessage> getHistoryWithRobot(String userId, String robotId, int limit, int offset);
     List<ChatMessage> getLatestHistoryWithRobot(String userId, String robotId, int limit);
     List<ChatMessage> getHistoryWithRobotBefore(String userId, String robotId, java.time.LocalDateTime before, int limit);
+    /**
+     * 根据conversationId获取该会话的所有消息，按创建时间升序
+     * @param conversationId 会话ID
+     * @return 消息列表
+     */
+    List<ChatMessage> getHistoryByConversationId(String conversationId);
 } 

@@ -19,6 +19,7 @@
           <p>自定义你的伊甸园体验，打造专属的视觉风格</p>
         </div>
         
+        
         <!-- 主题设置 -->
         <div class="settings-section">
           <div class="section-header">
@@ -131,10 +132,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { useUserStore } from '@/stores/user'
-import { Setting, Brush, Bell, Refresh, Monitor, Lock } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { Setting, Brush, Bell, Refresh, Monitor, Lock, User } from '@element-plus/icons-vue'
 import { message } from '@/utils/message'
 
 /**
@@ -153,6 +155,9 @@ import { message } from '@/utils/message'
 
 const configStore = useConfigStore()
 const userStore = useUserStore()
+const router = useRouter()
+
+// 响应式数据
 
 // 计算属性
 const config = computed(() => configStore.config)
@@ -229,6 +234,8 @@ const resetSettings = async () => {
     }
   }
 }
+
+
 
 const testTheme = () => {
   const root = document.documentElement

@@ -1419,6 +1419,33 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     }
     
     /**
+     * 根据熟悉度等级计算倾诉主题触发概率
+     * 
+     * @param familiarityLevel 熟悉度等级
+     * @return 触发概率（0.0-1.0）
+     */
+    private double calculateConfessionProbability(Integer familiarityLevel) {
+        if (familiarityLevel == null) {
+            return 0.1; // 默认很低概率
+        }
+        
+        switch (familiarityLevel) {
+            case 0: // 陌生人
+                return 0.05; // 5%概率
+            case 1: // 初识
+                return 0.10; // 10%概率
+            case 2: // 朋友
+                return 0.20; // 20%概率
+            case 3: // 好友
+                return 0.35; // 35%概率
+            case 4: // 密友
+                return 0.50; // 50%概率
+            default:
+                return 0.1; // 默认概率
+        }
+    }
+    
+    /**
      * 根据熟悉度等级生成聊天提示词
      * 
      * @param robot 机器人对象
@@ -1432,8 +1459,14 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             robot.getName(), robot.getPersonality(), context
         );
         
-        // 决定是否使用倾诉主题（1/3概率）
-        boolean useConfessionTopic = random.nextDouble() < 0.33;
+        // 决定是否使用倾诉主题（根据熟悉度等级调整概率）
+        double confessionProbability = calculateConfessionProbability(link.getFamiliarityLevel());
+        boolean useConfessionTopic = random.nextDouble() < confessionProbability;
+        
+        logger.debug("机器人 {} 对用户 {} 的倾诉主题概率: {}% (熟悉度等级: {}), 实际触发: {}", 
+                    robot.getName(), link.getUserId(), 
+                    String.format("%.1f", confessionProbability * 100), 
+                    link.getFamiliarityLevel(), useConfessionTopic);
         String topicPrompt = "";
         
         if (useConfessionTopic && StringUtils.isNotBlank(robot.getHiddenTrouble())) {

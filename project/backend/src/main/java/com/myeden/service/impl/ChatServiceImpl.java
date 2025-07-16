@@ -57,4 +57,12 @@ public class ChatServiceImpl implements ChatService {
         return chatMessageRepository.findHistoryWithRobotBeforeDesc(
             userId, robotId, before, PageRequest.of(0, limit));
     }
+
+    @Override
+    public List<ChatMessage> getHistoryByConversationId(String conversationId) {
+        if (conversationId == null || conversationId.trim().isEmpty()) {
+            throw new IllegalArgumentException("会话ID不能为空");
+        }
+        return chatMessageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
+    }
 } 

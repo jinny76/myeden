@@ -40,4 +40,16 @@ export function sendChatMessage(robotId, content, conversationId, imageBase64, a
       audioBase64
     }
   })
+}
+
+/**
+ * 根据会话ID获取聊天历史
+ * @param {string} conversationId
+ * @returns {Promise<{code: number, data: Array}>}
+ */
+export function getChatHistoryByConversationId(conversationId) {
+  return request({
+    url: `/chat/history/${conversationId}`,
+    method: 'get'
+  })
 } 
