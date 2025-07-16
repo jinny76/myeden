@@ -7,6 +7,7 @@ import com.myeden.repository.UserRobotLinkRepository;
 import com.myeden.repository.RobotRepository;
 import com.myeden.repository.UserRepository;
 import com.myeden.service.UserRobotLinkService;
+import com.myeden.config.FamiliarityConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +50,9 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
     
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private FamiliarityConfig familiarityConfig;
     
     @Override
     public LinkResult createLink(String userId, String robotId) {
@@ -623,18 +627,7 @@ public class UserRobotLinkServiceImpl implements UserRobotLinkService {
      * 根据行为类型计算积分
      */
     private Integer calculatePointsByAction(String actionType) {
-        switch (actionType.toLowerCase()) {
-            case "comment":
-                return 3; // 评论获得3分
-            case "reply":
-                return 2; // 回复获得2分
-            case "chat":
-                return 5; // 聊天获得5分
-            case "like":
-                return 1; // 点赞获得1分
-            default:
-                return 0;
-        }
+        return familiarityConfig.getPointsByAction(actionType);
     }
     
     /**

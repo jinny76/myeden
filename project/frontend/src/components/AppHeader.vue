@@ -416,7 +416,6 @@ onUnmounted(() => {
   justify-content: flex-start;
   margin: 0;
   max-width: 320px;
-  background: rgba(255, 255, 255, 0.6);
   border-radius: 16px;
   padding: 4px;
   backdrop-filter: blur(12px);
@@ -491,7 +490,6 @@ onUnmounted(() => {
   border-radius: 14px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--color-text);
-  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(34, 211, 107, 0.1);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -518,7 +516,7 @@ onUnmounted(() => {
 /* 移动端菜单 */
 .mobile-menu {
   display: none;
-  background: rgba(255, 255, 255, 0.98);
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(24px);
   border-top: 1px solid rgba(34, 211, 107, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);

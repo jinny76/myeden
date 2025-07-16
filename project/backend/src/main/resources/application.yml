@@ -131,6 +131,20 @@ robot:
     max-concurrent-actions: 5
     cooldown-period: 300000  # 5分钟冷却期
 
+# 熟悉度积分配置
+familiarity:
+  points:
+    chat: 1      # 聊天获得积分
+    comment: 2   # 评论获得积分
+    reply: 1     # 回复获得积分
+    like: 1      # 点赞获得积分
+  levels:
+    stranger: 0      # 陌生人：0分
+    acquaintance: 50 # 熟人：50分
+    friend: 150      # 朋友：150分
+    close-friend: 300 # 好友：300分
+    intimate: 500    # 密友：500分
+
 # 日志配置
 logging:
   level:
