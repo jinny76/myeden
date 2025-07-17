@@ -262,6 +262,9 @@ public interface WorldService {
         private String avatar;
         private String personality;
         private String description;
+        private String background;
+        private String family;
+        private String location;
         private boolean isActive;
         private Boolean isDeleted;
         private String gender;
@@ -270,13 +273,17 @@ public interface WorldService {
         private List<ExpertThemeSummary> expertThemes;
         
         public RobotSummary(String id, String name, String nickname, String avatar, 
-                          String personality, String description, boolean isActive, Boolean isDeleted, String gender, int age, List<ExpertThemeSummary> expertThemes) {
+                          String personality, String description, String background, String family, String location,
+                            boolean isActive, Boolean isDeleted, String gender, int age, List<ExpertThemeSummary> expertThemes) {
             this.id = id;
             this.name = name;
             this.nickname = nickname;
             this.avatar = avatar;
             this.personality = personality;
             this.description = description;
+            this.background = background;
+            this.family = family;
+            this.location = location;
             this.isActive = isActive;
             this.isDeleted = isDeleted;
             this.gender = gender;
@@ -291,6 +298,9 @@ public interface WorldService {
         public String getAvatar() { return avatar; }
         public String getPersonality() { return personality; }
         public String getDescription() { return description; }
+        public String getBackground() { return background; }
+        public String getFamily() { return family; }
+        public String getLocation() { return location; }
         public boolean isActive() { return isActive; }
         public Boolean getIsDeleted() { return isDeleted; }
         public String getGender() { return gender; }

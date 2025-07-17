@@ -192,6 +192,14 @@
                   <span class="score-label">分</span>
                 </div>
               </div>
+              <div class="report-title" v-if="report.partnerName || report.firstMessage">
+                <div class="partner-name" v-if="report.partnerName">
+                  与 {{ report.partnerName }} 的对话
+                </div>
+                <div class="first-message" v-if="report.firstMessage">
+                  "{{ report.firstMessage }}"
+                </div>
+              </div>
               <div class="report-scores">
                 <div class="score-item">
                   <span class="score-name">沟通深度</span>
@@ -250,6 +258,19 @@
               </div>
             </div>
           </div>
+          
+          <!-- 加载更多按钮 -->
+          <div class="load-more-section" v-if="hasMoreReports">
+            <button 
+              class="load-more-button"
+              :disabled="loadingMore"
+              @click="loadMoreReports"
+            >
+              <div v-if="loadingMore" class="loading-spinner"></div>
+              <el-icon v-else><ArrowDown /></el-icon>
+              <span>{{ loadingMore ? '加载中...' : '加载更多' }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -261,7 +282,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from '@/utils/message'
-import { Plus, Camera, Male, Female, User, Check, Brush, ChatLineSquare, Star, Document } from '@element-plus/icons-vue'
+import { Plus, Camera, Male, Female, User, Check, Brush, ChatLineSquare, Star, Document, ArrowDown } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useConfigStore } from '@/stores/config'
 import { userApi } from '@/api/user'
@@ -302,6 +323,12 @@ const userStats = ref({
 })
 const recentReports = ref([])
 const evaluationLoading = ref(false)
+
+// 分页数据
+const allReports = ref([])
+const hasMoreReports = ref(false)
+const loadingMore = ref(false)
+const pageSize = 5
 
 // 表单验证规则
 const profileRules = {
@@ -483,7 +510,9 @@ const loadCommunicationData = async () => {
     // 加载最近的报告
     const reportsResponse = await getUserCommunicationReports()
     if (reportsResponse.code === 200) {
-      recentReports.value = reportsResponse.data.slice(0, 5) // 只显示最近5个
+      allReports.value = reportsResponse.data
+      recentReports.value = reportsResponse.data.slice(0, pageSize) // 只显示最近5个
+      hasMoreReports.value = reportsResponse.data.length > pageSize
     }
   } catch (error) {
     console.error('加载沟通数据失败:', error)
@@ -544,6 +573,30 @@ const triggerEvaluation = async () => {
     message.error('评价失败，请重试')
   } finally {
     evaluationLoading.value = false
+  }
+}
+
+// 加载更多报告
+const loadMoreReports = async () => {
+  if (loadingMore.value || !hasMoreReports.value) return
+  
+  try {
+    loadingMore.value = true
+    
+    const currentCount = recentReports.value.length
+    const nextBatch = allReports.value.slice(currentCount, currentCount + pageSize)
+    
+    if (nextBatch.length > 0) {
+      recentReports.value = [...recentReports.value, ...nextBatch]
+      hasMoreReports.value = recentReports.value.length < allReports.value.length
+    } else {
+      hasMoreReports.value = false
+    }
+  } catch (error) {
+    console.error('加载更多报告失败:', error)
+    message.error('加载更多报告失败，请重试')
+  } finally {
+    loadingMore.value = false
   }
 }
 
@@ -1330,6 +1383,33 @@ const handleAvatarError = (event) => {
   margin-bottom: 15px;
 }
 
+.report-title {
+  margin-bottom: 15px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border-left: 3px solid #22d36b;
+}
+
+.partner-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #22d36b;
+  margin-bottom: 6px;
+}
+
+.first-message {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  opacity: 0.8;
+  font-style: italic;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .report-date {
   font-size: 0.9rem;
   color: var(--color-text);
@@ -1444,6 +1524,58 @@ const handleAvatarError = (event) => {
   }
 }
 
+/* 加载更多按钮样式 */
+.load-more-section {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.load-more-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text);
+  backdrop-filter: blur(10px);
+  
+  &:hover:not(:disabled) {
+    border-color: rgba(34, 211, 107, 0.3);
+    background: rgba(34, 211, 107, 0.05);
+    color: #22d36b;
+    transform: translateY(-1px);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+  
+  .el-icon {
+    font-size: 16px;
+  }
+  
+  .loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid var(--color-text);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
 /* 移动端适配 */
 @media (max-width: 768px) {
   .stats-grid {
@@ -1461,6 +1593,11 @@ const handleAvatarError = (event) => {
   
   .action-button {
     padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+  
+  .load-more-button {
+    padding: 10px 20px;
     font-size: 0.85rem;
   }
 }

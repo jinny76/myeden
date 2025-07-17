@@ -1935,14 +1935,20 @@ function getVoiceType(gender, age, id) {
 }
 
 /**
- * 过滤括号内容，只保留非括号部分
+ * 过滤括号内容和标签内容，只保留非括号部分
  * @param {string} text - 原始文本
  * @returns {string} 过滤后的文本
  */
 function filterBracketText(text) {
   if (!text) return ''
   // 去除所有中英文括号内的内容，包括多组
-  return text.replace(/\([^\)]*\)|（[^）]*）/g, '').replace(/\s+/g, ' ').trim()
+  let filteredText = text.replace(/\([^\)]*\)|（[^）]*）/g, '')
+  // 去除所有标签内容（如emoji、标签等）
+  filteredText = filteredText.replace(/#[^\s#]+/g, '') // 去除#标签（只有一个井号在最前）
+  filteredText = filteredText.replace(/\[[^\]]*\]/g, '') // 去除[标签]
+  filteredText = filteredText.replace(/【[^】]*】/g, '') // 去除【标签】
+  // 清理多余的空格
+  return filteredText.replace(/\s+/g, ' ').trim()
 }
 
 /**

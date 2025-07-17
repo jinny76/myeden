@@ -1,10 +1,13 @@
 package com.myeden.service;
 
+import com.myeden.dto.CommunicationReportDto;
 import com.myeden.entity.ChatMessage;
 import com.myeden.entity.CommunicationReport;
+import com.myeden.entity.Robot;
 import com.myeden.entity.User;
 import com.myeden.repository.ChatMessageRepository;
 import com.myeden.repository.CommunicationReportRepository;
+import com.myeden.repository.RobotRepository;
 import com.myeden.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +49,9 @@ public class CommunicationScoringService {
     
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private RobotRepository robotRepository;
     
     @Autowired
     private DifyService difyService;
@@ -258,15 +264,15 @@ public class CommunicationScoringService {
      */
     private String buildCommunicationMasterPrompt(String conversationContent) {
         return String.format(
-            "你是一位资深的社交沟通大师，拥有心理学博士学位，专门研究人际沟通和社交技巧。" +
-            "现在请你分析以下对话，从专业角度评估用户的沟通质量。\n\n" +
+            "你是一位资深的社交沟通大师，拥有心理学博士学位，专门研究人际沟通和社交技巧，目标是帮助用户在未来提升与人沟通的能力和技巧。" +
+            "现在请你分析以下对话，从专业角度评估用户本人的沟通质量，可以参考对方的话语，但仅做参考，无需对对方的话语进行评估。\n\n" +
             "对话内容：\n%s\n\n" +
             "请从以下维度进行评估：\n" +
-            "1. 沟通深度 (0-10分): 是否有深入的思考和分享\n" +
-            "2. 情感表达 (0-10分): 情感的真实性和丰富度\n" +
-            "3. 互动质量 (0-10分): 回应的及时性和相关性\n" +
-            "4. 语言表达 (0-10分): 表达的清晰度和准确性\n" +
-            "5. 共情能力 (0-10分): 对对方的理解和关怀\n\n" +
+            "1. 沟通深度 (0-10分): 用户是否有深入的思考和分享\n" +
+            "2. 情感表达 (0-10分): 用户情感的真实性和丰富度\n" +
+            "3. 互动质量 (0-10分): 用户回应的及时性和相关性\n" +
+            "4. 语言表达 (0-10分): 用户表达的清晰度和准确性\n" +
+            "5. 共情能力 (0-10分): 用户对对方的理解和关怀\n\n" +
             "请按以下格式返回评估结果：\n" +
             "总分: [0-10的整数]\n" +
             "沟通深度: [0-10的整数]\n" +
@@ -274,8 +280,8 @@ public class CommunicationScoringService {
             "互动质量: [0-10的整数]\n" +
             "语言表达: [0-10的整数]\n" +
             "共情能力: [0-10的整数]\n" +
-            "评价: [详细的专业评价，包括优点、不足和改进建议，100-300字, 可以举例]\n" +
-            "建议: [具体的改进建议，50-150字, 可以举例]",
+            "评价: [详细的对用户内容的专业评价，包括优点、不足和改进建议，100-300字, 可以举例]\n" +
+            "建议: [具体的对用户沟通的改进建议，50-150字, 可以举例]",
             conversationContent
         );
     }
@@ -449,6 +455,111 @@ public class CommunicationScoringService {
         } catch (Exception e) {
             logger.error("获取用户沟通报告失败，用户ID: {}, 错误: {}", userId, e.getMessage(), e);
             return List.of();
+        }
+    }
+    
+    /**
+     * 获取用户的沟通报告列表（扩展信息）
+     * 
+     * @param userId 用户ID
+     * @return 扩展的沟通报告列表
+     */
+    public List<CommunicationReportDto> getUserCommunicationReportsWithDetails(String userId) {
+        try {
+            List<CommunicationReport> reports = communicationReportRepository.findByUserIdOrderByCreatedAtDesc(userId);
+            
+            return reports.stream()
+                    .map(report -> {
+                        // 获取对方名称和第一句话
+                        String partnerName = getPartnerName(report.getConversationId());
+                        String firstMessage = getFirstMessage(report.getConversationId());
+                        
+                        return CommunicationReportDto.fromEntity(report, partnerName, firstMessage);
+                    })
+                    .collect(Collectors.toList());
+                    
+        } catch (Exception e) {
+            logger.error("获取用户沟通报告详情失败，用户ID: {}, 错误: {}", userId, e.getMessage(), e);
+            return List.of();
+        }
+    }
+    
+    /**
+     * 获取对话中的对方名称（机器人名称）
+     * 
+     * @param conversationId 对话ID
+     * @return 对方名称
+     */
+    private String getPartnerName(String conversationId) {
+        try {
+            // 获取对话中的第一条消息来确定机器人ID
+            List<ChatMessage> messages = chatMessageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
+            
+            if (messages.isEmpty()) {
+                return "未知对话者";
+            }
+            
+            // 找到机器人ID
+            String robotId = null;
+            for (ChatMessage msg : messages) {
+                if ("robot".equals(msg.getSenderType())) {
+                    robotId = msg.getSenderId();
+                    break;
+                } else if ("robot".equals(msg.getReceiverType())) {
+                    robotId = msg.getReceiverId();
+                    break;
+                }
+            }
+            
+            if (robotId == null) {
+                return "未知对话者";
+            }
+            
+            // 通过机器人ID获取机器人名称
+            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
+            if (robot != null) {
+                return robot.getName();
+            }
+            
+            return "机器人-" + robotId;
+            
+        } catch (Exception e) {
+            logger.warn("获取对话 {} 的对方名称失败: {}", conversationId, e.getMessage());
+            return "未知对话者";
+        }
+    }
+    
+    /**
+     * 获取对话的第一句话
+     * 
+     * @param conversationId 对话ID
+     * @return 第一句话内容
+     */
+    private String getFirstMessage(String conversationId) {
+        try {
+            List<ChatMessage> messages = chatMessageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
+            
+            if (messages.isEmpty()) {
+                return "暂无对话内容";
+            }
+            
+            // 找到第一条有效消息
+            for (ChatMessage msg : messages) {
+                if (msg.getContent() != null && !msg.getContent().trim().isEmpty()) {
+                    // 截取前100个字符，避免过长
+                    String content = msg.getContent().trim();
+                    if (content.length() > 100) {
+                        return content.substring(0, 100) + "...";
+                    }
+                    return content;
+                }
+            }
+            
+            return "暂无对话内容";
+            
+        } catch (Exception e) {
+            logger.warn("获取对话 {} 的第一句话失败: {}", conversationId, e.getMessage());
+            return "暂无对话内容";
         }
     }
     

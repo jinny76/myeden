@@ -183,9 +183,10 @@
                   <p class="robot-intro">{{ robot.description }}</p>
                   <div class="robot-tags">
                     <span class="tag-item">👼 {{ robot.nickname }}</span>
-                    <span class="tag-item" :class="{ 'online': robot.active, 'offline': !robot.active }">
-                      {{ robot.active ? '🟢 在线' : '🔴 离线' }}
-                    </span>
+                    <button class="detail-btn" @click="showRobotDetail(robot)" title="查看详情">
+                      <el-icon><InfoFilled /></el-icon>
+                      <span>详情</span>
+                    </button>
                   </div>
                   
                   <!-- 机器人控制区域 -->
@@ -285,6 +286,76 @@
       </div>
     </transition>
   </div>
+
+  <!-- 机器人详情弹窗 -->
+  <div v-if="robotDetailVisible" class="robot-detail-overlay" @click.self="closeRobotDetail">
+    <div class="robot-detail-modal" :class="{ mobile: isMobile }">
+      <div class="robot-detail-header">
+        <div class="robot-detail-title">
+          <div class="robot-avatar-wrapper">
+            <el-avatar :src="getRobotAvatarUrl(currentRobotDetail)" :size="60" />
+            <div class="robot-status-badge" :class="{ active: currentRobotDetail?.active }">
+              <el-icon v-if="currentRobotDetail?.active" class="status-icon"><CircleCheck /></el-icon>
+              <el-icon v-else class="status-icon"><CircleClose /></el-icon>
+              {{ currentRobotDetail?.active ? '在线' : '离线' }}
+            </div>
+          </div>
+        </div>
+        <button class="close-btn" @click="closeRobotDetail">×</button>
+      </div>
+      
+      <div class="robot-detail-content">
+        <div class="robot-info-section">
+          <h4>基本信息</h4>
+          <div class="robot-info-grid">
+            <div class="info-row">
+              <div class="info-item">
+                <span class="info-label">姓名：</span>
+                <span class="info-value">{{ currentRobotDetail?.name }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">昵称：</span>
+                <span class="info-value">{{ currentRobotDetail?.nickname }}</span>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-item">
+                <span class="info-label">性别：</span>
+                <span class="info-value">{{ getGenderText(currentRobotDetail?.gender) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">年龄：</span>
+                <span class="info-value">{{ currentRobotDetail?.age }}岁</span>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-item full-width">
+                <span class="info-label">性格特点：</span>
+                <span class="info-value">{{ currentRobotDetail?.personality }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="robot-description-section">
+          <h4>详细介绍</h4>
+          <div class="robot-description-scroll">
+            <div class="robot-description-content">
+                <p>{{ currentRobotDetail.description }} {{ currentRobotDetail.background }} {{ currentRobotDetail.family }} 目前在{{ currentRobotDetail.location }}</p>
+            </div>
+          </div>
+        </div>
+            
+      </div>
+      
+      <div class="robot-detail-footer">
+        <button class="chat-btn" @click="goToChat(currentRobotDetail); closeRobotDetail()">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>开始聊天</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -294,7 +365,7 @@ import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
-import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus, Edit, Calendar, ChatLineRound } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus, Edit, Calendar, ChatLineRound, InfoFilled } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { 
   createUserRobotLink, 
@@ -337,6 +408,10 @@ const themeMenuOptions = ref([])
 const themeMenuRobot = ref(null)
 const themeMenuPosition = ref({ x: 0, y: 0 })
 const selectedThemeId = ref(null)
+
+// 机器人详情弹窗相关
+const robotDetailVisible = ref(false)
+const currentRobotDetail = ref(null)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -713,6 +788,28 @@ const clearMessageRedDot = async (robotId) => {
   } catch (error) {
     console.error('清除消息红点失败:', error)
   }
+}
+
+// 显示机器人详情
+const showRobotDetail = (robot) => {
+  currentRobotDetail.value = robot
+  robotDetailVisible.value = true
+}
+
+// 关闭机器人详情
+const closeRobotDetail = () => {
+  robotDetailVisible.value = false
+  currentRobotDetail.value = null
+}
+
+// 获取性别中文显示
+const getGenderText = (gender) => {
+  const genderMap = {
+    'male': '男',
+    'female': '女',
+    'other': '其他'
+  }
+  return genderMap[gender] || gender || '未知'
 }
 </script>
 
@@ -1263,6 +1360,32 @@ const clearMessageRedDot = async (robotId) => {
 .tag-item.offline {
   background: rgba(255, 77, 79, 0.15);
   color: #ff4d4f;
+}
+
+.detail-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid rgba(64, 158, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(64, 158, 255, 0.1);
+  color: #409eff;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.detail-btn:hover {
+  background: rgba(64, 158, 255, 0.2);
+  border-color: #409eff;
+  transform: translateY(-1px);
+}
+
+.detail-btn:active {
+  transform: translateY(0);
 }
 
 .robot-card-bg {
@@ -1972,6 +2095,284 @@ const clearMessageRedDot = async (robotId) => {
     border-radius: 18px 18px 0 0;
     font-size: 1.18rem;
     padding: 28px 0 16px 0;
+  }
+}
+
+/* 机器人详情弹窗样式 */
+.robot-detail-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+}
+
+.robot-detail-modal {
+  background: var(--color-bg);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.robot-detail-modal.mobile {
+  width: 95%;
+  max-width: 95%;
+  max-height: 85vh;
+}
+
+.robot-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 30px 30px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.robot-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.robot-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.robot-status-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: #ff4d4f;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  border: 2px solid var(--color-bg);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 600;
+}
+
+.robot-status-badge.active {
+  background: #22d36b;
+}
+
+.robot-title-info h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 4px 0;
+}
+
+.robot-nickname {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  opacity: 0.7;
+  margin: 0;
+}
+
+.robot-detail-content {
+  padding: 20px 30px;
+}
+
+.robot-info-section,
+.robot-description-section,
+.robot-themes-section {
+  margin-bottom: 24px;
+}
+
+.robot-info-section h4,
+.robot-description-section h4,
+.robot-themes-section h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 12px 0;
+}
+
+.robot-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-row {
+  display: flex;
+  gap: 20px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.info-item.full-width {
+  flex: 1;
+}
+
+.info-label {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  opacity: 0.7;
+  min-width: 80px;
+}
+
+.info-value {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.robot-description-scroll {
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px;
+}
+
+.robot-description-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.robot-description-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.robot-description-scroll::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 107, 0.3);
+  border-radius: 3px;
+}
+
+.robot-description-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 107, 0.5);
+}
+
+.robot-description-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.description-item {
+  margin: 0;
+}
+
+.description-item h5 {
+  font-size: 0.85rem;
+  color: #22d36b;
+  margin: 0 0 8px 0;
+  font-weight: 600;
+}
+
+.description-item p {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.theme-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.theme-tag {
+  background: rgba(34, 211, 107, 0.1);
+  color: #22d36b;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.robot-detail-footer {
+  padding: 20px 30px 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
+}
+
+.chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #22d36b, #4ade80);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(34, 211, 107, 0.3);
+}
+
+.chat-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34, 211, 107, 0.4);
+}
+
+.chat-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .robot-detail-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+  
+  .robot-detail-header {
+    padding: 20px 20px 16px;
+  }
+  
+  .robot-detail-content {
+    padding: 16px 20px;
+  }
+  
+  .robot-detail-footer {
+    padding: 16px 20px 20px;
+  }
+  
+  .robot-detail-title {
+    justify-content: center;
+  }
+  
+  .robot-avatar-wrapper {
+    align-self: center;
+  }
+  
+  .info-row {
+    gap: 12px;
+  }
+  
+  .info-item {
+    gap: 4px;
+  }
+  
+  .info-label {
+    min-width: auto;
   }
 }
 </style> 

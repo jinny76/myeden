@@ -1,5 +1,6 @@
 package com.myeden.controller;
 
+import com.myeden.dto.CommunicationReportDto;
 import com.myeden.entity.CommunicationReport;
 import com.myeden.service.CommunicationScoringService;
 import org.slf4j.Logger;
@@ -45,13 +46,35 @@ public class CommunicationReportController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userId = authentication.getName();
             
-            List<CommunicationReport> reports = communicationScoringService.getUserCommunicationReports(userId);
+            List<CommunicationReportDto> reports = communicationScoringService.getUserCommunicationReportsWithDetails(userId);
             
             return ResponseEntity.ok(new EventResponse(200, "获取沟通报告成功", reports));
             
         } catch (Exception e) {
             logger.error("获取沟通报告失败: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(new EventResponse(400, "获取沟通报告失败", null));
+        }
+    }
+    
+    /**
+     * 获取用户的沟通报告列表（基础版本，不包含扩展信息）
+     * 
+     * @return 响应结果
+     */
+    @GetMapping("/basic")
+    public ResponseEntity<EventResponse> getUserCommunicationReportsBasic() {
+        try {
+            // 获取当前用户信息
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userId = authentication.getName();
+            
+            List<CommunicationReport> reports = communicationScoringService.getUserCommunicationReports(userId);
+            
+            return ResponseEntity.ok(new EventResponse(200, "获取基础沟通报告成功", reports));
+            
+        } catch (Exception e) {
+            logger.error("获取基础沟通报告失败: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(new EventResponse(400, "获取基础沟通报告失败", null));
         }
     }
     

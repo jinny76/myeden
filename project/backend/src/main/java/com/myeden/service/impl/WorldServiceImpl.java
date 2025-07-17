@@ -241,10 +241,13 @@ public class WorldServiceImpl implements WorldService {
                     .map(robot -> new RobotSummary(
                             robot.getRobotId(), // 使用业务逻辑的robotId而不是MongoDB的id
                             robot.getName(),
-                            robot.getName(), // 使用name作为nickname
+                            robot.getNickname(),
                             robot.getAvatar(),
                             robot.getPersonality(),
                             robot.getDescription(), // 使用description作为description
+                            robot.getBackground(),
+                            robot.getFamily(),
+                            robot.getLocation(),
                             robot.getIsActive() != null ? robot.getIsActive() : false,
                             robot.getIsDeleted() != null ? robot.getIsDeleted() : false,
                             robot.getGender(),
