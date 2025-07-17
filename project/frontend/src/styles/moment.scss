@@ -1169,7 +1169,8 @@
     }
     
     .mobile-editor-footer {
-      padding: 16px;
+      padding: 16px 20px 20px;
+      gap: 12px;
     }
     
     .mobile-editor-footer .el-button {
@@ -1463,46 +1464,43 @@
     display: flex;
     justify-content: space-between;
     gap: 16px;
+    padding: 20px 24px 24px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.02));
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0 0 24px 24px;
   }
   
   .mobile-editor-footer .el-button {
     flex: 1;
-    padding: 14px 24px;
+    padding: 12px 24px;
     font-weight: 600;
-    border-radius: 16px;
+    border-radius: 10px;
     font-size: 1rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 2px solid transparent;
+    border: 1px solid transparent;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    
+    &:active {
+      transform: translateY(0);
+    }
   }
   
   .mobile-editor-footer .el-button--default {
-    background: rgba(255, 255, 255, 0.8);
-    border-color: rgba(102, 126, 234, 0.2);
-    color: var(--color-text, #333);
+    background: rgba(156, 163, 175, 0.1);
+    color: var(--el-text-color-regular, #606266);
+    border: 1px solid rgba(156, 163, 175, 0.3);
     backdrop-filter: blur(10px);
-    position: relative;
-    overflow: hidden;
-    
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
-      transition: left 0.5s ease;
-    }
     
     &:hover {
-      background: rgba(255, 255, 255, 0.9);
-      border-color: rgba(102, 126, 234, 0.3);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
-      
-      &::before {
-        left: 100%;
-      }
+      background: rgba(156, 163, 175, 0.2);
+      border-color: rgba(156, 163, 175, 0.5);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(156, 163, 175, 0.3);
     }
     
     &:active {
@@ -1511,39 +1509,19 @@
   }
   
   .mobile-editor-footer .el-button--primary {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    background: $gradient-primary;
     color: white;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    position: relative;
-    overflow: hidden;
-    
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: left 0.5s ease;
-    }
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
       background: linear-gradient(135deg, #5a67d8, #6b46c1);
-      
-      &::before {
-        left: 100%;
-      }
+      border-color: rgba(102, 126, 234, 0.5);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
       
       .el-icon {
-        transform: scale(1.1) rotate(5deg);
+        transform: scale(1.05);
       }
     }
     
@@ -1551,17 +1529,20 @@
       transform: translateY(0);
     }
     
+    &.is-loading,
     &[loading] {
       cursor: not-allowed;
       opacity: 0.8;
       
       &:hover {
         transform: none;
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: $gradient-primary;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
       }
     }
     
     .el-icon {
+      font-size: 16px;
       transition: transform 0.2s ease;
     }
   }
@@ -2291,6 +2272,19 @@
     .reply-send-icon.disabled {
       background: linear-gradient(135deg, #4a4a4a, #666666) !important;
     }
+    
+    // 移动端弹窗按钮深色适配
+    .mobile-editor-footer .el-button--default {
+      background: rgba(75, 85, 99, 0.1);
+      color: var(--el-text-color-regular, #d1d5db);
+      border-color: rgba(75, 85, 99, 0.3);
+      
+      &:hover {
+        background: rgba(75, 85, 99, 0.2);
+        border-color: rgba(75, 85, 99, 0.5);
+        box-shadow: 0 4px 12px rgba(75, 85, 99, 0.3);
+      }
+    }
   }
   
   // Element Plus主题适配
@@ -2314,6 +2308,19 @@
     .comment-send-icon.disabled,
     .reply-send-icon.disabled {
       background: linear-gradient(135deg, #4a4a4a, #666666) !important;
+    }
+    
+    // 移动端弹窗按钮深色适配
+    .mobile-editor-footer .el-button--default {
+      background: rgba(75, 85, 99, 0.1);
+      color: var(--color-text, #f5f5f5);
+      border-color: rgba(75, 85, 99, 0.3);
+      
+      &:hover {
+        background: rgba(75, 85, 99, 0.2);
+        border-color: rgba(75, 85, 99, 0.5);
+        box-shadow: 0 4px 12px rgba(75, 85, 99, 0.3);
+      }
     }
   }
   
