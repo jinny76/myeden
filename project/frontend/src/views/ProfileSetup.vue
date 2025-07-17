@@ -702,7 +702,7 @@ const handleAvatarError = (event) => {
   border-radius: 24px;
   padding: 40px 40px;
   width: 100%;
-  max-width: 550px;
+  max-width: 680px;
   overflow: hidden;
 }
 
