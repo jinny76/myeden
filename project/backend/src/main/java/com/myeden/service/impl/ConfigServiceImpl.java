@@ -460,6 +460,17 @@ public class ConfigServiceImpl implements ConfigService {
         // 在convertToRobot方法中同步hiddenTrouble
         robot.setHiddenTrouble(robotConfig.getHiddenTrouble());
         
+        // 同步专家主题配置 - 仅存储主题ID列表到Robot实体
+        if (robotConfig.getExpertThemes() != null && !robotConfig.getExpertThemes().isEmpty()) {
+            List<RobotConfig.ExpertTheme> expertThemes = new ArrayList<>();
+            for (RobotConfig.ExpertTheme theme : robotConfig.getExpertThemes()) {
+                if (theme.isActive()) {
+                    expertThemes.add(theme);
+                }
+            }
+            robot.setExpertThemes(expertThemes);
+        }
+        
         // 设置默认值（仅当字段为空时）
         if (robot.getGender() == null) {
             robot.setGender("未知");
@@ -564,6 +575,9 @@ public class ConfigServiceImpl implements ConfigService {
 
         // 在updateRobotFromConfig方法中同步hiddenTrouble
         existing.setHiddenTrouble(newConfig.getHiddenTrouble());
+
+        // 更新专家主题对象列表
+        existing.setExpertThemes(newConfig.getExpertThemes());
     }
     
     @Override

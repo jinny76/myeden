@@ -107,6 +107,7 @@ import { message } from '@/utils/message'
 import { tts } from '@/api/tts'
 
 const route = useRoute()
+const router = useRouter()
 const robotId = ref('')
 const messages = ref([])
 const input = ref('')
@@ -117,6 +118,8 @@ const userStore = useUserStore()
 const messagesContainer = ref(null)
 const websocketStore = useWebSocketStore && useWebSocketStore()
 const isRobotReplying = ref(false)
+// 新增：当前聊天主题Id
+const currentThemeId = ref(route.query.themeId || '')
 
 // 游标分页相关
 const loadedMessageIds = ref(new Set())
@@ -270,7 +273,7 @@ const startRecording = async (e) => {
       const reader = new FileReader()
       reader.onloadend = async () => {
         const base64Audio = reader.result
-        await sendChatMessage(robotId.value, null, conversationId.value, null, base64Audio)
+        await sendChatMessage(robotId.value, null, conversationId.value, null, base64Audio, currentThemeId.value, currentThemeId.value ? 'expert' : 'normal')
         isRecording.value = false
         isRobotReplying.value = true
         nextTick(() => {
@@ -308,8 +311,8 @@ const sendMessage = async () => {
       imageBase64 = canvas.toDataURL('image/png')
     }
   }
-  // 假设sendChatMessage支持imageBase64参数
-  const res = await sendChatMessage(robotId.value, input.value, conversationId.value, imageBase64)
+  // 发送消息时带上themeId
+  const res = await sendChatMessage(robotId.value, input.value, conversationId.value, imageBase64, undefined, currentThemeId.value, currentThemeId.value ? 'expert' : 'normal')
   if (res.code === 200) {
     input.value = ''
     scrollToBottom()
@@ -331,7 +334,11 @@ watch(messages, () => {
   scrollToBottom()
 })
 
-const router = useRouter()
+// 监听路由变化，保持主题Id同步
+watch(() => route.query.themeId, (val) => {
+  currentThemeId.value = val || ''
+})
+
 function goToWorld() {
   router.push('/world')
 }

@@ -248,7 +248,12 @@ public class WorldServiceImpl implements WorldService {
                             robot.getIsActive() != null ? robot.getIsActive() : false,
                             robot.getIsDeleted() != null ? robot.getIsDeleted() : false,
                             robot.getGender(),
-                            robot.getAge()
+                            robot.getAge(),
+                            // 新增：专家主题摘要
+                            robot.getExpertThemes() == null ? java.util.Collections.emptyList() :
+                                robot.getExpertThemes().stream()
+                                    .map(theme -> new com.myeden.service.WorldService.ExpertThemeSummary(theme.getThemeId(), theme.getThemeName()))
+                                    .collect(java.util.stream.Collectors.toList())
                     ))
                     .collect(Collectors.toList());
 

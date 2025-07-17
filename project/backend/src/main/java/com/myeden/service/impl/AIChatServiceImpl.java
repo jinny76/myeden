@@ -19,13 +19,11 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Base64;
+
 import org.springframework.web.client.RestTemplate;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.core.io.FileSystemResource;
@@ -34,6 +32,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpEntity;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.myeden.service.ExpertMemoryService;
 
 @Service
 public class AIChatServiceImpl implements AIChatService {
@@ -59,6 +58,9 @@ public class AIChatServiceImpl implements AIChatService {
     
     @Autowired
     private UserRobotLinkService userRobotLinkService;
+
+    @Autowired
+    private ExpertMemoryService expertMemoryService;
 
     @Value("${dify.image.apiKey}")
     private String apiKey;
@@ -171,7 +173,39 @@ public class AIChatServiceImpl implements AIChatService {
                 userMessage.setContent(userMessage.getContent() + ", 对方情绪是: " + userMessage.getAsrResult().getEmotion());
             }
 
-            DifyService.DifyChatResult result = promptService.generateChatReply(robot, userMessage, buildPostContext(robot));
+            // 判断是否为专家主题对话
+            DifyService.DifyChatResult result;
+            if (userMessage.getExpertThemeId() != null && !userMessage.getExpertThemeId().isEmpty()) {
+                // 专家主题记忆提取与保存
+                if (userMessage.getConversationId() != null && !userMessage.getConversationId().isEmpty() && userMessage.getContent().contains("/退出")) {
+                    // 获取会话历史
+                    List<ChatMessage> history = chatService.getHistoryByConversationId(userMessage.getConversationId());
+                    StringBuilder chatHistory = new StringBuilder();
+                    for (ChatMessage msg : history) {
+                        chatHistory.append(msg.getSenderType()).append(": ")
+                                .append(msg.getContent() == null ? "" : msg.getContent()).append("\n");
+                    }
+                    // 提取记忆
+                    Map<String, String> extractedMemories = expertMemoryService.extractMemoriesFromChat(
+                            userMessage.getSenderId(), userMessage.getReceiverId(), userMessage.getExpertThemeId(),
+                            chatHistory.toString(), new ArrayList<>() // infoFields可根据业务传递
+                    );
+                    // 合并保存记忆
+                    if (extractedMemories != null && !extractedMemories.isEmpty()) {
+                        expertMemoryService.mergeSessionMemories(
+                                userMessage.getSenderId(), userMessage.getReceiverId(), userMessage.getExpertThemeId(),
+                                extractedMemories
+                        );
+                    }
+                }
+
+                // 专家主题对话，获取记忆上下文
+                String memoryContext = expertMemoryService.buildMemoryContext(userMessage.getSenderId(), robotId, userMessage.getExpertThemeId());
+                result = promptService.generateExpertChatReply(robot, userMessage.getExpertThemeId(), userMessage, memoryContext);
+            } else {
+                // 普通对话
+                result = promptService.generateChatReply(robot, userMessage, buildPostContext(robot));
+            }
             ChatMessage aiMsg = new ChatMessage();
             aiMsg.setSessionId(userMessage.getSessionId());
             aiMsg.setConversationId(result.conversationId); // 保持会话ID一致
@@ -183,6 +217,13 @@ public class AIChatServiceImpl implements AIChatService {
             aiMsg.setMsgType("text");
             aiMsg.setCreatedAt(LocalDateTime.now());
             aiMsg.setIsRead(false);
+            // 设置专家主题ID和会话类型
+            if (userMessage.getExpertThemeId() != null && !userMessage.getExpertThemeId().isEmpty()) {
+                aiMsg.setExpertThemeId(userMessage.getExpertThemeId());
+                aiMsg.setSessionType("expert");
+            } else {
+                aiMsg.setSessionType("normal");
+            }
             return aiMsg;
         } catch (Exception e) {
             ChatMessage aiMsg = new ChatMessage();

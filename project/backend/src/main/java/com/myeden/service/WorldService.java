@@ -266,9 +266,11 @@ public interface WorldService {
         private Boolean isDeleted;
         private String gender;
         private int age;
+        // 新增：专家主题列表
+        private List<ExpertThemeSummary> expertThemes;
         
         public RobotSummary(String id, String name, String nickname, String avatar, 
-                          String personality, String description, boolean isActive, Boolean isDeleted, String gender, int age) {
+                          String personality, String description, boolean isActive, Boolean isDeleted, String gender, int age, List<ExpertThemeSummary> expertThemes) {
             this.id = id;
             this.name = name;
             this.nickname = nickname;
@@ -279,6 +281,7 @@ public interface WorldService {
             this.isDeleted = isDeleted;
             this.gender = gender;
             this.age = age;
+            this.expertThemes = expertThemes;
         }
         
         // Getter方法
@@ -292,6 +295,8 @@ public interface WorldService {
         public Boolean getIsDeleted() { return isDeleted; }
         public String getGender() { return gender; }
         public int getAge() { return age; }
+        // 新增getter
+        public List<ExpertThemeSummary> getExpertThemes() { return expertThemes; }
     }
     
     /**
@@ -424,5 +429,17 @@ public interface WorldService {
         public String getStart() { return start; }
         public String getEnd() { return end; }
         public double getProbability() { return probability; }
+    }
+
+    // 专家主题摘要类
+    class ExpertThemeSummary {
+        private String id;
+        private String name;
+        public ExpertThemeSummary(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+        public String getId() { return id; }
+        public String getName() { return name; }
     }
 } 

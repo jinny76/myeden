@@ -33,6 +33,8 @@ import com.myeden.model.external.WeatherInfo;
 import com.myeden.repository.ContentGenerationLogRepository;
 import com.myeden.repository.UserRobotLinkRepository;
 import com.myeden.repository.PostRepository;
+import com.myeden.service.ExpertMemoryService;
+import com.myeden.config.RobotConfig.ExpertTheme;
 
 /**
  * 提示词服务实现类
@@ -43,8 +45,9 @@ import com.myeden.repository.PostRepository;
  * @since 2024-01-01
  */
 @Service
-@Slf4j
 public class PromptServiceImpl implements PromptService {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PromptServiceImpl.class);
 
     @Autowired
     private RobotConfig robotConfig;
@@ -79,6 +82,9 @@ public class PromptServiceImpl implements PromptService {
 
     @Autowired
     private PostRepository postRepository;
+    
+    @Autowired
+    private ExpertMemoryService expertMemoryService;
 
     private final Random random = new Random();
 
@@ -1695,5 +1701,184 @@ public class PromptServiceImpl implements PromptService {
             log.error("生成机器人主动聊天内容失败: {}", e.getMessage(), e);
             return null;
         }
+    }
+    
+    @Override
+    public String buildExpertChatPrompt(Robot robot, String themeId, ChatMessage userMessage, String memoryContext) {
+        try {
+            log.debug("构建专家主题聊天提示词: robotId={}, themeId={}", robot.getRobotId(), themeId);
+
+            boolean isNewConversation = (userMessage.getConversationId() == null || userMessage.getConversationId().trim().isEmpty());
+            String userContent = userMessage.getContent() != null ? userMessage.getContent().trim() : "";
+            if (isNewConversation) {
+
+                StringBuilder prompt = new StringBuilder();
+
+                // 获取专家主题配置
+                ExpertTheme expertTheme = getExpertThemeConfig(robot.getName(), themeId);
+                if (expertTheme == null) {
+                    log.warn("未找到专家主题配置: robotId={}, themeId={}", robot.getRobotId(), themeId);
+                    return buildChatPrompt(robot, userMessage, null); // 降级为普通聊天
+                }
+
+                // 构建专家身份设定
+                prompt.append(String.format("/no_think 你是%s，现在作为【%s】为用户提供专业服务。",
+                        robot.getName(), expertTheme.getThemeName()));
+                prompt.append("\n\n## 专家角色设定：\n");
+                prompt.append(expertTheme.getThemePrompt());
+
+                // 添加记忆上下文
+                if (memoryContext != null && !memoryContext.trim().isEmpty()) {
+                    prompt.append("\n\n");
+                    prompt.append(memoryContext);
+                }
+
+                // 添加信息采集引导
+                if (expertTheme.hasInfoFields() && isNewExpertSession(userMessage)) {
+                    prompt.append("\n\n## 信息采集指引：\n");
+                    prompt.append("为了更好地为用户提供专业服务，请主动了解以下信息：\n");
+                    for (String field : expertTheme.getInfoFields()) {
+                        prompt.append("- ").append(field).append("\n");
+                    }
+                }
+
+                // 用户消息
+                if (!userContent.isEmpty()) {
+                    prompt.append("\n\n## 用户问题：\n");
+                    prompt.append(userContent);
+                }
+
+                // 专家回复要求
+                prompt.append("\n\n## 专业回复要求：\n");
+                prompt.append("1. 以专业、耐心的态度回复用户\n");
+                prompt.append("2. 回复要专业准确，基于你的专业知识\n");
+                prompt.append("3. 如果信息不足，主动询问必要信息\n");
+                prompt.append("4. 语言要通俗易懂，避免过多专业术语\n");
+                prompt.append("5. 保持温暖、共情的沟通风格\n");
+                prompt.append("6. 回复长度控制在200字以内\n");
+
+                log.debug("专家主题提示词构建完成，长度: {}", prompt.length());
+                return prompt.toString();
+            } else {
+                return userContent;
+            }
+        } catch (Exception e) {
+            log.error("构建专家主题聊天提示词失败: robotId={}, themeId={}", 
+                     robot.getRobotId(), themeId, e);
+            return buildChatPrompt(robot, userMessage, null); // 降级为普通聊天
+        }
+    }
+    
+    @Override
+    public String buildMemoryExtractionPrompt(String chatHistory, List<String> infoFields, String themeId) {
+        StringBuilder prompt = new StringBuilder();
+        
+        prompt.append("作为专业的信息提取助手，请分析以下专家咨询对话记录，提取用户的关键信息。\n\n");
+        
+        prompt.append("## 对话记录：\n");
+        prompt.append(chatHistory);
+        
+        prompt.append("\n\n## 需要提取的信息字段：\n");
+        for (String field : infoFields) {
+            prompt.append("- ").append(field).append("\n");
+        }
+        
+        prompt.append("\n\n## 提取要求：\n");
+        prompt.append("1. 只提取对话中明确提到的信息，不要推测或编造\n");
+        prompt.append("2. 如果某个字段没有相关信息，请返回空值\n");
+        prompt.append("3. 提取的信息要准确、简洁、客观\n");
+        prompt.append("4. 保护用户隐私，不提取敏感个人信息\n");
+        prompt.append("5. 返回格式为JSON，字段名作为key，提取的内容作为value\n");
+        prompt.append("6. 只返回JSON，不要其他解释\n\n");
+        
+        // 根据主题提供示例
+        prompt.append("## 示例格式：\n");
+        if ("psychology".equals(themeId)) {
+            prompt.append("{\n");
+            prompt.append("  \"基本情况\": \"25岁，软件工程师，单身\",\n");
+            prompt.append("  \"困惑点\": \"工作压力大，经常失眠\",\n");
+            prompt.append("  \"情绪状态\": \"焦虑，容易烦躁\",\n");
+            prompt.append("  \"期望目标\": \"改善睡眠质量，学会压力管理\"\n");
+            prompt.append("}\n");
+        } else if ("legal".equals(themeId)) {
+            prompt.append("{\n");
+            prompt.append("  \"案件类型\": \"劳动纠纷\",\n");
+            prompt.append("  \"争议焦点\": \"公司拖欠工资三个月\",\n");
+            prompt.append("  \"相关证据\": \"劳动合同、工资条、聊天记录\",\n");
+            prompt.append("  \"期望结果\": \"追回工资并获得补偿\"\n");
+            prompt.append("}\n");
+        } else {
+            prompt.append("{\n");
+            prompt.append("  \"字段1\": \"提取的内容1\",\n");
+            prompt.append("  \"字段2\": \"提取的内容2\",\n");
+            prompt.append("  \"字段3\": \"提取的内容3\"\n");
+            prompt.append("}\n");
+        }
+        
+        return prompt.toString();
+    }
+    
+    @Override
+    public DifyChatResult generateExpertChatReply(Robot robot, String themeId, ChatMessage userMessage, String memoryContext) {
+        try {
+            log.debug("生成专家主题聊天回复: robotId={}, themeId={}", robot.getRobotId(), themeId);
+            
+            // 构建专家主题提示词
+            String prompt = buildExpertChatPrompt(robot, themeId, userMessage, memoryContext);
+            
+            // 获取专家主题的API密钥
+            String apiKey = getExpertThemeApiKey(robot.getName(), themeId);
+            if (apiKey == null) {
+                apiKey = robot.getAppKey(); // 降级使用机器人默认API密钥
+            }
+            
+            // 调用Dify API
+            DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), 
+                                                          userMessage.getConversationId(), apiKey);
+            
+            // 处理生成内容
+            result = processGeneratedContent(result, robot, "expert_chat");
+            
+            log.debug("专家主题聊天回复生成完成");
+            return result;
+            
+        } catch (Exception e) {
+            log.error("生成专家主题聊天回复失败: robotId={}, themeId={}", 
+                     robot.getRobotId(), themeId, e);
+            // 降级为普通聊天
+            return generateChatReply(robot, userMessage, null);
+        }
+    }
+    
+    // 私有辅助方法
+    
+    /**
+     * 获取专家主题配置
+     */
+    private ExpertTheme getExpertThemeConfig(String robotName, String themeId) {
+        RobotConfig.RobotInfo robotInfo = getRobotInfo(robotName);
+        if (robotInfo != null && robotInfo.getExpertThemes() != null) {
+            return robotInfo.getExpertThemes().stream()
+                .filter(theme -> themeId.equals(theme.getThemeId()) && theme.isActive())
+                .findFirst()
+                .orElse(null);
+        }
+        return null;
+    }
+    
+    /**
+     * 获取专家主题的API密钥
+     */
+    private String getExpertThemeApiKey(String robotName, String themeId) {
+        ExpertTheme expertTheme = getExpertThemeConfig(robotName, themeId);
+        return expertTheme != null ? expertTheme.getApiKey() : null;
+    }
+    
+    /**
+     * 判断是否为新的专家会话
+     */
+    private boolean isNewExpertSession(ChatMessage userMessage) {
+        // 简单判断：如果会话ID为空或者是新会话，则认为是新会话
+        return userMessage.getConversationId() == null || userMessage.getConversationId().trim().isEmpty();
     }
 } 

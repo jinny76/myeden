@@ -130,7 +130,7 @@
             >
               <div class="robot-content">
                 <div class="robot-avatar-section" 
-                @click="goToChat(robot)">
+                @click="goToChat(robot, $event)">
                   <div class="robot-avatar">
                     <!-- 熟悉度进度环 - 套在头像外侧 -->
                     <div class="avatar-progress-ring" v-if="isRobotLinkCreated(robot.id)">
@@ -266,10 +266,29 @@
       </div>
     </div>
   </div>
+  <!-- 专家主题选择菜单 -->
+  <div v-if="themeMenuVisible" class="theme-menu-overlay" @click.self="closeThemeMenu">
+    <transition name="theme-menu-fade">
+      <div
+        v-if="themeMenuVisible"
+        class="theme-menu"
+        :class="{ mobile: isMobile }"
+        :style="!isMobile ? { left: themeMenuPosition.x + 'px', top: themeMenuPosition.y + 'px' } : {}"
+      >
+        <div class="theme-menu-title">请选择聊天主题</div>
+        <div class="theme-menu-list">
+          <div v-for="item in themeMenuOptions" :key="item.id" class="theme-menu-item" @click="selectTheme(item)">
+            {{ item.name }}
+          </div>
+        </div>
+        <div class="theme-menu-cancel" @click="closeThemeMenu">取消</div>
+      </div>
+    </transition>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
@@ -311,6 +330,13 @@ const impressionPanelVisible = ref(false)
 const impressionText = ref('')
 const editingRobotId = ref(null)
 const isMobile = computed(() => window.innerWidth <= 600)
+
+// 专家主题菜单相关
+const themeMenuVisible = ref(false)
+const themeMenuOptions = ref([])
+const themeMenuRobot = ref(null)
+const themeMenuPosition = ref({ x: 0, y: 0 })
+const selectedThemeId = ref(null)
 
 // 计算属性
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -579,10 +605,42 @@ async function saveImpression() {
   }
 }
 
-const goToChat = async (robot) => {
+// 专家主题菜单相关
+function showThemeMenu(robot, event) {
+  themeMenuRobot.value = robot
+  themeMenuOptions.value = [
+    ...(robot.expertThemes || []).map(t => ({ id: t.id, name: t.name })),
+    { id: '', name: '随便聊聊' }
+  ]
+  if (!isMobile.value && event) {
+    themeMenuPosition.value = { x: event.clientX, y: event.clientY }
+  } else {
+    themeMenuPosition.value = { x: 0, y: 0 }
+  }
+  themeMenuVisible.value = true
+  nextTick(() => {})
+}
+function closeThemeMenu() {
+  themeMenuVisible.value = false
+}
+function selectTheme(theme) {
+  closeThemeMenu()
+  // 跳转到chat，带themeId参数
+  router.push({
+    path: `/chat/${themeMenuRobot.value.id}`,
+    query: theme.id ? { themeId: theme.id } : {}
+  })
+}
+
+// 修改goToChat
+const goToChat = async (robot, event) => {
   // 清除红点
   await clearMessageRedDot(robot.id)
-  router.push(`/chat/${robot.id}`)
+  if (robot.expertThemes && robot.expertThemes.length > 0) {
+    showThemeMenu(robot, event)
+  } else {
+    router.push(`/chat/${robot.id}`)
+  }
 }
 
 // 熟悉度相关方法
@@ -1821,6 +1879,99 @@ const clearMessageRedDot = async (robotId) => {
   .link-toggle-btn {
     padding: 6px 12px;
     font-size: 0.75rem;
+  }
+}
+.theme-menu-overlay {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  z-index: 3000;
+  background: rgba(0,0,0,0.18);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+.theme-menu {
+  position: absolute;
+  min-width: 200px;
+  background: var(--color-card);
+  color: var(--color-text);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  padding: 22px 0 10px 0;
+  margin-top: 8px;
+  font-size: 1.08rem;
+  border: 1px solid var(--color-border);
+  transition: background 0.2s, color 0.2s;
+}
+.theme-menu.mobile {
+  position: fixed;
+  left: 0; right: 0; bottom: 0; top: auto;
+  width: 100vw;
+  min-width: 0;
+  border-radius: 18px 18px 0 0;
+  margin: 0;
+  padding: 28px 0 16px 0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
+  font-size: 1.18rem;
+  animation: slideUp 0.25s cubic-bezier(.4,0,.2,1);
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.theme-menu-title {
+  font-weight: 700;
+  font-size: 1.18rem;
+  padding: 0 24px 14px 24px;
+  color: var(--color-primary);
+}
+.theme-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.theme-menu-item {
+  padding: 16px 24px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.18s, color 0.18s;
+  font-size: 1.08em;
+  font-weight: 500;
+  user-select: none;
+  background: transparent;
+}
+.theme-menu-item:hover, .theme-menu-item:active {
+  background: var(--color-primary, #22d36b);
+  color: #fff;
+}
+.theme-menu-cancel {
+  text-align: center;
+  color: var(--color-text-secondary, #888);
+  font-size: 1.05rem;
+  padding: 12px 0 0 0;
+  cursor: pointer;
+  font-weight: 500;
+  background: transparent;
+}
+.theme-menu-cancel:hover {
+  color: var(--color-primary);
+}
+.theme-menu-fade-enter-active, .theme-menu-fade-leave-active {
+  transition: opacity 0.18s;
+}
+.theme-menu-fade-enter-from, .theme-menu-fade-leave-to {
+  opacity: 0;
+}
+@media (max-width: 600px) {
+  .theme-menu {
+    min-width: 0;
+    width: 100vw;
+    left: 0 !important;
+    right: 0 !important;
+    border-radius: 18px 18px 0 0;
+    font-size: 1.18rem;
+    padding: 28px 0 16px 0;
   }
 }
 </style> 

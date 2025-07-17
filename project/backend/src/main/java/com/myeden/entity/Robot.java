@@ -197,6 +197,13 @@ public class Robot {
     private String hiddenTrouble;
 
     /**
+     * 专家主题对象列表
+     * 直接存储该机器人支持的完整专家主题对象，便于业务层直接获取详细配置信息。
+     * 注意：此字段为运行时辅助字段，通常不建议直接持久化到数据库，仅用于业务逻辑层缓存。
+     */
+    private List<com.myeden.config.RobotConfig.ExpertTheme> expertThemes = new ArrayList<>();
+
+    /**
      * 获取机器人AI服务的appKey
      * @return appKey AI服务密钥或唯一标识
      */
@@ -217,6 +224,22 @@ public class Robot {
     }
     public void setHiddenTrouble(String hiddenTrouble) {
         this.hiddenTrouble = hiddenTrouble;
+    }
+
+    /**
+     * 获取专家主题对象列表
+     * @return 该机器人支持的专家主题对象列表
+     */
+    public List<com.myeden.config.RobotConfig.ExpertTheme> getExpertThemes() {
+        return expertThemes;
+    }
+
+    /**
+     * 设置专家主题对象列表
+     * @param expertThemes 专家主题对象列表
+     */
+    public void setExpertThemes(List<com.myeden.config.RobotConfig.ExpertTheme> expertThemes) {
+        this.expertThemes = expertThemes;
     }
     
     // 内部类：活跃时间段

@@ -174,4 +174,36 @@ public interface PromptService {
      * @return 生成的聊天内容
      */
     String generateChatContent(Robot robot, String chatPrompt);
+    
+    /**
+     * 构建专家主题聊天提示词
+     * 
+     * @param robot 机器人实体
+     * @param themeId 专家主题ID
+     * @param userMessage 用户消息
+     * @param memoryContext 记忆上下文
+     * @return 专家主题聊天提示词
+     */
+    String buildExpertChatPrompt(Robot robot, String themeId, com.myeden.entity.ChatMessage userMessage, String memoryContext);
+    
+    /**
+     * 构建记忆提取提示词
+     * 
+     * @param chatHistory 聊天记录
+     * @param infoFields 需要提取的信息字段
+     * @param themeId 专家主题ID
+     * @return 记忆提取提示词
+     */
+    String buildMemoryExtractionPrompt(String chatHistory, List<String> infoFields, String themeId);
+    
+    /**
+     * 生成专家主题聊天回复
+     * 
+     * @param robot 机器人实体
+     * @param themeId 专家主题ID
+     * @param userMessage 用户消息
+     * @param memoryContext 记忆上下文
+     * @return AI回复结果
+     */
+    DifyService.DifyChatResult generateExpertChatReply(Robot robot, String themeId, com.myeden.entity.ChatMessage userMessage, String memoryContext);
 }

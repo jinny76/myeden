@@ -20,6 +20,9 @@ import com.myeden.controller.EventResponse;
 import org.springframework.http.ResponseEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.myeden.service.ExpertMemoryService;
+import java.util.ArrayList;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/chat")
@@ -32,6 +35,8 @@ public class ChatController {
     private AIChatService aiChatService;
     @Autowired
     private UserRobotLinkService userRobotLinkService;
+    @Autowired
+    private ExpertMemoryService expertMemoryService;
     
     private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
 
@@ -63,7 +68,6 @@ public class ChatController {
     @PostMapping("/send")
     public ResponseEntity<EventResponse> sendMessage(@RequestBody ChatMessage message) {
         try {
-
             if (message.getAudioBase64() != null && !message.getAudioBase64().isEmpty()) {
                 // 1. 保存音频到本地文件
                 File audioFile = File.createTempFile("audio", ".webm");
@@ -104,9 +108,12 @@ public class ChatController {
             chatMessage.setIsRead(message.getIsRead());
             chatMessage.setIsDeleted(message.getIsDeleted());
             chatMessage.setAsrResult(message.getAsrResult());
+            chatMessage.setExpertThemeId(message.getExpertThemeId());
+            chatMessage.setSessionType(message.getSessionType());
 
             // 1. 保存用户消息
             chatService.sendMessage(chatMessage);
+
             // 2. 推送给接收方
             WebSocketMessage<ChatMessage> wsMsg = WebSocketMessage.chat(chatMessage);
             webSocketService.sendMessageToUser(chatMessage.getSenderId(), wsMsg);

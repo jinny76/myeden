@@ -69,6 +69,12 @@ public class ChatMessage {
 
     /** 是否为机器人主动触发的消息 */
     private Boolean isProactiveMessage = false;
+    
+    /** 专家主题ID（如果是专家主题对话） */
+    private String expertThemeId;
+    
+    /** 会话类型：normal(普通聊天), expert(专家主题对话) */
+    private String sessionType = "normal";
 
     // 构造方法
     public ChatMessage() {
@@ -121,6 +127,12 @@ public class ChatMessage {
     public void setAsrResult(AIChatService.ASRRawTextInfo asrResult) { this.asrResult = asrResult; }
     public Boolean getIsProactiveMessage() { return isProactiveMessage; }
     public void setIsProactiveMessage(Boolean isProactiveMessage) { this.isProactiveMessage = isProactiveMessage; }
+    
+    public String getExpertThemeId() { return expertThemeId; }
+    public void setExpertThemeId(String expertThemeId) { this.expertThemeId = expertThemeId; }
+    
+    public String getSessionType() { return sessionType; }
+    public void setSessionType(String sessionType) { this.sessionType = sessionType; }
     
     // 业务方法
     /** 标记为已读 */

@@ -104,6 +104,12 @@ public class RobotConfig {
          * 当用户达到好友熟悉度后，robot可主动分享内心困境
          */
         private String hiddenTrouble;
+        
+        /**
+         * 专家主题配置列表
+         * 每个机器人可以有多个专家主题，用户可选择特定主题进行专业对话
+         */
+        private List<ExpertTheme> expertThemes;
 
         /**
          * 获取机器人AI服务的appKey
@@ -135,6 +141,22 @@ public class RobotConfig {
          */
         public void setHiddenTrouble(String hiddenTrouble) {
             this.hiddenTrouble = hiddenTrouble;
+        }
+        
+        /**
+         * 获取专家主题配置列表
+         * @return expertThemes 专家主题配置列表
+         */
+        public List<ExpertTheme> getExpertThemes() {
+            return expertThemes;
+        }
+        
+        /**
+         * 设置专家主题配置列表
+         * @param expertThemes 专家主题配置列表
+         */
+        public void setExpertThemes(List<ExpertTheme> expertThemes) {
+            this.expertThemes = expertThemes;
         }
         
         public String getId() { return id; }
@@ -547,5 +569,171 @@ public class RobotConfig {
         
         public double getTrustBuildingRate() { return trustBuildingRate; }
         public void setTrustBuildingRate(double trustBuildingRate) { this.trustBuildingRate = trustBuildingRate; }
+    }
+    
+    /**
+     * 专家主题配置类
+     */
+    public static class ExpertTheme {
+        private String themeId;           // 主题唯一标识
+        private String themeName;         // 主题名称，如"心理咨询师"、"法律顾问"
+        private String themePrompt;       // 专家主题专用提示词(后端专用，不传给前端)
+        private String apiKey;            // 专用API密钥(后端专用，不传给前端)
+        private String description;       // 主题描述(前端显示)
+        private String icon;              // 主题图标(可选)
+        private boolean isActive;         // 是否激活
+        private List<String> infoFields;  // 需要主动采集的信息字段
+        
+        // 构造方法
+        public ExpertTheme() {
+            this.isActive = true;
+        }
+        
+        public ExpertTheme(String themeId, String themeName, String themePrompt, String apiKey, String description) {
+            this();
+            this.themeId = themeId;
+            this.themeName = themeName;
+            this.themePrompt = themePrompt;
+            this.apiKey = apiKey;
+            this.description = description;
+        }
+        
+        // Getter和Setter方法
+        public String getThemeId() {
+            return themeId;
+        }
+        
+        public void setThemeId(String themeId) {
+            this.themeId = themeId;
+        }
+        
+        public String getThemeName() {
+            return themeName;
+        }
+        
+        public void setThemeName(String themeName) {
+            this.themeName = themeName;
+        }
+        
+        public String getThemePrompt() {
+            return themePrompt;
+        }
+        
+        public void setThemePrompt(String themePrompt) {
+            this.themePrompt = themePrompt;
+        }
+        
+        public String getApiKey() {
+            return apiKey;
+        }
+        
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
+        
+        public String getDescription() {
+            return description;
+        }
+        
+        public void setDescription(String description) {
+            this.description = description;
+        }
+        
+        public String getIcon() {
+            return icon;
+        }
+        
+        public void setIcon(String icon) {
+            this.icon = icon;
+        }
+        
+        public boolean isActive() {
+            return isActive;
+        }
+        
+        public void setActive(boolean active) {
+            isActive = active;
+        }
+        
+        public List<String> getInfoFields() {
+            return infoFields;
+        }
+        
+        public void setInfoFields(List<String> infoFields) {
+            this.infoFields = infoFields;
+        }
+        
+        /**
+         * 检查是否有预设的信息采集字段
+         */
+        public boolean hasInfoFields() {
+            return infoFields != null && !infoFields.isEmpty();
+        }
+        
+        /**
+         * 获取前端安全的主题信息(不包含敏感信息)
+         */
+        public ExpertThemeDTO toSafeDTO() {
+            ExpertThemeDTO dto = new ExpertThemeDTO();
+            dto.setThemeId(this.themeId);
+            dto.setThemeName(this.themeName);
+            dto.setDescription(this.description);
+            dto.setIcon(this.icon);
+            dto.setActive(this.isActive);
+            return dto;
+        }
+    }
+    
+    /**
+     * 专家主题前端安全传输对象
+     * 不包含敏感信息(themePrompt, apiKey)
+     */
+    public static class ExpertThemeDTO {
+        private String themeId;
+        private String themeName;
+        private String description;
+        private String icon;
+        private boolean isActive;
+        
+        // Getter和Setter方法
+        public String getThemeId() {
+            return themeId;
+        }
+        
+        public void setThemeId(String themeId) {
+            this.themeId = themeId;
+        }
+        
+        public String getThemeName() {
+            return themeName;
+        }
+        
+        public void setThemeName(String themeName) {
+            this.themeName = themeName;
+        }
+        
+        public String getDescription() {
+            return description;
+        }
+        
+        public void setDescription(String description) {
+            this.description = description;
+        }
+        
+        public String getIcon() {
+            return icon;
+        }
+        
+        public void setIcon(String icon) {
+            this.icon = icon;
+        }
+        
+        public boolean isActive() {
+            return isActive;
+        }
+        
+        public void setActive(boolean active) {
+            isActive = active;
+        }
     }
 } 

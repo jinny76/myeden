@@ -518,10 +518,11 @@ public class UserRobotLinkController {
             
             boolean result = userRobotLinkService.clearPendingMessage(currentUserId, robotId);
             
+            // 修改：无论是否存在链接，都返回 200 和 success:true，不再返回 400
             if (result) {
                 return ResponseEntity.ok(EventResponse.success(null, "待沟通消息标记清除成功"));
             } else {
-                return ResponseEntity.badRequest().body(EventResponse.error(400, "链接不存在或清除失败"));
+                return ResponseEntity.ok(EventResponse.success(null, "无待沟通消息或链接不存在，无需清理"));
             }
             
         } catch (Exception e) {
