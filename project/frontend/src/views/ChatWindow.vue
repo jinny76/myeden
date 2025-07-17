@@ -1,10 +1,22 @@
 <template>
   <div class="chat-window">
     <div class="chat-header">
-      <el-button @click="goToWorld" circle>
-        <el-icon><Back /></el-icon>
+      <div class="header-left">
+        <el-button @click="goToWorld" circle>
+          <el-icon><Back /></el-icon>
+        </el-button>
+        <span style="margin-left: 10px;">{{ robot?.name || '天使' }} 聊天</span>
+      </div>
+      <!-- 专家模式结束按钮 -->
+      <el-button 
+        v-if="currentThemeId" 
+        type="warning" 
+        @click="endExpertSession"
+        class="end-session-btn header-end-btn"
+        title="结束专家会话并保存记忆"
+      >
+        结束会话
       </el-button>
-      <span style="margin-left: 10px;">{{ robot?.name || '天使' }} 聊天</span>
     </div>
     <div class="chat-messages" ref="messagesContainer">
       <div v-if="loadingHistory" class="loading-history">历史消息加载中...</div>
@@ -40,28 +52,26 @@
       </div>
     </div>
     <div class="chat-input" style="position:relative;">
-      <el-button
-        class="voice-btn"
-        @touchstart.prevent="startRecording"
-        @touchend.prevent="stopRecording"
-        @mousedown.prevent="startRecording"
-        @mouseup.prevent="stopRecording"
+      <el-input 
+        v-model="input" 
+        @keyup.enter="sendMessage" 
+        :placeholder="isRecording ? '正在录音...' : '输入消息或长按语音'"
+        @touchstart="handleInputTouchStart"
+        @touchend="handleInputTouchEnd"
+        @mousedown="handleInputMouseDown"
+        @mouseup="handleInputMouseUp"
+        :class="{ 'recording-input': isRecording }"
+        ref="inputRef"
+      />
+      <button 
+        v-if="input.trim()" 
+        @click="sendMessage"
+        class="send-btn"
+        title="发送消息"
       >
-        <el-icon><Microphone /></el-icon>
-      </el-button>
-      <span v-if="isRecording" class="recording-tip">正在录音，松手发送</span>
-      <el-input v-model="input" @keyup.enter="sendMessage" placeholder="输入消息..." />
-      <el-button type="primary" @click="sendMessage">发送</el-button>
-      <!-- 浮动摄像头图标 -->
-      <span
-        class="switch-icon"
-        @click="switchCamera"
-        title="切换摄像头"
-      >
-        <el-icon>
-          <Refresh />
-        </el-icon>
-      </span>
+        <el-icon><Position /></el-icon>
+      </button>
+      <!-- 摄像头按钮 -->
       <span
         class="camera-icon"
         :class="{ active: cameraActive }"
@@ -72,6 +82,32 @@
           <VideoCamera />
         </el-icon>
       </span>
+      <!-- 切换摄像头按钮，只在视频模式下显示 -->
+      <span
+        v-if="cameraActive"
+        class="switch-icon"
+        @click="switchCamera"
+        title="切换摄像头"
+      >
+        <el-icon>
+          <Refresh />
+        </el-icon>
+      </span>
+    </div>
+    <!-- 语音录制面板 -->
+    <div v-if="isRecording" class="voice-recording-panel">
+      <div class="recording-visual">
+        <div class="mic-icon-wrapper">
+          <el-icon class="mic-icon"><Microphone /></el-icon>
+        </div>
+        <div class="recording-waves">
+          <div class="wave wave1"></div>
+          <div class="wave wave2"></div>
+          <div class="wave wave3"></div>
+        </div>
+      </div>
+      <div class="recording-text">正在录音，松手发送</div>
+      <div class="recording-hint">向上滑动取消</div>
     </div>
     <!-- 摄像头视频窗口浮动显示在右上角，仅在cameraActive时显示 -->
     <div v-if="cameraActive" class="floating-video-window">
@@ -102,7 +138,7 @@ import { getRobotById } from '@/api/robot'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { useUserStore } from '@/stores/user'
 import { useWebSocketStore } from '@/stores/websocket'
-import { Back, VideoCamera, Refresh, Microphone, VideoPlay } from '@element-plus/icons-vue'
+import { Back, VideoCamera, Refresh, Microphone, VideoPlay, Position } from '@element-plus/icons-vue'
 import { message } from '@/utils/message'
 import { tts } from '@/api/tts'
 
@@ -116,6 +152,7 @@ const robot = ref(null)
 const conversationId = ref(null)
 const userStore = useUserStore()
 const messagesContainer = ref(null)
+const inputRef = ref(null)
 const websocketStore = useWebSocketStore && useWebSocketStore()
 const isRobotReplying = ref(false)
 // 新增：当前聊天主题Id
@@ -254,6 +291,8 @@ const isRecording = ref(false)
 const recorder = ref(null)
 const audioChunks = ref([])
 const recordStartY = ref(0)
+const longPressTimer = ref(null)
+const isLongPressing = ref(false)
 
 const startRecording = async (e) => {
   if (!navigator.mediaDevices || !window.MediaRecorder) {
@@ -273,12 +312,20 @@ const startRecording = async (e) => {
       const reader = new FileReader()
       reader.onloadend = async () => {
         const base64Audio = reader.result
-        await sendChatMessage(robotId.value, null, conversationId.value, null, base64Audio, currentThemeId.value, currentThemeId.value ? 'expert' : 'normal')
+        const res = await sendChatMessage(robotId.value, null, conversationId.value, null, base64Audio, currentThemeId.value, currentThemeId.value ? 'expert' : 'normal')
         isRecording.value = false
-        isRobotReplying.value = true
-        nextTick(() => {
-          scrollToBottom()
-        })
+        // 检查语音识别结果，如果没有内容则不触发机器人回复
+        if (res && res.code === 200 && res.data && res.data.content && res.data.content.trim()) {
+          isRobotReplying.value = true
+          nextTick(() => {
+            scrollToBottom()
+          })
+        } else {
+          // 语音识别为空或失败，显示提示
+          if (res && res.code === 200 && (!res.data.content || !res.data.content.trim())) {
+            message.warning('语音识别内容为空，请重新录制')
+          }
+        }
       }
       reader.readAsDataURL(blob)
     }
@@ -295,6 +342,47 @@ const stopRecording = () => {
     recorder.value.stop()
   }
   isRecording.value = false
+}
+
+// 长按检测处理函数
+const handleInputTouchStart = (e) => {
+  longPressTimer.value = setTimeout(() => {
+    isLongPressing.value = true
+    startRecording(e)
+  }, 500) // 500ms后开始录音
+}
+
+const handleInputTouchEnd = (e) => {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  
+  if (isLongPressing.value) {
+    isLongPressing.value = false
+    stopRecording()
+    e.preventDefault()
+  }
+}
+
+const handleInputMouseDown = (e) => {
+  longPressTimer.value = setTimeout(() => {
+    isLongPressing.value = true
+    startRecording(e)
+  }, 500) // 500ms后开始录音
+}
+
+const handleInputMouseUp = (e) => {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  
+  if (isLongPressing.value) {
+    isLongPressing.value = false
+    stopRecording()
+    e.preventDefault()
+  }
 }
 
 const sendMessage = async () => {
@@ -454,6 +542,15 @@ onUnmounted(() => {
     messagesContainer.value.removeEventListener('scroll', onScroll)
   }
   stopBgm() // 离开页面时自动停止背景音乐
+  
+  // 停止当前音频
+  stopCurrentAudio()
+  
+  // 清理长按定时器
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
 })
 
 function handleAIChatMessage(e) {
@@ -468,6 +565,8 @@ function handleAIChatMessage(e) {
       // 如果上一条消息是自己发的语音，自动朗读AI回复
       const lastMsg = messages.value[messages.value.length - 1]
       if (lastMsg && lastMsg.senderType === 'user' && lastMsg.asrResult) {
+        // 在播放新语音前先停止当前播放的语音
+        stopCurrentAudio()
         playSpeech(msg)
       }  else {
         messages.value.push(msg)
@@ -538,6 +637,22 @@ const handleMessageClick = async (msg) => {
 let currentAudio = null
 
 /**
+ * 停止当前正在播放的音频
+ */
+const stopCurrentAudio = () => {
+  // 停止TTS音频
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio.currentTime = 0
+    currentAudio = null
+  }
+  // 停止浏览器语音合成
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel()
+  }
+}
+
+/**
  * 播放消息语音
  * @param {Object} msg - 消息对象
  */
@@ -547,12 +662,7 @@ const playMessageSpeech = async (msg) => {
     return
   }
   // 打断当前音频
-  if (currentAudio) {
-    currentAudio.pause()
-    currentAudio.currentTime = 0
-    currentAudio = null
-  }
-  if (window.speechSynthesis) window.speechSynthesis.cancel()
+  stopCurrentAudio()
   // 1. 优先调用后端TTS接口
   try {
     const voiceType = getVoiceType(msg)
@@ -615,12 +725,7 @@ const playSpeech = async (msg) => {
     return
   }
   // 打断当前音频
-  if (currentAudio) {
-    currentAudio.pause()
-    currentAudio.currentTime = 0
-    currentAudio = null
-  }
-  if (window.speechSynthesis) window.speechSynthesis.cancel()
+  stopCurrentAudio()
   // 1. 优先调用后端TTS接口
   try {
     const voiceType = getVoiceType()
@@ -660,6 +765,35 @@ const playSpeech = async (msg) => {
     playEmotion(msg.content)
   }
 }
+
+/**
+ * 结束专家会话并保存记忆
+ */
+const endExpertSession = async () => {
+  if (!currentThemeId.value) {
+    message.warning('当前不在专家模式')
+    return
+  }
+  
+  try {
+    // 发送退出消息触发记忆保存
+    const res = await sendChatMessage(robotId.value, '/退出', conversationId.value, null, undefined, currentThemeId.value, 'expert')
+    if (res.code === 200) {
+      message.success('专家会话已结束，正在记录这次沟通...')
+      // 清空当前主题ID，退出专家模式
+      currentThemeId.value = ''
+      // 可选：跳转回世界页面
+      setTimeout(() => {
+        router.push('/world')
+      }, 1000)
+    } else {
+      message.error('结束会话失败，请重试')
+    }
+  } catch (error) {
+    console.error('结束专家会话失败:', error)
+    message.error('结束会话失败，请重试')
+  }
+}
 </script>
 
 <style scoped>
@@ -681,10 +815,23 @@ const playSpeech = async (msg) => {
   height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 16px;
   border-bottom: 1px solid #23272e;
   background: #23272e;
   z-index: 2;
+}
+
+.chat-header .header-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-end-btn {
+  font-size: 14px !important;
+  padding: 8px 16px !important;
+  height: 36px !important;
+  margin-left: auto;
 }
 
 .chat-messages {
@@ -855,6 +1002,7 @@ const playSpeech = async (msg) => {
   border-top: 1px solid #23272e;
   border-radius: 0 0 16px 16px;
   /* 移除position:sticky，保证flex布局下始终在底部 */
+  gap: 8px;
 }
 
 .el-input {
@@ -893,26 +1041,57 @@ const playSpeech = async (msg) => {
   background: linear-gradient(135deg, #1eae98 0%, #3eb575 100%);
 }
 
+.end-session-btn {
+  background: linear-gradient(135deg, #f56c6c 0%, #e6a23c 100%) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(245,108,108,0.20) !important;
+  transition: all 0.2s !important;
+  margin-left: 8px;
+}
+
+.end-session-btn:hover {
+  background: linear-gradient(135deg, #e6a23c 0%, #f56c6c 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245,108,108,0.30) !important;
+}
+
 .camera-icon {
-  position: absolute;
-  right: 80px;
-  top: 58%;
-  transform: translateY(-50%);
   cursor: pointer;
   font-size: 22px;
   color: #888;
   transition: color 0.2s;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
 }
 .camera-icon.active {
   color: #67c23a;
+  background: rgba(103, 194, 58, 0.1);
 }
 .switch-icon {
-  position: absolute;
-  right: 120px;
-  top: 58%;
-  transform: translateY(-50%);
   cursor: pointer;
+  font-size: 20px;
+  color: #888;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+}
+.switch-icon:hover {
+  color: #67c23a;
+  background: rgba(103, 194, 58, 0.1);
 }
 
 .floating-video-window {
@@ -940,34 +1119,199 @@ const playSpeech = async (msg) => {
   border-radius: 12px;
 }
 
-.voice-btn {
-  margin-right: 8px;
-  background: transparent !important;
-  color: #67c23a;
+
+.send-btn {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: inline-flex;
+  border: none;
+  background: linear-gradient(135deg, #3eb575 0%, #1eae98 100%);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(62, 181, 117, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.send-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translate(-50%, -50%);
+}
+
+.send-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(62, 181, 117, 0.4);
+  background: linear-gradient(135deg, #1eae98 0%, #3eb575 100%);
+}
+
+.send-btn:hover::before {
+  width: 100%;
+  height: 100%;
+}
+
+.send-btn:active {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 4px 12px rgba(62, 181, 117, 0.3);
+}
+
+.send-btn .el-icon {
+  position: relative;
+  z-index: 1;
+  transform: rotate(-45deg);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.send-btn:hover .el-icon {
+  transform: rotate(-45deg) scale(1.1);
+}
+
+/* 录音状态输入框样式 */
+.recording-input .el-input__wrapper {
+  border-color: #67c23a !important;
+  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.2) !important;
+  background: rgba(103, 194, 58, 0.05) !important;
+}
+
+/* 语音录制面板 */
+.voice-recording-panel {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 30px 24px 24px 24px;
+  z-index: 1000;
+  text-align: center;
+  min-width: 240px;
+  animation: slideUp 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.recording-visual {
+  position: relative;
+  margin-bottom: 16px;
+  height: 80px;
+  display: flex;
   align-items: center;
   justify-content: center;
 }
-.recording-tip {
-  position: absolute;
-  left: 50%;
-  top: -40px;
-  transform: translateX(-50%);
-  background: #23272e;
-  color: #fff;
-  padding: 8px 18px;
-  border-radius: 18px;
-  font-size: 1rem;
-  z-index: 20;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-  animation: pulse 1.2s infinite;
+
+.mic-icon-wrapper {
+  position: relative;
+  z-index: 2;
+  background: #67c23a;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  box-shadow: 0 4px 20px rgba(103, 194, 58, 0.3);
 }
+
+.mic-icon {
+  font-size: 24px;
+  color: white;
+  animation: pulse 2s infinite;
+}
+
 @keyframes pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.recording-waves {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  width: 120px;
+  height: 120px;
+}
+
+.wave {
+  position: absolute;
+  border: 2px solid rgba(103, 194, 58, 0.5);
+  border-radius: 50%;
+  animation: wave 2s infinite;
+}
+
+.wave1 {
+  width: 80px;
+  height: 80px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: 0s;
+}
+
+.wave2 {
+  width: 100px;
+  height: 100px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: 0.5s;
+}
+
+.wave3 {
+  width: 120px;
+  height: 120px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: 1s;
+}
+
+@keyframes wave {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+.recording-text {
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.recording-hint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
 }
 
 .voice-message .message-content {
@@ -1014,9 +1358,29 @@ const playSpeech = async (msg) => {
     min-height: 100dvh;
     height: 100dvh;
     max-width: 100vw;
+    margin: 0;
   }
   .chat-header, .chat-input {
     border-radius: 0;
+  }
+  .chat-header {
+    height: 60px;
+    padding: 0 12px;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+  }
+  .chat-messages {
+    padding-top: 135px;
+    margin-top: 0;
+  }
+  .header-end-btn {
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+    height: 32px !important;
+    min-width: 70px !important;
   }
   .chat-message {
     gap: 6px;
@@ -1058,6 +1422,13 @@ const playSpeech = async (msg) => {
     padding: 0 8px;
     font-size: 16px;
   }
+  
+  .header-end-btn {
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+    height: 28px !important;
+    min-width: 60px !important;
+  }
   .chat-messages {
     padding: 8px;
     padding-top: 48px;
@@ -1074,6 +1445,47 @@ const playSpeech = async (msg) => {
     height: 36px !important;
     min-height: 36px !important;
     border-radius: 6px !important;
+  }
+  
+  .send-btn {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 16px !important;
+    box-shadow: 0 2px 8px rgba(62, 181, 117, 0.25) !important;
+  }
+  
+  .send-btn:hover {
+    transform: translateY(-1px) scale(1.02) !important;
+    box-shadow: 0 4px 12px rgba(62, 181, 117, 0.35) !important;
+  }
+  
+  /* 移动端语音面板 */
+  .voice-recording-panel {
+    bottom: 80px !important;
+    min-width: 200px !important;
+    padding: 25px 20px 20px 20px !important;
+  }
+  
+  .recording-visual {
+    height: 70px !important;
+  }
+  
+  .mic-icon-wrapper {
+    width: 50px !important;
+    height: 50px !important;
+    margin: 0 !important;
+  }
+  
+  .mic-icon {
+    font-size: 20px !important;
+  }
+  
+  .recording-text {
+    font-size: 14px !important;
+  }
+  
+  .recording-hint {
+    font-size: 11px !important;
   }
   .el-avatar {
     width: 32px !important;

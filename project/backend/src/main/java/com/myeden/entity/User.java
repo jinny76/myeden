@@ -218,6 +218,10 @@ public class User {
     }
     
     public Integer getAge() {
+        if (age == null) {
+            // 如果年龄为空，则返回当前年份减去出生年份
+            return LocalDate.now().getYear() - birthday.getYear();
+        }
         return age;
     }
     

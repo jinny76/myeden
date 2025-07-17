@@ -933,10 +933,16 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         LocalTime time = now.toLocalTime();
         String weekDay = now.getDayOfWeek().toString();
         String timeOfDay = getTimeOfDay(time);
-        WeatherInfo weatherInfo = getWeather(robot);
-        String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
-        String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
-        weather = String.format("，天气%s, 温度%s", weather, temperature);
+        
+        //三分之一几率提供天气信息
+        String weather = "";
+        Double weatherProbability = random.nextDouble();
+        if (weatherProbability < 1.0/3.0) {
+            WeatherInfo weatherInfo = getWeather(robot);
+            weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
+            String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
+            weather = String.format("，天气%s, 温度%s", weather, temperature);
+        }
         
         return String.format(
                 "现在是%s，%s，%s，%s",
@@ -951,10 +957,16 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         LocalTime time = now.toLocalTime();
         String weekDay = now.getDayOfWeek().toString();
         String timeOfDay = getTimeOfDay(time);
-        WeatherInfo weatherInfo = getWeather(robot);
-        String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
-        String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
-        weather = String.format("，天气%s, 温度%s", weather, temperature);
+        
+        //三分之一几率提供天气信息
+        String weather = "";
+        Double weatherProbability = random.nextDouble();
+        if (weatherProbability < 1.0/3.0) {
+            WeatherInfo weatherInfo = getWeather(robot);
+            weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
+            String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
+            weather = String.format("，天气%s, 温度%s", weather, temperature);
+        }
 
         return String.format("现在是%s，%s，%s，%s",
                 now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
@@ -966,11 +978,15 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         LocalTime time = now.toLocalTime();
         String weekDay = now.getDayOfWeek().toString();
         String timeOfDay = getTimeOfDay(time);
-        WeatherInfo weatherInfo = getWeather(robot);
-        String weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
-        String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
-        weather = String.format("，天气%s, 温度%s", weather, temperature);
-
+        //三分之一几率提供天气信息
+        String weather = "";
+        Double weatherProbability = random.nextDouble();
+        if (weatherProbability < 1.0/3.0) {
+            WeatherInfo weatherInfo = getWeather(robot);
+            weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
+            String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
+            weather = String.format("，天气%s, 温度%s", weather, temperature);
+        }
         return String.format("现在是%s，%s，%s，%s",
                 now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
                 weekDay, timeOfDay, weather);
@@ -1212,6 +1228,16 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return;
             }
             
+            // 计算主动聊天触发几率
+            double proactiveChatProbability = calculateProactiveChatProbability(robot);
+            double randomValue = random.nextDouble();
+            
+            if (randomValue > proactiveChatProbability) {
+                logger.info("机器人 {} 主动聊天几率检查未通过，几率: {:.2%}, 随机值: {:.2%}", 
+                          robotId, proactiveChatProbability, randomValue);
+                return;
+            }
+            
             // 选择聊天对象
             String targetUserId = selectProactiveChatTarget(robot);
             if (targetUserId == null) {
@@ -1385,11 +1411,15 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         String weekDay = now.getDayOfWeek().toString();
         String timeOfDay = getTimeOfDay(time);
         
-        // 获取天气信息
-        WeatherInfo weatherInfo = getWeather(robot);
-        String weather = weatherInfo != null ? 
-            String.format("，天气%s, 温度%s", weatherInfo.getDescription(), weatherInfo.getTemperature()) : "";
-        
+        // 获取天气信息， 1/3 几率提供
+        String weather = "";
+        Double weatherProbability = random.nextDouble();
+        if (weatherProbability < 1.0/3.0) {
+            WeatherInfo weatherInfo = getWeather(robot);
+            weather = weatherInfo != null ? 
+                String.format("，天气%s, 温度%s", weatherInfo.getDescription(), weatherInfo.getTemperature()) : "";
+        }
+
         // 获取熟悉度信息
         String familiarityInfo = "";
         if (link.getFamiliarityLevel() != null && link.getFamiliarityLevelName() != null) {
@@ -1580,5 +1610,116 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             logger.error("发送主动聊天消息失败: {}", e.getMessage(), e);
             return false;
         }
+    }
+    
+    /**
+     * 计算机器人主动聊天的触发几率
+     * 基于机器人性格、当前时间、社交能量等因素综合计算
+     * 
+     * @param robot 机器人对象
+     * @return 触发几率（0.0-1.0）
+     */
+    private double calculateProactiveChatProbability(Robot robot) {
+        try {
+            // 基础几率：根据机器人性格调整
+            double baseProbability = getBaseProactiveChatProbability(robot);
+            
+            // 时间因素：不同时间段有不同的主动聊天倾向
+            LocalTime currentTime = LocalDateTime.now().toLocalTime();
+            double timeMultiplier = getProactiveChatTimeMultiplier(robot, currentTime);
+            
+            // 社交能量因素：社交能量越高，越容易主动聊天
+            double socialEnergyMultiplier = getProactiveChatSocialEnergyMultiplier(robot);
+            
+            // 心情因素：心情好时更容易主动聊天
+            double moodMultiplier = getProactiveChatMoodMultiplier(robot);
+            
+            // 计算最终几率
+            double finalProbability = baseProbability * timeMultiplier * socialEnergyMultiplier * moodMultiplier;
+            
+            // 限制几率范围在合理区间
+            finalProbability = Math.max(0.05, Math.min(0.30, finalProbability));
+            
+            logger.debug("机器人 {} 主动聊天几率计算 - 基础: {:.2%}, 时间系数: {:.2f}, 社交系数: {:.2f}, 心情系数: {:.2f}, 最终: {:.2%}", 
+                        robot.getName(), baseProbability, timeMultiplier, socialEnergyMultiplier, moodMultiplier, finalProbability);
+            
+            return finalProbability;
+            
+        } catch (Exception e) {
+            logger.error("计算主动聊天几率失败: {}", e.getMessage(), e);
+            return 0.10; // 默认10%几率
+        }
+    }
+    
+    /**
+     * 根据机器人性格获取基础主动聊天几率
+     * 
+     * @param robot 机器人对象
+     * @return 基础几率
+     */
+    private double getBaseProactiveChatProbability(Robot robot) {
+        String personality = robot.getPersonality();
+        if (personality == null) {
+            return 0.15; // 默认15%
+        }
+        
+        // 根据性格特征调整基础几率
+        if (personality.contains("外向") || personality.contains("活泼") || personality.contains("热情")) {
+            return 0.20; // 外向性格更容易主动聊天
+        } else if (personality.contains("内向") || personality.contains("安静") || personality.contains("害羞")) {
+            return 0.10; // 内向性格较少主动聊天
+        } else if (personality.contains("友好") || personality.contains("善良") || personality.contains("关心")) {
+            return 0.18; // 友好性格适中
+        } else {
+            return 0.15; // 默认几率
+        }
+    }
+    
+    /**
+     * 获取主动聊天的时间系数
+     * 
+     * @param robot 机器人对象
+     * @param currentTime 当前时间
+     * @return 时间系数
+     */
+    private double getProactiveChatTimeMultiplier(Robot robot, LocalTime currentTime) {
+        int hour = currentTime.getHour();
+        
+        // 不同时间段的主动聊天倾向
+        if (hour >= 8 && hour <= 10) {
+            return 1.2; // 早上8-10点，精力充沛，容易主动聊天
+        } else if (hour >= 12 && hour <= 14) {
+            return 1.1; // 中午12-14点，午休时间，稍微活跃
+        } else if (hour >= 18 && hour <= 21) {
+            return 1.3; // 晚上18-21点，下班后放松时间，最容易主动聊天
+        } else if (hour >= 22 || hour <= 6) {
+            return 0.6; // 深夜和凌晨，较少主动聊天
+        } else {
+            return 1.0; // 其他时间正常
+        }
+    }
+    
+    /**
+     * 获取主动聊天的社交能量系数
+     * 
+     * @param robot 机器人对象
+     * @return 社交能量系数
+     */
+    private double getProactiveChatSocialEnergyMultiplier(Robot robot) {
+        // 这里可以根据机器人的社交能量状态调整
+        // 暂时使用固定值，后续可以扩展为动态计算
+        return 1.0;
+    }
+    
+    /**
+     * 获取主动聊天的心情系数
+     * 
+     * @param robot 机器人对象
+     * @return 心情系数
+     */
+    private double getProactiveChatMoodMultiplier(Robot robot) {
+        // 这里可以根据机器人的心情状态调整
+        // 暂时使用固定值，后续可以扩展为动态计算
+        return 1.0;
     }
 } 

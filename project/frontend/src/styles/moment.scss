@@ -1,3 +1,5 @@
+@import './variables.scss';
+
 .moments-container {
     min-height: 100vh;
     background: var(--color-bg);
@@ -144,20 +146,74 @@
     gap: 16px;
   }
   
-  .publish-button {
-    background: linear-gradient(135deg, #22d36b, #4ade80);
-    border: none;
-    padding: 12px 24px;
-    font-weight: 600;
+  .editor-actions {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
+    justify-content: flex-end;
+    margin-top: 16px;
   }
   
-  .publish-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
+  .publish-button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    position: relative;
+    overflow: hidden;
+    min-width: 100px;
+    height: 36px;
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      background: linear-gradient(135deg, #5a67d8, #6b46c1);
+    }
+    
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    }
+    
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+      
+      &:hover {
+        transform: none;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        background: linear-gradient(135deg, #667eea, #764ba2);
+      }
+    }
+    
+    .loading-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    .el-icon {
+      font-size: 14px;
+      transition: transform 0.2s ease;
+    }
+    
+    span {
+      font-weight: 600;
+      white-space: nowrap;
+    }
   }
   
   /* 搜索和筛选区域 */
@@ -541,10 +597,164 @@
   
   .reply-input {
     margin-top: 12px;
+    
+    :deep(.el-input-group) {
+      box-shadow: none;
+      
+      .el-input-group__append {
+        background: transparent;
+        border: none;
+        padding: 0;
+        box-shadow: none;
+        
+        .reply-send-icon {
+          width: 36px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: $gradient-primary;
+          border-radius: 0 4px 4px 0;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          color: white;
+          border: none;
+          
+          &:hover:not(.disabled) {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+            transform: scale(1.05);
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+          }
+          
+          &:active:not(.disabled) {
+            transform: scale(0.95);
+          }
+          
+          &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: linear-gradient(135deg, var(--el-text-color-disabled, #a0a0a0), var(--el-text-color-disabled, #888888));
+          }
+          
+          .el-icon {
+            font-size: 14px;
+            transition: transform 0.2s ease;
+          }
+          
+          &:hover:not(.disabled) .el-icon {
+            transform: translateX(1px);
+          }
+        }
+      }
+      
+      .el-input__wrapper {
+        border-radius: 4px 0 0 4px;
+        transition: all 0.3s ease;
+        background-color: var(--el-bg-color, #ffffff);
+        border: 1px solid var(--el-border-color, #dcdfe6);
+        box-shadow: none;
+        
+        &:hover {
+          border-color: rgba(102, 126, 234, 0.3);
+        }
+        
+        &.is-focus {
+          border-color: rgba(102, 126, 234, 0.5);
+          box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+        
+        .el-input__inner {
+          background-color: transparent;
+          border: none;
+          color: var(--el-text-color-primary, #303133);
+          
+          &::placeholder {
+            color: var(--el-text-color-placeholder, #a8abb2);
+          }
+        }
+      }
+    }
   }
   
   .comment-input {
     margin-top: 16px;
+    
+    :deep(.el-input-group) {
+      box-shadow: none;
+      
+      .el-input-group__append {
+        background: transparent;
+        border: none;
+        padding: 0;
+        box-shadow: none;
+        
+        .comment-send-icon {
+          width: 40px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: $gradient-primary;
+          border-radius: 0 6px 6px 0;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          color: white;
+          border: none;
+          
+          &:hover:not(.disabled) {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+          }
+          
+          &:active:not(.disabled) {
+            transform: scale(0.95);
+          }
+          
+          &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: linear-gradient(135deg, var(--el-text-color-disabled, #a0a0a0), var(--el-text-color-disabled, #888888));
+          }
+          
+          .el-icon {
+            font-size: 16px;
+            transition: transform 0.2s ease;
+          }
+          
+          &:hover:not(.disabled) .el-icon {
+            transform: translateX(1px);
+          }
+        }
+      }
+      
+      .el-input__wrapper {
+        border-radius: 6px 0 0 6px;
+        transition: all 0.3s ease;
+        background-color: var(--el-bg-color, #ffffff);
+        border: 1px solid var(--el-border-color, #dcdfe6);
+        box-shadow: none;
+        
+        &:hover {
+          border-color: rgba(102, 126, 234, 0.3);
+        }
+        
+        &.is-focus {
+          border-color: rgba(102, 126, 234, 0.5);
+          box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+        
+        .el-input__inner {
+          background-color: transparent;
+          border: none;
+          color: var(--el-text-color-primary, #303133);
+          
+          &::placeholder {
+            color: var(--el-text-color-placeholder, #a8abb2);
+          }
+        }
+      }
+    }
   }
   
   .replies-section {
@@ -924,6 +1134,23 @@
       width: 52px;
       height: 52px;
       font-size: 22px;
+      opacity: 0.8;
+      
+      &:hover {
+        transform: translateY(-2px) scale(1.02);
+        opacity: 1;
+      }
+      
+      &:active {
+        transform: translateY(-1px) scale(1.01);
+      }
+    }
+    
+    .mobile-fab-container {
+      &::before {
+        width: 70px;
+        height: 70px;
+      }
     }
     
     /* 移动端弹窗样式调整 */
@@ -958,31 +1185,94 @@
     bottom: 80px;
     right: 20px;
     z-index: 1000;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    
+    &:hover::before {
+      opacity: 1;
+    }
   }
   
   .mobile-fab {
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #22d36b, #4ade80);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8));
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     font-size: 24px;
-    box-shadow: 0 8px 25px rgba(34, 211, 107, 0.3);
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
-  }
-  
-  .mobile-fab:hover {
-    transform: translateY(-4px) scale(1.05);
-    box-shadow: 0 12px 35px rgba(34, 211, 107, 0.4);
-  }
-  
-  .mobile-fab:active {
-    transform: translateY(-2px) scale(1.02);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    opacity: 0.85;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    &:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+      background: linear-gradient(135deg, rgba(90, 103, 216, 0.9), rgba(107, 70, 193, 0.9));
+      opacity: 1;
+      
+      &::before {
+        opacity: 1;
+      }
+      
+      .el-icon {
+        transform: scale(1.05) rotate(3deg);
+      }
+    }
+    
+    &:active {
+      transform: translateY(-1px) scale(1.01);
+      
+      &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        animation: fabWave 0.6s ease-out;
+        pointer-events: none;
+      }
+    }
+    
+    .el-icon {
+      transition: transform 0.2s ease;
+    }
   }
   
   /* 移动端编辑器弹窗 - 高级设计 */
@@ -1187,36 +1477,92 @@
   
   .mobile-editor-footer .el-button--default {
     background: rgba(255, 255, 255, 0.8);
-    border-color: rgba(34, 211, 107, 0.2);
+    border-color: rgba(102, 126, 234, 0.2);
     color: var(--color-text, #333);
     backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+      transition: left 0.5s ease;
+    }
     
     &:hover {
       background: rgba(255, 255, 255, 0.9);
-      border-color: rgba(34, 211, 107, 0.3);
+      border-color: rgba(102, 126, 234, 0.3);
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(34, 211, 107, 0.15);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+      
+      &::before {
+        left: 100%;
+      }
+    }
+    
+    &:active {
+      transform: translateY(0);
     }
   }
   
   .mobile-editor-footer .el-button--primary {
-    background: linear-gradient(135deg, #22d36b, #4ade80);
+    background: linear-gradient(135deg, #667eea, #764ba2);
     border: none;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     color: white;
-    box-shadow: 0 4px 15px rgba(34, 211, 107, 0.3);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
     
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(34, 211, 107, 0.4);
-      background: linear-gradient(135deg, #20c997, #4ade80);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+      background: linear-gradient(135deg, #5a67d8, #6b46c1);
+      
+      &::before {
+        left: 100%;
+      }
+      
+      .el-icon {
+        transform: scale(1.1) rotate(5deg);
+      }
     }
     
     &:active {
       transform: translateY(0);
+    }
+    
+    &[loading] {
+      cursor: not-allowed;
+      opacity: 0.8;
+      
+      &:hover {
+        transform: none;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+      }
+    }
+    
+    .el-icon {
+      transition: transform 0.2s ease;
     }
   }
   
@@ -1430,6 +1776,48 @@
     }
     to {
       transform: rotate(360deg);
+    }
+  }
+  
+  @keyframes buttonPulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.02);
+    }
+  }
+  
+  @keyframes fabPulse {
+    0%, 100% {
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 12px 35px rgba(34, 211, 107, 0.4);
+    }
+    50% {
+      transform: translateY(-3px) scale(1.08);
+      box-shadow: 0 15px 40px rgba(34, 211, 107, 0.5);
+    }
+  }
+  
+  @keyframes fabPulsePurple {
+    0%, 100% {
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+    }
+    50% {
+      transform: translateY(-3px) scale(1.08);
+      box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+    }
+  }
+  
+  @keyframes fabWave {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(2);
+      opacity: 0;
     }
   }
   
@@ -1881,6 +2269,51 @@
     .thoughts-content p,
     .thoughts-original p {
       color: var(--color-text-dark, #fff);
+    }
+    
+    // 深色模式下的输入框和按钮
+    .comment-input :deep(.el-input-group .el-input__wrapper),
+    .reply-input :deep(.el-input-group .el-input__wrapper) {
+      background-color: var(--el-bg-color, #232425);
+      border-color: var(--el-border-color, #3a3b3c);
+      
+      .el-input__inner {
+        color: var(--el-text-color-primary, #f5f5f5);
+        background-color: transparent;
+        
+        &::placeholder {
+          color: var(--el-text-color-placeholder, #8a8b8c);
+        }
+      }
+    }
+    
+    .comment-send-icon.disabled,
+    .reply-send-icon.disabled {
+      background: linear-gradient(135deg, #4a4a4a, #666666) !important;
+    }
+  }
+  
+  // Element Plus主题适配
+  [data-theme='dark'],
+  .dark-mode {
+    .comment-input :deep(.el-input-group .el-input__wrapper),
+    .reply-input :deep(.el-input-group .el-input__wrapper) {
+      background-color: var(--color-card, #232425);
+      border-color: var(--color-border, #3a3b3c);
+      
+      .el-input__inner {
+        color: var(--color-text, #f5f5f5);
+        background-color: transparent;
+        
+        &::placeholder {
+          color: rgba(245, 245, 245, 0.5);
+        }
+      }
+    }
+    
+    .comment-send-icon.disabled,
+    .reply-send-icon.disabled {
+      background: linear-gradient(135deg, #4a4a4a, #666666) !important;
     }
   }
   

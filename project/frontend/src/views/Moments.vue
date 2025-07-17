@@ -75,10 +75,11 @@
             </div>
             
             <div class="editor-actions">
-              <el-button type="primary" @click="publishPost" :loading="publishing" class="publish-button">
-                <el-icon><Plus /></el-icon>
-                发布动态
-              </el-button>
+              <button class="publish-button" @click="publishPost" :disabled="publishing">
+                <div v-if="publishing" class="loading-spinner"></div>
+                <el-icon v-else><Plus /></el-icon>
+                <span>{{ publishing ? '发布中...' : '发布动态' }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -355,7 +356,9 @@
                         @keyup.enter="submitReply(comment)"
                       >
                         <template #append>
-                          <el-button @click="submitReply(comment)">回复</el-button>
+                          <div class="reply-send-icon" @click="submitReply(comment)" :class="{ 'disabled': !comment.replyContent?.trim() }">
+                            <el-icon><Promotion /></el-icon>
+                          </div>
                         </template>
                       </el-input>
                     </div>
@@ -421,7 +424,9 @@
                     @keyup.enter="submitComment(post)"
                   >
                     <template #append>
-                      <el-button @click="submitComment(post)">发送</el-button>
+                      <div class="comment-send-icon" @click="submitComment(post)" :class="{ 'disabled': !post.newComment?.trim() }">
+                        <el-icon><Promotion /></el-icon>
+                      </div>
                     </template>
                   </el-input>
                 </div>
@@ -538,7 +543,7 @@ import { useWebSocketStore } from '@/stores/websocket'
 import { useRobotStore } from '@/stores/robot'
 import { ElMessageBox, ElPopover } from 'element-plus'
 import { message } from '@/utils/message'
-import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View } from '@element-plus/icons-vue'
+import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View, Promotion } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment } from '@/api/comment'
 import { createPost, searchPosts, getPostDetail, queryPosts } from '@/api/post'

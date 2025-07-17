@@ -75,18 +75,14 @@
               <p>与天使们进行互动交流，体验温暖的社交氛围</p>
             </div>
             <div class="header-right">
-              <el-button type="primary" @click="$router.push('/robot-daily-plan')" class="create-robot-btn">
+              <button class="header-action-btn daily-plan-btn" @click="$router.push('/robot-daily-plan')">
                 <el-icon><Calendar /></el-icon>
-                天使的每一天
-              </el-button>              
-              <el-button 
-                type="primary" 
-                @click="createRobot"
-                class="create-robot-btn"
-              >
+                <span>天使的每一天</span>
+              </button>              
+              <button class="header-action-btn create-btn" @click="createRobot">
                 <el-icon><Plus /></el-icon>
-                创建天使
-              </el-button>            
+                <span>创建天使</span>
+              </button>            
             </div>
           </div>
           
@@ -183,6 +179,11 @@
                   <p class="robot-intro">{{ robot.description }}</p>
                   <div class="robot-tags">
                     <span class="tag-item">👼 {{ robot.nickname }}</span>
+                    <!-- 链接状态标签 -->
+                    <div class="link-status-tag" :class="getLinkStatusClass(robot.id)">
+                      <el-icon><Connection /></el-icon>
+                      <span>{{ getLinkStatusText(robot.id) }}</span>
+                    </div>
                     <button class="detail-btn" @click="showRobotDetail(robot)" title="查看详情">
                       <el-icon><InfoFilled /></el-icon>
                       <span>详情</span>
@@ -191,13 +192,10 @@
                   
                   <!-- 机器人控制区域 -->
                   <div class="robot-controls">
-                    <!-- 链接控制 -->
-                    <div class="robot-link-control">
-                      <div class="link-status" :class="getLinkStatusClass(robot.id)">
-                        <span class="status-text">{{ getLinkStatusText(robot.id) }}</span>
-                      </div>
+                    <!-- 操作按钮 -->
+                    <div class="robot-action-buttons">
                       <button 
-                        class="link-toggle-btn"
+                        class="action-btn link-btn"
                         :class="{ 
                           'linked': isRobotLinked(robot.id),
                           'loading': linkLoadingStates.get(robot.id)
@@ -207,14 +205,14 @@
                       >
                         <div v-if="linkLoadingStates.get(robot.id)" class="loading-spinner-small"></div>
                         <el-icon v-else>
-                          <SwitchButton />
+                          <Connection />
                         </el-icon>
                         <span>{{ isRobotLinked(robot.id) ? '断开' : '链接' }}</span>
                       </button>
 
                       <button 
                         v-if="isMyRobot(robot.id)" 
-                        class="edit-btn"
+                        class="action-btn edit-btn"
                         @click="editRobot(robot.id)"
                         title="编辑机器人"
                       >
@@ -223,11 +221,11 @@
                       </button>
                       <button
                         v-if="isRobotLinkCreated(robot.id)"
-                        class="edit-btn"
+                        class="action-btn impression-btn"
                         @click="openImpressionPanel(robot)"
                       >
                         <el-icon><ChatLineRound /></el-icon>
-                        印象
+                        <span>印象</span>
                       </button>
                     </div>                                      
                   </div>
@@ -365,7 +363,7 @@ import { useUserStore } from '@/stores/user'
 import { useWorldStore } from '@/stores/world'
 import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
-import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus, Edit, Calendar, ChatLineRound, InfoFilled } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, Refresh, Menu, Close, House, ChatDotRound, Compass, User, SwitchButton, Search, Plus, Edit, Calendar, ChatLineRound, InfoFilled, Connection } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl } from '@/utils/avatar'
 import { 
   createUserRobotLink, 
@@ -1098,22 +1096,61 @@ const getGenderText = (gender) => {
 
 .header-right {
   flex-shrink: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
-.create-robot-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
+/* 头部操作按钮样式 */
+.header-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid rgba(64, 158, 255, 0.3);
   border-radius: 12px;
-  padding: 12px 24px;
-  font-weight: 600;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  background: rgba(64, 158, 255, 0.1);
+  color: #409eff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
   transition: all 0.3s ease;
-  width: 100px !important;
+  outline: none;
+  white-space: nowrap;
 }
 
-.create-robot-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+.header-action-btn:hover {
+  background: rgba(64, 158, 255, 0.2);
+  border-color: #409eff;
+  transform: translateY(-1px);
+}
+
+.header-action-btn:active {
+  transform: translateY(0);
+}
+
+/* 每日计划按钮特殊样式 */
+.header-action-btn.daily-plan-btn {
+  border-color: rgba(255, 193, 7, 0.3);
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+}
+
+.header-action-btn.daily-plan-btn:hover {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: #ffc107;
+}
+
+/* 创建按钮特殊样式 */
+.header-action-btn.create-btn {
+  border-color: rgba(34, 211, 107, 0.3);
+  background: rgba(34, 211, 107, 0.1);
+  color: #22d36b;
+}
+
+.header-action-btn.create-btn:hover {
+  background: rgba(34, 211, 107, 0.2);
+  border-color: #22d36b;
 }
 
 /* 过滤控制区域 */
@@ -1362,6 +1399,34 @@ const getGenderText = (gender) => {
   color: #ff4d4f;
 }
 
+/* 链接状态标签样式 */
+.link-status-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.link-status-tag.link-status-unlinked {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.link-status-tag.link-status-linked {
+  background: rgba(34, 211, 107, 0.15);
+  color: #22d36b;
+}
+
+.link-status-tag.link-status-inactive {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+}
+
 .detail-btn {
   display: flex;
   align-items: center;
@@ -1413,24 +1478,20 @@ const getGenderText = (gender) => {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* 机器人链接控制样式 */
-.robot-link-control {
+/* 机器人操作按钮容器 */
+.robot-action-buttons {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* 机器人编辑控制样式 */
-.robot-edit-control {
-  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
   justify-content: center;
 }
 
-.edit-btn {
+/* 统一的操作按钮样式 */
+.action-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 8px;
+  padding: 8px 12px;
   border: 1px solid rgba(64, 158, 255, 0.3);
   border-radius: 12px;
   background: rgba(64, 158, 255, 0.1);
@@ -1440,85 +1501,51 @@ const getGenderText = (gender) => {
   cursor: pointer;
   transition: all 0.3s ease;
   outline: none;
+  white-space: nowrap;
 }
 
-.edit-btn:hover {
+.action-btn:hover:not(:disabled) {
   background: rgba(64, 158, 255, 0.2);
   border-color: #409eff;
   transform: translateY(-1px);
 }
 
-.edit-btn:active {
+.action-btn:active {
   transform: translateY(0);
 }
 
-.link-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.link-status-unlinked {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--color-text);
-  opacity: 0.7;
-}
-
-.link-status-linked {
-  background: rgba(34, 211, 107, 0.15);
-  color: #22d36b;
-}
-
-.link-status-inactive {
-  background: rgba(255, 193, 7, 0.15);
-  color: #ffc107;
-}
-
-.status-text {
-  font-size: 0.8rem;
-}
-
-.link-toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: 1px solid rgba(34, 211, 107, 0.3);
-  border-radius: 12px;
+/* 链接按钮特殊样式 */
+.action-btn.link-btn {
+  border-color: rgba(34, 211, 107, 0.3);
   background: rgba(34, 211, 107, 0.1);
   color: #22d36b;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  outline: none;
 }
 
-.link-toggle-btn:hover:not(:disabled) {
+.action-btn.link-btn:hover:not(:disabled) {
   background: rgba(34, 211, 107, 0.2);
   border-color: #22d36b;
-  transform: translateY(-1px);
 }
 
-.link-toggle-btn.linked {
+.action-btn.link-btn.linked {
   background: rgba(255, 77, 79, 0.1);
   border-color: rgba(255, 77, 79, 0.3);
   color: #ff4d4f;
 }
 
-.link-toggle-btn.linked:hover:not(:disabled) {
+.action-btn.link-btn.linked:hover:not(:disabled) {
   background: rgba(255, 77, 79, 0.2);
   border-color: #ff4d4f;
 }
 
-.link-toggle-btn:disabled {
+.action-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+/* 印象按钮使用与编辑按钮相同的蓝色系样式 */
+.action-btn.impression-btn {
+  /* 使用默认的蓝色系样式，与编辑按钮保持一致 */
 }
 
 .loading-spinner-small {
@@ -1530,7 +1557,7 @@ const getGenderText = (gender) => {
   animation: spin 1s linear infinite;
 }
 
-.link-toggle-btn.linked .loading-spinner-small {
+.action-btn.link-btn.linked .loading-spinner-small {
   border-color: rgba(255, 77, 79, 0.2);
   border-top-color: #ff4d4f;
 }
@@ -1586,22 +1613,6 @@ const getGenderText = (gender) => {
   filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.2));
 }
 
-.impression-btn {
-  background: linear-gradient(135deg, #22d36b, #4ade80);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 8px 18px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  margin-left: 8px;
-  box-shadow: 0 2px 8px rgba(34,211,107,0.08);
-  transition: background 0.2s;
-}
-.impression-btn:hover {
-  background: linear-gradient(135deg, #16a34a, #22d36b);
-}
 .impression-overlay {
   position: fixed;
   z-index: 2000;
@@ -1805,9 +1816,16 @@ const getGenderText = (gender) => {
     font-size: 1rem;
   }
   
-  .create-robot-btn {
+  .header-right {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .header-action-btn {
     width: 100%;
     max-width: 200px;
+    justify-content: center;
   }
   
   .robots-grid {
@@ -1851,22 +1869,13 @@ const getGenderText = (gender) => {
     gap: 16px;
   }
   
-  .robot-link-control {
+  .robot-action-buttons {
     flex-direction: column;
-    gap: 12px;
-    align-items: center;
+    gap: 8px;
+    align-items: stretch;
   }
   
-  .robot-edit-control {
-    justify-content: center;
-  }
-  
-  .edit-btn {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .link-toggle-btn {
+  .action-btn {
     width: 100%;
     justify-content: center;
   }
@@ -1951,11 +1960,11 @@ const getGenderText = (gender) => {
     font-size: 0.9rem;
   }
   
-  .create-robot-btn {
+  .header-action-btn {
     width: 100%;
     max-width: 180px;
-    padding: 10px 20px;
-    font-size: 0.9rem;
+    padding: 10px 16px;
+    font-size: 0.85rem;
   }
   
   .robot-card {
@@ -1983,24 +1992,24 @@ const getGenderText = (gender) => {
     padding: 3px 10px;
   }
   
+  .link-status-tag {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    gap: 3px;
+  }
+  
   .robot-controls {
     margin-top: 12px;
     padding-top: 12px;
     gap: 12px;
   }
   
-  .robot-link-control {
-    margin-top: 0;
-    padding-top: 0;
+  .robot-action-buttons {
+    gap: 6px;
   }
   
-  .link-status {
-    padding: 4px 8px;
-    font-size: 0.75rem;
-  }
-  
-  .link-toggle-btn {
-    padding: 6px 12px;
+  .action-btn {
+    padding: 6px 10px;
     font-size: 0.75rem;
   }
 }
