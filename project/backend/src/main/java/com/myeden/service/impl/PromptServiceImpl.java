@@ -1757,6 +1757,12 @@ public class PromptServiceImpl implements PromptService {
                 prompt.append("5. 保持温暖、共情的沟通风格\n");
                 prompt.append("6. 回复长度控制在200字以内\n");
 
+                prompt.append("\n## 回复内容范例, 内容包含回复内容和态度, 态度用|分割, 可选值有: 理解,赞同,反对,总结");
+                prompt.append("\n- 非常理解你现在碰到的问题, 我们一起来解决|理解");
+                prompt.append("\n- 你现在做的很不错, 请继续保持|赞同");
+                prompt.append("\n- 我对你目前的做法不是很认可|反对");
+                prompt.append("\n- 所以我们接下来应该从根本上解决问题, 从一件小事开始|总结");
+
                 log.debug("专家主题提示词构建完成，长度: {}", prompt.length());
                 return prompt.toString();
             } else {
