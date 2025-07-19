@@ -193,8 +193,23 @@ const getEmotion = (msg) => {
 const loadHistory = async (append = false) => {
   if (loadingHistory.value || !hasMoreHistory.value) return
   loadingHistory.value = true
-  if (append && historyCursor.value) params.value.before = historyCursor.value
-  const res = await getChatHistory(robotId.value, params.value)
+  
+  // 构建查询参数，包含主题ID过滤
+  const queryParams = { ...params.value }
+  if (append && historyCursor.value) {
+    queryParams.before = historyCursor.value
+  }
+  
+  // 添加expertThemeId过滤参数
+  if (currentThemeId.value) {
+    // 专家模式：只加载该主题的消息
+    queryParams.expertThemeId = currentThemeId.value
+  } else {
+    // 随便聊聊模式：只加载没有主题ID的消息（expertThemeId为null或空）
+    queryParams.expertThemeId = null
+  }
+  
+  const res = await getChatHistory(robotId.value, queryParams)
   if (res.code === 200) {
     let newMsgs = (res.data || []).filter(msg => !loadedMessageIds.value.has(msg.id))
     newMsgs.forEach(msg => loadedMessageIds.value.add(msg.id))

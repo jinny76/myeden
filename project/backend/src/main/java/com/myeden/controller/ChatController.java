@@ -220,15 +220,18 @@ public class ChatController {
             @RequestParam String userId,
             @RequestParam String robotId,
             @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(required = false) String before // ISO时间字符串
+            @RequestParam(required = false) String before, // ISO时间字符串
+            @RequestParam(required = false) String expertThemeId // 专家主题ID，null表示随便聊聊模式
     ) {
         try {
             List<ChatMessage> history;
+
+            String themeId = "null".equals(expertThemeId) ? null : expertThemeId;
             if (before != null && !before.isEmpty()) {
                 java.time.LocalDateTime beforeTime = java.time.LocalDateTime.parse(before);
-                history = chatService.getHistoryWithRobotBefore(userId, robotId, beforeTime, limit);
+                history = chatService.getHistoryWithRobotByExpertThemeBefore(userId, robotId, themeId, beforeTime, limit);
             } else {
-                history = chatService.getLatestHistoryWithRobot(userId, robotId, limit);
+                history = chatService.getLatestHistoryWithRobotByExpertTheme(userId, robotId, themeId, limit);
             }
             // 不再排序，直接返回desc，前端reverse
             return ResponseEntity.ok(new EventResponse(200, "获取历史消息成功", history));

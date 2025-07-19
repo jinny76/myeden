@@ -78,6 +78,24 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    public List<ChatMessage> getLatestHistoryWithRobotByExpertTheme(String userId, String robotId, String expertThemeId, int limit) {
+        if (userId == null || robotId == null || limit <= 0) {
+            throw new IllegalArgumentException("用户ID、机器人ID和分页参数非法");
+        }
+        return chatMessageRepository.findHistoryWithRobotByExpertThemeDesc(
+            userId, robotId, expertThemeId, PageRequest.of(0, limit));
+    }
+
+    @Override
+    public List<ChatMessage> getHistoryWithRobotByExpertThemeBefore(String userId, String robotId, String expertThemeId, java.time.LocalDateTime before, int limit) {
+        if (userId == null || robotId == null || before == null || limit <= 0) {
+            throw new IllegalArgumentException("用户ID、机器人ID、时间和分页参数非法");
+        }
+        return chatMessageRepository.findHistoryWithRobotByExpertThemeBeforeDesc(
+            userId, robotId, expertThemeId, before, PageRequest.of(0, limit));
+    }
+
+    @Override
     public List<ChatMessage> getHistoryByConversationId(String conversationId) {
         if (conversationId == null || conversationId.trim().isEmpty()) {
             throw new IllegalArgumentException("会话ID不能为空");

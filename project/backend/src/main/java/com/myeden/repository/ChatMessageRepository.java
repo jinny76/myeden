@@ -104,4 +104,33 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
      */
     @Query(value = "{ $or: [ { 'senderId': ?0 }, { 'receiverId': ?0 } ], 'createdAt': { $gte: ?1, $lte: ?2 } }", sort = "{ 'createdAt': -1 }")
     List<ChatMessage> findByUserIdAndCreatedAtBetween(String userId, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    /**
+     * 根据expertThemeId过滤用户与机器人的历史消息，按创建时间降序排列
+     * @param userId 用户ID
+     * @param robotId 机器人ID
+     * @param expertThemeId 专家主题ID（null表示随便聊聊模式）
+     * @param pageable 分页参数
+     * @return 过滤后的消息列表
+     */
+    @Query(
+      value = "{ $and: [ { $or: [ { $and: [ { 'senderId': ?0 }, { 'receiverId': ?1 } ] }, { $and: [ { 'senderId': ?1 }, { 'receiverId': ?0 } ] } ] }, { 'expertThemeId': ?2 } ] }",
+      sort = "{ 'createdAt': -1 }"
+    )
+    List<ChatMessage> findHistoryWithRobotByExpertThemeDesc(String userId, String robotId, String expertThemeId, Pageable pageable);
+
+    /**
+     * 根据expertThemeId过滤用户与机器人在指定时间之前的历史消息，按创建时间降序排列
+     * @param userId 用户ID
+     * @param robotId 机器人ID
+     * @param expertThemeId 专家主题ID（null表示随便聊聊模式）
+     * @param before 指定时间
+     * @param pageable 分页参数
+     * @return 过滤后的消息列表
+     */
+    @Query(
+      value = "{ $and: [ { $or: [ { $and: [ { 'senderId': ?0 }, { 'receiverId': ?1 } ] }, { $and: [ { 'senderId': ?1 }, { 'receiverId': ?0 } ] } ] }, { 'expertThemeId': ?2 }, { 'createdAt': { $lt: ?3 } } ] }",
+      sort = "{ 'createdAt': -1 }"
+    )
+    List<ChatMessage> findHistoryWithRobotByExpertThemeBeforeDesc(String userId, String robotId, String expertThemeId, java.time.LocalDateTime before, Pageable pageable);
 } 
