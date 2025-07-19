@@ -550,32 +550,60 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     }
     
     /**
-     * 计算行为触发概率 - 增加随机性和情绪影响
+     * 计算行为触发概率 - 使用机器人配置的行为模式
      */
     @Override
     public double calculateBehaviorProbability(Robot robot, String behaviorType, String context, Boolean isRobot) {
         try {
-            double baseProbability = 1;
+            double baseProbability = 0.3; // 默认概率
             
-            // 根据行为类型调整基础概率
-            switch (behaviorType) {
-                case "post":
-                    baseProbability = 0.1;
-                    break;
-                case "comment":
-                    baseProbability = 0.2;
-                    if (!isRobot) {
-                        baseProbability = 0.75;
-                    }
-                    break;
-                case "reply":
-                    baseProbability = 0.2;
-                    if (!isRobot) {
-                        baseProbability = 0.75;
-                    }
-                    break;
-                default:
-                    baseProbability = 0.3;
+            // 使用机器人配置的行为模式概率
+            if (robot.getBehaviorPatterns() != null) {
+                switch (behaviorType) {
+                    case "post":
+                        baseProbability = robot.getBehaviorPatterns().getShareFrequency();
+                        break;
+                    case "comment":
+                        baseProbability = robot.getBehaviorPatterns().getCommentFrequency();
+                        if (!isRobot) {
+                            // 对用户内容的评论概率更高
+                            baseProbability = Math.min(baseProbability * 2.5, 1.0);
+                        }
+                        break;
+                    case "reply":
+                        baseProbability = robot.getBehaviorPatterns().getReplyFrequency();
+                        if (!isRobot) {
+                            // 对用户评论的回复概率更高
+                            baseProbability = Math.min(baseProbability * 2.5, 1.0);
+                        }
+                        break;
+                    case "proactive_chat":
+                        baseProbability = robot.getBehaviorPatterns().getGreetingFrequency();
+                        break;
+                    default:
+                        baseProbability = 0.3;
+                }
+            } else {
+                // 备用：使用硬编码概率
+                switch (behaviorType) {
+                    case "post":
+                        baseProbability = 0.1;
+                        break;
+                    case "comment":
+                        baseProbability = 0.2;
+                        if (!isRobot) {
+                            baseProbability = 0.75;
+                        }
+                        break;
+                    case "reply":
+                        baseProbability = 0.2;
+                        if (!isRobot) {
+                            baseProbability = 0.75;
+                        }
+                        break;
+                    default:
+                        baseProbability = 0.3;
+                }
             }
 
             // 时间因素
@@ -610,63 +638,94 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     }
     
     /**
-     * 获取时间倍数
+     * 获取时间倍数 - 基于机器人活跃时间配置
      */
     private double getTimeMultiplier(Robot robot, LocalTime currentTime) {
-        // 这里可以根据机器人的活跃时间配置来计算
-        // 简化实现，根据时间段返回不同的倍数
-        int hour = currentTime.getHour();
-        
-        if (hour >= 8 && hour <= 12) {
-            return 1.2; // 上午活跃
-        } else if (hour >= 14 && hour <= 18) {
-            return 1.3; // 下午活跃
-        } else if (hour >= 19 && hour <= 23) {
-            return 1.5; // 晚上最活跃
-        } else if (hour >= 0 && hour <= 6) {
-            return 0.3; // 深夜不活跃
-        } else {
-            return 0.8; // 其他时间
+        if (robot.getActiveHours() == null || robot.getActiveHours().isEmpty()) {
+            // 没有配置活跃时间，使用默认时间段倍数
+            int hour = currentTime.getHour();
+            if (hour >= 8 && hour <= 12) {
+                return 1.2; // 上午活跃
+            } else if (hour >= 14 && hour <= 18) {
+                return 1.3; // 下午活跃
+            } else if (hour >= 19 && hour <= 23) {
+                return 1.5; // 晚上最活跃
+            } else if (hour >= 0 && hour <= 6) {
+                return 0.3; // 深夜不活跃
+            } else {
+                return 0.8; // 其他时间
+            }
         }
+        
+        // 使用机器人配置的活跃时间和概率
+        double maxMultiplier = 0.3; // 非活跃时间的基础倍数
+        
+        for (Robot.ActiveHours activeHour : robot.getActiveHours()) {
+            try {
+                LocalTime startTime = LocalTime.parse(activeHour.getStart());
+                LocalTime endTime = LocalTime.parse(activeHour.getEnd());
+                
+                // 检查当前时间是否在这个活跃时间段内
+                boolean isInRange;
+                if (endTime.isBefore(startTime)) {
+                    // 跨天时间段
+                    isInRange = currentTime.isAfter(startTime) || currentTime.equals(startTime) || 
+                              currentTime.isBefore(endTime) || currentTime.equals(endTime);
+                } else {
+                    // 同一天时间段
+                    isInRange = (currentTime.isAfter(startTime) || currentTime.equals(startTime)) && 
+                              (currentTime.isBefore(endTime) || currentTime.equals(endTime));
+                }
+                
+                if (isInRange) {
+                    // 如果有配置概率，使用配置的概率作为倍数
+                    double probability = activeHour.getProbability();
+                    if (probability > 0) {
+                        // 将概率转换为倍数，概率越高倍数越大
+                        double multiplier = 0.5 + (probability * 1.5); // 0.5-2.0 范围
+                        maxMultiplier = Math.max(maxMultiplier, multiplier);
+                    } else {
+                        // 没有配置概率，使用默认高倍数
+                        maxMultiplier = Math.max(maxMultiplier, 1.2);
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("解析机器人活跃时间失败: {}, start: {}, end: {}", 
+                          robot.getName(), activeHour.getStart(), activeHour.getEnd());
+            }
+        }
+        
+        return maxMultiplier;
     }
     
     /**
      * 获取社交能量倍数
      */
     private double getSocialEnergyMultiplier(Robot robot) {
-        // 根据机器人的社交能量配置计算
-        // 这里可以根据机器人的性格特征来调整
-        String personality = robot.getPersonality();
-        
-        switch (personality) {
-            case "文艺青年":
-                return 0.6;
-            case "技术宅":
-                return 0.7;
-            case "时尚达人":
-                return 0.9;
-            case "成熟稳重":
-                return 0.4;
-            case "运动达人":
-                return 0.8;
-            case "学霸女神":
-                return 0.5;
-            case "退休教师":
-                return 0.3;
-            case "可爱萌妹":
-                return 0.9;
-            default:
-                return 0.7;
+        // 使用机器人配置中的社交能量值
+        if (robot.getBehaviorPatterns() != null && robot.getBehaviorPatterns().getSocialEnergy() > 0) {
+            return robot.getBehaviorPatterns().getSocialEnergy();
         }
+        
+        // 如果没有配置，使用默认值
+        return 0.7;
     }
     
     /**
      * 获取情绪倍数
      */
     private double getMoodMultiplier(Robot robot) {
-        // 模拟机器人的情绪状态
-        // 这里可以实现更复杂的情绪系统
+        // 使用机器人配置中的情绪波动值
         double baseMood = 0.7;
+        
+        if (robot.getBehaviorPatterns() != null && robot.getBehaviorPatterns().getMoodSwings() > 0) {
+            // 使用配置的情绪波动值来计算波动范围
+            double moodSwingRange = robot.getBehaviorPatterns().getMoodSwings();
+            double moodSwing = random.nextDouble() * moodSwingRange - (moodSwingRange / 2);
+            return baseMood + moodSwing;
+        }
+        
+        // 如果没有配置，使用默认的随机波动
         double moodSwing = random.nextDouble() * 0.6 - 0.3; // -0.3 到 0.3 的波动
         return baseMood + moodSwing;
     }

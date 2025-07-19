@@ -699,7 +699,6 @@ onUnmounted(() => {
     gap: 4px;
     max-width: 260px;
     padding: 3px;
-    background: rgba(255, 255, 255, 0.7);
     border-radius: 14px;
   }
   

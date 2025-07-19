@@ -1,5 +1,6 @@
 package com.myeden.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.myeden.config.RobotConfig;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
  * @since 2024-01-01
  */
 @Document(collection = "robots")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Robot {
     
     @Id
@@ -99,6 +101,11 @@ public class Robot {
     private String background;
 
     /**
+     * 机器人发帖示例
+     */
+    private String example;
+
+    /**
      * 学历
      */
     private String education;
@@ -133,20 +140,6 @@ public class Robot {
      */
     private BehaviorPatterns behaviorPatterns;
     
-    /**
-     * 回复速度（1-10）
-     */
-    private Integer replySpeed;
-    
-    /**
-     * 回复频度（1-10）
-     */
-    private Integer replyFrequency;
-    
-    /**
-     * 分享频度（1-10）
-     */
-    private Integer shareFrequency;
     
     /**
      * 活跃时间段
@@ -243,6 +236,7 @@ public class Robot {
     }
     
     // 内部类：活跃时间段
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ActiveHours {
         private String start;
         private String end;
@@ -265,11 +259,14 @@ public class Robot {
     }
     
     // 内部类：说话风格
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class SpeakingStyle {
         private String tone;
         private String vocabulary;
         private String emojiUsage;
         private String sentenceLength;
+        private List<String> favoriteWords = new ArrayList<>();
+        private List<String> speechPatterns = new ArrayList<>();
         
         public SpeakingStyle() {}
         
@@ -284,15 +281,24 @@ public class Robot {
         
         public String getSentenceLength() { return sentenceLength; }
         public void setSentenceLength(String sentenceLength) { this.sentenceLength = sentenceLength; }
+        
+        public List<String> getFavoriteWords() { return favoriteWords; }
+        public void setFavoriteWords(List<String> favoriteWords) { this.favoriteWords = favoriteWords != null ? favoriteWords : new ArrayList<>(); }
+        
+        public List<String> getSpeechPatterns() { return speechPatterns; }
+        public void setSpeechPatterns(List<String> speechPatterns) { this.speechPatterns = speechPatterns != null ? speechPatterns : new ArrayList<>(); }
     }
     
     // 内部类：行为模式
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class BehaviorPatterns {
         private double greetingFrequency;
         private double comfortFrequency;
         private double shareFrequency;
         private double commentFrequency;
         private double replyFrequency;
+        private double moodSwings;
+        private double socialEnergy;
         
         public BehaviorPatterns() {}
         
@@ -310,6 +316,12 @@ public class Robot {
         
         public double getReplyFrequency() { return replyFrequency; }
         public void setReplyFrequency(double replyFrequency) { this.replyFrequency = replyFrequency; }
+        
+        public double getMoodSwings() { return moodSwings; }
+        public void setMoodSwings(double moodSwings) { this.moodSwings = moodSwings; }
+        
+        public double getSocialEnergy() { return socialEnergy; }
+        public void setSocialEnergy(double socialEnergy) { this.socialEnergy = socialEnergy; }
     }
     
     // 构造函数
@@ -452,6 +464,14 @@ public class Robot {
         this.background = background;
     }
     
+    public String getExample() {
+        return example;
+    }
+    
+    public void setExample(String example) {
+        this.example = example;
+    }
+    
     public String getEducation() {
         return education;
     }
@@ -508,29 +528,6 @@ public class Robot {
         this.behaviorPatterns = behaviorPatterns;
     }
     
-    public Integer getReplySpeed() {
-        return replySpeed;
-    }
-    
-    public void setReplySpeed(Integer replySpeed) {
-        this.replySpeed = replySpeed;
-    }
-    
-    public Integer getReplyFrequency() {
-        return replyFrequency;
-    }
-    
-    public void setReplyFrequency(Integer replyFrequency) {
-        this.replyFrequency = replyFrequency;
-    }
-    
-    public Integer getShareFrequency() {
-        return shareFrequency;
-    }
-    
-    public void setShareFrequency(Integer shareFrequency) {
-        this.shareFrequency = shareFrequency;
-    }
     
     public List<ActiveHours> getActiveHours() {
         return activeHours;
@@ -675,11 +672,14 @@ public class Robot {
      */
     public void updateRobot(Robot robot) {
         this.name = robot.getName();
+        this.nickname = robot.getNickname();
         this.avatar = robot.getAvatar();
         this.gender = robot.getGender();
         this.age = robot.getAge();
         this.description = robot.getDescription();
         this.personality = robot.getPersonality();
+        this.background = robot.getBackground();
+        this.example = robot.getExample();
         this.occupation = robot.getOccupation();
         this.mbti = robot.getMbti();
         this.bloodType = robot.getBloodType();
@@ -692,11 +692,11 @@ public class Robot {
         this.interests = robot.getInterests();
         this.speakingStyle = robot.getSpeakingStyle();
         this.behaviorPatterns = robot.getBehaviorPatterns();
-        this.replySpeed = robot.getReplySpeed();
-        this.replyFrequency = robot.getReplyFrequency();
-        this.shareFrequency = robot.getShareFrequency();
         this.activeHours = robot.getActiveHours();
         this.topics = robot.getTopics();
+        this.appKey = robot.getAppKey();
+        this.hiddenTrouble = robot.getHiddenTrouble();
+        this.expertThemes = robot.getExpertThemes();
         this.isActive = robot.getIsActive();
         this.updatedAt = LocalDateTime.now();
     }

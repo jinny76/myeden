@@ -78,14 +78,6 @@ public class RobotEditRequest {
     @Schema(description = "行为模式")
     private Robot.BehaviorPatterns behaviorPatterns;
     
-    @Schema(description = "回复速度（1-10）", example = "7")
-    private Integer replySpeed;
-    
-    @Schema(description = "回复频度（1-10）", example = "8")
-    private Integer replyFrequency;
-    
-    @Schema(description = "分享频度（1-10）", example = "6")
-    private Integer shareFrequency;
     
     @Schema(description = "活跃时间段列表")
     private List<Robot.ActiveHours> activeHours;
@@ -159,14 +151,6 @@ public class RobotEditRequest {
     public Robot.BehaviorPatterns getBehaviorPatterns() { return behaviorPatterns; }
     public void setBehaviorPatterns(Robot.BehaviorPatterns behaviorPatterns) { this.behaviorPatterns = behaviorPatterns; }
     
-    public Integer getReplySpeed() { return replySpeed; }
-    public void setReplySpeed(Integer replySpeed) { this.replySpeed = replySpeed; }
-    
-    public Integer getReplyFrequency() { return replyFrequency; }
-    public void setReplyFrequency(Integer replyFrequency) { this.replyFrequency = replyFrequency; }
-    
-    public Integer getShareFrequency() { return shareFrequency; }
-    public void setShareFrequency(Integer shareFrequency) { this.shareFrequency = shareFrequency; }
     
     public List<Robot.ActiveHours> getActiveHours() { return activeHours; }
     public void setActiveHours(List<Robot.ActiveHours> activeHours) { this.activeHours = activeHours; }
@@ -200,9 +184,6 @@ public class RobotEditRequest {
         robot.setInterests(interests != null ? interests : new ArrayList<>());
         robot.setSpeakingStyle(speakingStyle);
         robot.setBehaviorPatterns(behaviorPatterns);
-        robot.setReplySpeed(replySpeed);
-        robot.setReplyFrequency(replyFrequency);
-        robot.setShareFrequency(shareFrequency);
         robot.setActiveHours(activeHours != null ? activeHours : new ArrayList<>());
         robot.setTopics(topics != null ? topics : new ArrayList<>());
         robot.setIsActive(isActive);
@@ -232,9 +213,6 @@ public class RobotEditRequest {
         robot.setInterests(interests != null ? interests : new ArrayList<>());
         robot.setSpeakingStyle(speakingStyle);
         robot.setBehaviorPatterns(behaviorPatterns);
-        robot.setReplySpeed(replySpeed);
-        robot.setReplyFrequency(replyFrequency);
-        robot.setShareFrequency(shareFrequency);
         robot.setActiveHours(activeHours != null ? activeHours : new ArrayList<>());
         robot.setTopics(topics != null ? topics : new ArrayList<>());
         robot.setIsActive(isActive);

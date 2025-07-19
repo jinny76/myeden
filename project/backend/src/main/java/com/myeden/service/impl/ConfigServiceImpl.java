@@ -374,6 +374,7 @@ public class ConfigServiceImpl implements ConfigService {
         robot.setZodiac(robotConfig.getZodiac());
         robot.setOccupation(robotConfig.getOccupation());
         robot.setBackground(robotConfig.getBackground());
+        robot.setExample(robotConfig.getExample());
         robot.setLocation(robotConfig.getLocation());
         robot.setEducation(robotConfig.getEducation());
         robot.setRelationship(robotConfig.getRelationship());
@@ -397,6 +398,12 @@ public class ConfigServiceImpl implements ConfigService {
             speakingStyle.setVocabulary(robotConfig.getSpeakingStyle().getVocabulary());
             speakingStyle.setEmojiUsage(robotConfig.getSpeakingStyle().getEmojiUsage());
             speakingStyle.setSentenceLength(robotConfig.getSpeakingStyle().getSentenceLength());
+            if (robotConfig.getSpeakingStyle().getFavoriteWords() != null) {
+                speakingStyle.setFavoriteWords(new ArrayList<>(robotConfig.getSpeakingStyle().getFavoriteWords()));
+            }
+            if (robotConfig.getSpeakingStyle().getSpeechPatterns() != null) {
+                speakingStyle.setSpeechPatterns(new ArrayList<>(robotConfig.getSpeakingStyle().getSpeechPatterns()));
+            }
             robot.setSpeakingStyle(speakingStyle);
         }
         
@@ -408,6 +415,8 @@ public class ConfigServiceImpl implements ConfigService {
             behaviorPatterns.setShareFrequency(robotConfig.getBehaviorPatterns().getShareFrequency());
             behaviorPatterns.setCommentFrequency(robotConfig.getBehaviorPatterns().getCommentFrequency());
             behaviorPatterns.setReplyFrequency(robotConfig.getBehaviorPatterns().getReplyFrequency());
+            behaviorPatterns.setMoodSwings(robotConfig.getBehaviorPatterns().getMoodSwings());
+            behaviorPatterns.setSocialEnergy(robotConfig.getBehaviorPatterns().getSocialEnergy());
             robot.setBehaviorPatterns(behaviorPatterns);
         }
 
@@ -435,18 +444,6 @@ public class ConfigServiceImpl implements ConfigService {
             robot.setDescription(robot.getDescription() + "\n\n" + robotConfig.getBackground());
         }
         
-        // 行为模式转换（保持原有逻辑）
-        if (robotConfig.getBehaviorPatterns() != null) {
-            RobotConfig.BehaviorPatterns patterns = robotConfig.getBehaviorPatterns();
-            
-            // 转换行为模式为数值（0-10）
-            if (patterns.getReplyFrequency() > 0) {
-                robot.setReplyFrequency((int) (patterns.getReplyFrequency() * 10));
-            }
-            if (patterns.getShareFrequency() > 0) {
-                robot.setShareFrequency((int) (patterns.getShareFrequency() * 10));
-            }
-        }
         
         // 活跃时间段
         if (robotConfig.getActiveHours() != null) {
@@ -500,7 +497,6 @@ public class ConfigServiceImpl implements ConfigService {
             robot.setRelationship("single");
         }
         
-        robot.setReplySpeed(5);
         robot.setIsActive(robotConfig.isActive());
         robot.setCreatedAt(LocalDateTime.now());
         robot.setUpdatedAt(LocalDateTime.now());
@@ -526,6 +522,8 @@ public class ConfigServiceImpl implements ConfigService {
         existing.setBloodType(newConfig.getBloodType());
         existing.setZodiac(newConfig.getZodiac());
         existing.setOccupation(newConfig.getOccupation());
+        existing.setBackground(newConfig.getBackground());
+        existing.setExample(newConfig.getExample());
         existing.setLocation(newConfig.getLocation());
         existing.setEducation(newConfig.getEducation());
         existing.setRelationship(newConfig.getRelationship());
@@ -549,6 +547,12 @@ public class ConfigServiceImpl implements ConfigService {
             speakingStyle.setVocabulary(newConfig.getSpeakingStyle().getVocabulary());
             speakingStyle.setEmojiUsage(newConfig.getSpeakingStyle().getEmojiUsage());
             speakingStyle.setSentenceLength(newConfig.getSpeakingStyle().getSentenceLength());
+            if (newConfig.getSpeakingStyle().getFavoriteWords() != null) {
+                speakingStyle.setFavoriteWords(new ArrayList<>(newConfig.getSpeakingStyle().getFavoriteWords()));
+            }
+            if (newConfig.getSpeakingStyle().getSpeechPatterns() != null) {
+                speakingStyle.setSpeechPatterns(new ArrayList<>(newConfig.getSpeakingStyle().getSpeechPatterns()));
+            }
             existing.setSpeakingStyle(speakingStyle);
         }
         
@@ -560,12 +564,11 @@ public class ConfigServiceImpl implements ConfigService {
             behaviorPatterns.setShareFrequency(newConfig.getBehaviorPatterns().getShareFrequency());
             behaviorPatterns.setCommentFrequency(newConfig.getBehaviorPatterns().getCommentFrequency());
             behaviorPatterns.setReplyFrequency(newConfig.getBehaviorPatterns().getReplyFrequency());
+            behaviorPatterns.setMoodSwings(newConfig.getBehaviorPatterns().getMoodSwings());
+            behaviorPatterns.setSocialEnergy(newConfig.getBehaviorPatterns().getSocialEnergy());
             existing.setBehaviorPatterns(behaviorPatterns);
         }
         
-        // 更新行为模式
-        existing.setReplyFrequency(newConfig.getReplyFrequency());
-        existing.setShareFrequency(newConfig.getShareFrequency());
         
         // 更新活跃时间段
         existing.setActiveHours(newConfig.getActiveHours());

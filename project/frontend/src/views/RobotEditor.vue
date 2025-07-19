@@ -379,75 +379,13 @@
           </div>
         </el-form>
 
-        <!-- 步骤4：行为设置 -->
+
+        <!-- 步骤4：活跃与主题 -->
         <el-form
           v-if="currentStep === 3"
           ref="formRef3"
           :model="robotData"
           :rules="formRules[3]"
-          label-width="100px"
-          status-icon
-        >
-          <div class="step-content">
-            <div class="step-header">
-              <h2>行为设置</h2>
-              <p>配置天使的互动行为参数</p>
-            </div>
-            
-            <div class="form-section">
-              <div class="behavior-section">
-                <h3>互动参数</h3>
-                <div class="slider-group">
-                  <div class="slider-item">
-                    <label>回复速度</label>
-                    <el-slider
-                      v-model="robotData.replySpeed"
-                      :min="0"
-                      :max="1"
-                      :step="0.1"
-                      :marks="{0: '慢', 0.5: '中等', 1: '快'}"
-                      show-stops
-                      size="large"
-                    />
-                  </div>
-                  
-                  <div class="slider-item">
-                    <label>回复频度</label>
-                    <el-slider
-                      v-model="robotData.replyFrequency"
-                      :min="0"
-                      :max="1"
-                      :step="0.1"
-                      :marks="{0: '低', 0.5: '中等', 1: '高'}"
-                      show-stops
-                      size="large"
-                    />
-                  </div>
-                  
-                  <div class="slider-item">
-                    <label>分享频度</label>
-                    <el-slider
-                      v-model="robotData.shareFrequency"
-                      :min="0"
-                      :max="1"
-                      :step="0.1"
-                      :marks="{0: '低', 0.5: '中等', 1: '高'}"
-                      show-stops
-                      size="large"
-                    />
-                  </div>
-                </div>
-              </div>            
-            </div>
-          </div>
-        </el-form>
-
-        <!-- 步骤5：活跃与主题 -->
-        <el-form
-          v-if="currentStep === 4"
-          ref="formRef4"
-          :model="robotData"
-          :rules="formRules[4]"
           label-width="100px"
           status-icon
         >
@@ -705,9 +643,7 @@ const formRules = [
       { required: true, message: '请输入家庭背景', trigger: 'blur' }
     ]
   },
-  // 步骤4：行为设置（如有必填项可补充）
-  {},
-  // 步骤5：活跃与主题（如有必填项可补充）
+  // 步骤4：活跃与主题（如有必填项可补充）
   {}
 ]
 
@@ -726,10 +662,6 @@ const steps = [
     description: '完善背景和详细信息'
   },
   {
-    title: '行为设置',
-    description: '配置互动参数'
-  },
-  {
     title: '活跃与主题',
     description: '设置活跃时间和个人主题'
   }
@@ -739,7 +671,6 @@ const formRef0 = ref(null)
 const formRef1 = ref(null)
 const formRef2 = ref(null)
 const formRef3 = ref(null)
-const formRef4 = ref(null)
 
 // 机器人数据
 const robotData = reactive({
@@ -760,9 +691,6 @@ const robotData = reactive({
   family: '',
   traits: [],
   interests: [],
-  replySpeed: 0.5,
-  replyFrequency: 0.5,
-  shareFrequency: 0.5,
   isActive: true,
   activeHours: [],
   topics: []
@@ -787,7 +715,6 @@ const nextStep = () => {
   if (currentStep.value === 1) formRef = formRef1.value
   if (currentStep.value === 2) formRef = formRef2.value
   if (currentStep.value === 3) formRef = formRef3.value
-  if (currentStep.value === 4) formRef = formRef4.value
   if (formRef) {
     formRef.validate((valid) => {
       if (valid) {
@@ -916,9 +843,6 @@ const loadRobotData = async () => {
         family: robot.family || '',
         traits: robot.traits || [],
         interests: robot.interests || [],
-        replySpeed: robot.replySpeed || 0.5,
-        replyFrequency: robot.replyFrequency || 0.5,
-        shareFrequency: robot.shareFrequency || 0.5,
         isActive: robot.isActive !== undefined ? robot.isActive : true,
         activeHours: robot.activeHours || [],
         topics: robot.topics || []

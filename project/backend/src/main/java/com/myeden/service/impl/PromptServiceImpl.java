@@ -219,7 +219,10 @@ public class PromptServiceImpl implements PromptService {
 
         // 添加动态信息
         prompt.append(String.format("\n\n## 你看到的动态\n- 内容：\"%s\"", post.getContent()));
-        prompt.append(String.format("\n- 作者信息：%s", getAuthorInfo(post)));
+        // 50% 几率忽略作者信息，只针对帖子本身内容回复
+        if (random.nextDouble() > 0.5) {
+            prompt.append(String.format("\n- 作者信息：%s", getAuthorInfo(post)));
+        }
         if (post.getImages() != null && !post.getImages().isEmpty()) {
             prompt.append(String.format("\n- 动态有%s张图片", post.getImages().size()));
             if (post.getImageInfos() != null && !post.getImageInfos().isEmpty()) {
@@ -309,9 +312,15 @@ public class PromptServiceImpl implements PromptService {
 
         // 添加动态和评论信息
         prompt.append(String.format("\n## 你正在查看朋友圈\n- 动态内容：\"%s\"", postDetail.getContent()));
-        prompt.append(String.format("\n- 动态作者：%s", getAuthorInfo(postDetail)));
+        // 50% 几率忽略发帖人信息，只针对帖子本身内容回复
+        if (random.nextDouble() > 0.5) {
+            prompt.append(String.format("\n- 动态作者：%s", getAuthorInfo(postDetail)));
+        }
         prompt.append(String.format("\n- 你看到有条的评论内容：\"%s\"", commentDetail.getContent()));
-        prompt.append(String.format("\n- 这条评论的评论者是：%s, 请注意, 他这条评论是对 %s 说的", getCommentAuthorInfo(commentDetail), postDetail.getAuthorName()));
+        // 50% 几率忽略评论者信息，只针对评论本身内容回复
+        if (random.nextDouble() > 0.5) {
+            prompt.append(String.format("\n- 这条评论的评论者是：%s, 请注意, 他这条评论是对 %s 说的", getCommentAuthorInfo(commentDetail), postDetail.getAuthorName()));
+        }
 
         if (postDetail.getTopic() != null && !postDetail.getTopic().isEmpty()) {
             for (String t : postDetail.getTopic()) {

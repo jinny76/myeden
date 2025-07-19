@@ -95,32 +95,6 @@ public interface RobotRepository extends MongoRepository<Robot, String> {
      */
     List<Robot> findByIsActiveFalse();
     
-    /**
-     * 根据回复速度范围查找机器人
-     * @param minSpeed 最小回复速度
-     * @param maxSpeed 最大回复速度
-     * @return 机器人列表
-     */
-    @Query("{'replySpeed': {$gte: ?0, $lte: ?1}}")
-    List<Robot> findByReplySpeedBetween(Integer minSpeed, Integer maxSpeed);
-    
-    /**
-     * 根据回复频度范围查找机器人
-     * @param minFrequency 最小回复频度
-     * @param maxFrequency 最大回复频度
-     * @return 机器人列表
-     */
-    @Query("{'replyFrequency': {$gte: ?0, $lte: ?1}}")
-    List<Robot> findByReplyFrequencyBetween(Integer minFrequency, Integer maxFrequency);
-    
-    /**
-     * 根据分享频度范围查找机器人
-     * @param minFrequency 最小分享频度
-     * @param maxFrequency 最大分享频度
-     * @return 机器人列表
-     */
-    @Query("{'shareFrequency': {$gte: ?0, $lte: ?1}}")
-    List<Robot> findByShareFrequencyBetween(Integer minFrequency, Integer maxFrequency);
     
     /**
      * 查找最近创建的机器人
@@ -154,45 +128,7 @@ public interface RobotRepository extends MongoRepository<Robot, String> {
     @Query("{'personality': {$regex: ?0, $options: 'i'}}")
     List<Robot> findByPersonalityContaining(String personality);
     
-    /**
-     * 查找回复速度大于等于指定值的机器人
-     * @param replySpeed 回复速度
-     * @return 机器人列表
-     */
-    @Query("{'replySpeed': {$gte: ?0}}")
-    List<Robot> findByReplySpeedGreaterThanEqual(Integer replySpeed);
     
-    /**
-     * 查找回复频度大于等于指定值的机器人
-     * @param replyFrequency 回复频度
-     * @return 机器人列表
-     */
-    @Query("{'replyFrequency': {$gte: ?0}}")
-    List<Robot> findByReplyFrequencyGreaterThanEqual(Integer replyFrequency);
-    
-    /**
-     * 查找分享频度大于等于指定值的机器人
-     * @param shareFrequency 分享频度
-     * @return 机器人列表
-     */
-    @Query("{'shareFrequency': {$gte: ?0}}")
-    List<Robot> findByShareFrequencyGreaterThanEqual(Integer shareFrequency);
-    
-    /**
-     * 查找高活跃度机器人（按回复频度排序）
-     * @param limit 限制数量
-     * @return 机器人列表
-     */
-    @Query(value = "{}", sort = "{'replyFrequency': -1}")
-    List<Robot> findHighActivityRobots(int limit);
-    
-    /**
-     * 查找高分享度机器人（按分享频度排序）
-     * @param limit 限制数量
-     * @return 机器人列表
-     */
-    @Query(value = "{}", sort = "{'shareFrequency': -1}")
-    List<Robot> findHighShareRobots(int limit);
     
     /**
      * 查找今日创建的机器人
@@ -254,26 +190,6 @@ public interface RobotRepository extends MongoRepository<Robot, String> {
     @Query(value = "{'createdAt': {$gte: ?0}}", count = true)
     long countTodayRobots(java.time.LocalDateTime startOfDay);
     
-    /**
-     * 查找指定回复速度的机器人
-     * @param replySpeed 回复速度
-     * @return 机器人列表
-     */
-    List<Robot> findByReplySpeed(Integer replySpeed);
-    
-    /**
-     * 查找指定回复频度的机器人
-     * @param replyFrequency 回复频度
-     * @return 机器人列表
-     */
-    List<Robot> findByReplyFrequency(Integer replyFrequency);
-    
-    /**
-     * 查找指定分享频度的机器人
-     * @param shareFrequency 分享频度
-     * @return 机器人列表
-     */
-    List<Robot> findByShareFrequency(Integer shareFrequency);
     
     /**
      * 根据所有者查找机器人

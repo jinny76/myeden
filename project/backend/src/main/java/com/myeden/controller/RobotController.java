@@ -607,9 +607,6 @@ public class RobotController {
             newRobot.setInterests(originalRobot.getInterests());
             newRobot.setSpeakingStyle(originalRobot.getSpeakingStyle());
             newRobot.setBehaviorPatterns(originalRobot.getBehaviorPatterns());
-            newRobot.setReplySpeed(originalRobot.getReplySpeed());
-            newRobot.setReplyFrequency(originalRobot.getReplyFrequency());
-            newRobot.setShareFrequency(originalRobot.getShareFrequency());
             newRobot.setActiveHours(originalRobot.getActiveHours());
             newRobot.setTopics(originalRobot.getTopics());
             newRobot.setIsActive(false); // 新复制的机器人默认不激活
