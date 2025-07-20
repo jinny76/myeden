@@ -1320,7 +1320,14 @@ const handleImagePreviewClose = () => {
 const formatTime = (time) => {
   if (!time) return ''
   
-  // 处理服务器返回的时间格式
+  // 缓存时间常量
+  const MINUTE = 60 * 1000
+  const HOUR = 60 * MINUTE
+  const DAY = 24 * HOUR
+  const WEEK = 7 * DAY
+  const MONTH = 30 * DAY
+  
+  // 优化时间解析
   let date
   if (typeof time === 'string') {
     // 检测时间格式并处理时区问题
@@ -1335,21 +1342,61 @@ const formatTime = (time) => {
     date = new Date(time)
   }
   
+  // 验证日期有效性
+  if (isNaN(date.getTime())) {
+    return '时间格式错误'
+  }
+  
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   
-  const minute = 60 * 1000
-  const hour = 60 * minute
-  const day = 24 * hour
+  // 处理未来时间
+  if (diff < 0) {
+    return '即将发布'
+  }
   
-  if (diff < minute) {
+  // 优化时间判断逻辑，按频率排序
+  if (diff < MINUTE) {
     return '刚刚'
-  } else if (diff < hour) {
-    return Math.floor(diff / minute) + '分钟前'
-  } else if (diff < day) {
-    return Math.floor(diff / hour) + '小时前'
+  }
+  
+  if (diff < HOUR) {
+    const minutes = Math.floor(diff / MINUTE)
+    return `${minutes}分钟前`
+  }
+  
+  if (diff < DAY) {
+    const hours = Math.floor(diff / HOUR)
+    return `${hours}小时前`
+  }
+  
+  if (diff < WEEK) {
+    const days = Math.floor(diff / DAY)
+    return `${days}天前`
+  }
+  
+  if (diff < MONTH) {
+    const weeks = Math.floor(diff / WEEK)
+    return `${weeks}周前`
+  }
+  
+  // 超过一个月显示具体日期，格式更友好
+  const year = date.getFullYear()
+  const currentYear = now.getFullYear()
+  
+  if (year === currentYear) {
+    // 同年只显示月日
+    return date.toLocaleDateString('zh-CN', { 
+      month: 'numeric', 
+      day: 'numeric' 
+    })
   } else {
-    return date.toLocaleDateString()
+    // 不同年显示年月日
+    return date.toLocaleDateString('zh-CN', { 
+      year: 'numeric', 
+      month: 'numeric', 
+      day: 'numeric' 
+    })
   }
 }
 
