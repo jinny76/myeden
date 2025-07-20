@@ -31,42 +31,43 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.Optional;
 import java.util.Objects;
+
 import com.myeden.service.impl.PromptServiceImpl;
 
 /**
  * 机器人行为管理服务实现类
  * 实现AI机器人的行为触发、时机控制和状态管理
- * 
+ *
  * @author MyEden Team
  * @version 1.0.0
  */
 @Service
 public class RobotBehaviorServiceImpl implements RobotBehaviorService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(RobotBehaviorServiceImpl.class);
-    
+
     @Autowired
     private RobotRepository robotRepository;
-    
+
     @Autowired
     private PostRepository postRepository;
-    
+
     @Autowired
     private CommentRepository commentRepository;
-    
+
     @Autowired
     private PromptService promptService;
-    
+
     @Autowired
     @Lazy
     private PostService postService;
-    
+
     @Autowired
     private CommentService commentService;
-    
+
     @Autowired
     private WebSocketService webSocketService;
-    
+
     @Autowired
     private UserRobotLinkService userRobotLinkService;
 
@@ -75,46 +76,56 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
     @Autowired
     private SearchContentService searchContentService;
-    
+
     @Autowired
     private AIChatService aiChatService;
-    
+
     private final Random random = new Random();
     private final ConcurrentHashMap<String, RobotDailyStats> dailyStats = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Object> localCache = new ConcurrentHashMap<>();
-    
+
     /**
      * 聊天提示词结果内部类
      */
     private static class ChatPromptResult {
         private String prompt;
         private boolean isConfessionTopic;
-        
+
         public ChatPromptResult(String prompt, boolean isConfessionTopic) {
             this.prompt = prompt;
             this.isConfessionTopic = isConfessionTopic;
         }
-        
-        public String getPrompt() { return prompt; }
-        public boolean isConfessionTopic() { return isConfessionTopic; }
+
+        public String getPrompt() {
+            return prompt;
+        }
+
+        public boolean isConfessionTopic() {
+            return isConfessionTopic;
+        }
     }
-    
+
     /**
      * 主动聊天结果内部类
      */
     private static class ProactiveChatResult {
         private String content;
         private boolean isConfessionTopic;
-        
+
         public ProactiveChatResult(String content, boolean isConfessionTopic) {
             this.content = content;
             this.isConfessionTopic = isConfessionTopic;
         }
-        
-        public String getContent() { return content; }
-        public boolean isConfessionTopic() { return isConfessionTopic; }
+
+        public String getContent() {
+            return content;
+        }
+
+        public boolean isConfessionTopic() {
+            return isConfessionTopic;
+        }
     }
-    
+
     /**
      * 机器人每日行为统计内部类
      */
@@ -124,7 +135,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         private int replyCount = 0;
         private int proactiveChatCount = 0;
         private LocalDateTime lastReset = LocalDateTime.now();
-        
+
         public void incrementPost() {
             postCount++;
         }
@@ -136,11 +147,11 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         public void incrementReply() {
             replyCount++;
         }
-        
+
         public void incrementProactiveChat() {
             proactiveChatCount++;
         }
-        
+
         public int getPostCount() {
             return postCount;
         }
@@ -152,7 +163,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         public int getReplyCount() {
             return replyCount;
         }
-        
+
         public int getProactiveChatCount() {
             return proactiveChatCount;
         }
@@ -160,7 +171,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         public LocalDateTime getLastReset() {
             return lastReset;
         }
-        
+
         public void reset() {
             postCount = 0;
             commentCount = 0;
@@ -169,50 +180,51 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             lastReset = LocalDateTime.now();
         }
     }
-    
+
     /**
      * 本地缓存操作 - 替代Redis功能
      */
     private void setCacheValue(String key, Object value) {
         localCache.put(key, value);
     }
-    
+
     private Object getCacheValue(String key) {
         return localCache.get(key);
     }
-    
+
     private void deleteCacheValue(String key) {
         localCache.remove(key);
     }
-    
+
     private boolean hasCacheKey(String key) {
         return localCache.containsKey(key);
     }
-    
+
     /**
      * 检查机器人是否满足发帖/评论/回复的前置条件
-     * @param robotId 机器人ID
+     *
+     * @param robotId      机器人ID
      * @param behaviorType 行为类型（post/comment/reply）
-     * @param context 行为上下文（如"自动发布动态"等）
-     * @param isRobot 是否对机器人内容操作（如评论/回复对象是否为机器人）
+     * @param context      行为上下文（如"自动发布动态"等）
+     * @param isRobot      是否对机器人内容操作（如评论/回复对象是否为机器人）
      * @return 满足条件返回Robot对象，否则返回null
      */
     private Robot checkRobotPostCondition(String robotId, String behaviorType, String context, boolean isRobot) {
-            Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
-            if (robot == null) {
-                logger.warn("机器人不存在: {}", robotId);
-                return null;
-            }
-            
-            // 直接检查机器人是否在活跃时间段，不依赖数据库中的isActive字段
-            if (!isRobotActive(robot)) {
-                logger.info("机器人不在活跃时间段: {}", robotId);
-                return null;
-            }
-            
-            // 计算触发概率
+        Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
+        if (robot == null) {
+            logger.warn("机器人不存在: {}", robotId);
+            return null;
+        }
+
+        // 直接检查机器人是否在活跃时间段，不依赖数据库中的isActive字段
+        if (!isRobotActive(robot)) {
+            logger.info("机器人不在活跃时间段: {}", robotId);
+            return null;
+        }
+
+        // 计算触发概率
         double probability = calculateBehaviorProbability(robot, behaviorType, context, isRobot);
-            if (random.nextDouble() > probability) {
+        if (random.nextDouble() > probability) {
             logger.info("机器人{}概率未触发: {}, 概率: {}", behaviorType, robotId, probability);
             return null;
         }
@@ -234,7 +246,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
              * return false;
              * }
              */
-            
+
             // 生成动态内容
             String context = buildPostContext(robot);
             PromptServiceImpl.PostContentResult postResult = promptService.generatePostContent(robot, context);
@@ -302,7 +314,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     private void searchTopic(String topic) {
         searchContentService.triggerSearch(topic, "");
     }
-    
+
     @Override
     public boolean triggerRobotComment(String robotId, String postId) {
         try {
@@ -315,17 +327,18 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
             // 随机决定行为：点赞、评论或点赞加评论
             return triggerRandomRobotAction(robot, postId, postDetail);
-            
+
         } catch (Exception e) {
             logger.error("触发机器人发表评论失败: {}", e.getMessage(), e);
-                return false;
-            }
+            return false;
+        }
     }
 
     /**
      * 随机决定机器人的行为：点赞、评论或点赞加评论
-     * @param robot 机器人对象
-     * @param postId 动态ID
+     *
+     * @param robot      机器人对象
+     * @param postId     动态ID
      * @param postDetail 动态详情
      * @return 是否成功执行了行为
      */
@@ -334,7 +347,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 随机决定行为类型
             int actionType = random.nextInt(3); // 0: 只点赞, 1: 只评论, 2: 点赞加评论
             boolean success = false;
-            
+
             switch (actionType) {
                 case 0: // 只点赞
                     success = performRobotLike(robot, postId);
@@ -348,18 +361,19 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     success = likeSuccess || commentSuccess; // 只要有一个成功就算成功
                     break;
             }
-            
+
             return success;
-            
+
         } catch (Exception e) {
             logger.error("随机机器人行为执行失败: {}", e.getMessage(), e);
-                return false;
-            }
+            return false;
+        }
     }
 
     /**
      * 执行机器人点赞行为
-     * @param robot 机器人对象
+     *
+     * @param robot  机器人对象
      * @param postId 动态ID
      * @return 是否成功点赞
      */
@@ -370,7 +384,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             List<PostService.LikeDetail> likes = postService.getPostLikes(postId, robot.getRobotId()).getLikes();
             boolean alreadyLiked = likes.stream()
                     .anyMatch(like -> like.getUserId().equals(robot.getRobotId()));
-            
+
             if (alreadyLiked) {
                 logger.info("机器人 {} 已经点赞过动态 {}", robot.getRobotId(), postId);
                 return false;
@@ -395,21 +409,22 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 } catch (Exception e) {
                     logger.warn("WebSocket消息推送失败", e);
                 }
-                
+
                 return true;
             }
-            
+
             return false;
         } catch (Exception e) {
             logger.error("机器人点赞失败: {}", e.getMessage(), e);
-                return false;
-            }
+            return false;
+        }
     }
 
     /**
      * 执行机器人评论行为
-     * @param robot 机器人对象
-     * @param postId 动态ID
+     *
+     * @param robot      机器人对象
+     * @param postId     动态ID
      * @param postDetail 动态详情
      * @return 是否成功评论
      */
@@ -459,7 +474,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             return false;
         }
     }
-    
+
     @Override
     public boolean triggerRobotReply(String robotId, String commentId) {
         try {
@@ -473,7 +488,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 统一前置条件判断
             Robot robot = checkRobotPostCondition(robotId, "reply", "回复评论", isRobot);
             if (robot == null) return false;
-            
+
             // 检查今日回复数量限制
             RobotDailyStats stats = getDailyStats(robotId);
             /*if (stats.getReplyCount() >= 15) { // 每日最多15条回复
@@ -483,7 +498,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
             String commentContent = commentDetail.getContent();
             String context = buildReplyContext(commentContent, robot);
-            
+
             // 生成回复内容和内心活动
             String content = promptService.generateReplyContent(robot, commentDetail, postDetail, context);
             if (StringUtils.isNotBlank(content)) {
@@ -524,31 +539,31 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             return false;
         }
     }
-    
+
     @Override
     public boolean isRobotActive(Robot robot) {
         if (robot == null) {
             return false;
         }
-        
+
         // 使用机器人配置的活跃时间段进行判断
         boolean isActive = robot.isInActiveTimeSlot();
-        
+
         // 添加调试日志
         if (logger.isDebugEnabled()) {
             LocalTime currentTime = LocalTime.now();
-            logger.debug("机器人 {} 活跃状态检查 - 当前时间: {}, 活跃时间段: {}, 结果: {}", 
-                        robot.getName(), 
-                        currentTime.format(DateTimeFormatter.ofPattern("HH:mm")),
-                        robot.getActiveHours().stream()
+            logger.debug("机器人 {} 活跃状态检查 - 当前时间: {}, 活跃时间段: {}, 结果: {}",
+                    robot.getName(),
+                    currentTime.format(DateTimeFormatter.ofPattern("HH:mm")),
+                    robot.getActiveHours().stream()
                             .map(range -> range.getStart() + "-" + range.getEnd())
                             .collect(java.util.stream.Collectors.joining(", ")),
-                        isActive ? "在线" : "离线");
+                    isActive ? "在线" : "离线");
         }
-        
+
         return isActive;
     }
-    
+
     /**
      * 计算行为触发概率 - 使用机器人配置的行为模式
      */
@@ -556,7 +571,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     public double calculateBehaviorProbability(Robot robot, String behaviorType, String context, Boolean isRobot) {
         try {
             double baseProbability = 0.3; // 默认概率
-            
+
             // 使用机器人配置的行为模式概率
             if (robot.getBehaviorPatterns() != null) {
                 switch (behaviorType) {
@@ -609,20 +624,20 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 时间因素
             LocalTime currentTime = LocalTime.now();
             double timeMultiplier = getTimeMultiplier(robot, currentTime);
-            
+
             // 社交能量影响
             double socialEnergyMultiplier = getSocialEnergyMultiplier(robot);
-            
+
             // 情绪影响
             double moodMultiplier = getMoodMultiplier(robot);
-            
+
             // 随机因子
             double randomFactor = 0.3 + random.nextDouble() * 0.4; // 0.3-0.7
-            
+
             // 计算最终概率
             double finalProbability = baseProbability * timeMultiplier * socialEnergyMultiplier * moodMultiplier
                     * randomFactor;
-            
+
             // 确保概率在合理范围内
             if (finalProbability < 0) {
                 finalProbability = 0;
@@ -636,7 +651,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             return 0.3; // 默认概率
         }
     }
-    
+
     /**
      * 获取时间倍数 - 基于机器人活跃时间配置
      */
@@ -656,27 +671,27 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return 0.8; // 其他时间
             }
         }
-        
+
         // 使用机器人配置的活跃时间和概率
         double maxMultiplier = 0.3; // 非活跃时间的基础倍数
-        
+
         for (Robot.ActiveHours activeHour : robot.getActiveHours()) {
             try {
                 LocalTime startTime = LocalTime.parse(activeHour.getStart());
                 LocalTime endTime = LocalTime.parse(activeHour.getEnd());
-                
+
                 // 检查当前时间是否在这个活跃时间段内
                 boolean isInRange;
                 if (endTime.isBefore(startTime)) {
                     // 跨天时间段
-                    isInRange = currentTime.isAfter(startTime) || currentTime.equals(startTime) || 
-                              currentTime.isBefore(endTime) || currentTime.equals(endTime);
+                    isInRange = currentTime.isAfter(startTime) || currentTime.equals(startTime) ||
+                            currentTime.isBefore(endTime) || currentTime.equals(endTime);
                 } else {
                     // 同一天时间段
-                    isInRange = (currentTime.isAfter(startTime) || currentTime.equals(startTime)) && 
-                              (currentTime.isBefore(endTime) || currentTime.equals(endTime));
+                    isInRange = (currentTime.isAfter(startTime) || currentTime.equals(startTime)) &&
+                            (currentTime.isBefore(endTime) || currentTime.equals(endTime));
                 }
-                
+
                 if (isInRange) {
                     // 如果有配置概率，使用配置的概率作为倍数
                     double probability = activeHour.getProbability();
@@ -690,14 +705,14 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     }
                 }
             } catch (Exception e) {
-                logger.warn("解析机器人活跃时间失败: {}, start: {}, end: {}", 
-                          robot.getName(), activeHour.getStart(), activeHour.getEnd());
+                logger.warn("解析机器人活跃时间失败: {}, start: {}, end: {}",
+                        robot.getName(), activeHour.getStart(), activeHour.getEnd());
             }
         }
-        
+
         return maxMultiplier;
     }
-    
+
     /**
      * 获取社交能量倍数
      */
@@ -706,54 +721,54 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         if (robot.getBehaviorPatterns() != null && robot.getBehaviorPatterns().getSocialEnergy() > 0) {
             return robot.getBehaviorPatterns().getSocialEnergy();
         }
-        
+
         // 如果没有配置，使用默认值
         return 0.7;
     }
-    
+
     /**
      * 获取情绪倍数
      */
     private double getMoodMultiplier(Robot robot) {
         // 使用机器人配置中的情绪波动值
         double baseMood = 0.7;
-        
+
         if (robot.getBehaviorPatterns() != null && robot.getBehaviorPatterns().getMoodSwings() > 0) {
             // 使用配置的情绪波动值来计算波动范围
             double moodSwingRange = robot.getBehaviorPatterns().getMoodSwings();
             double moodSwing = random.nextDouble() * moodSwingRange - (moodSwingRange / 2);
             return baseMood + moodSwing;
         }
-        
+
         // 如果没有配置，使用默认的随机波动
         double moodSwing = random.nextDouble() * 0.6 - 0.3; // -0.3 到 0.3 的波动
         return baseMood + moodSwing;
     }
-    
+
     @Override
     public String getRobotDailyStats(String robotId) {
         RobotDailyStats stats = getDailyStats(robotId);
-        return String.format("机器人%s今日统计 - 动态: %d, 评论: %d, 回复: %d, 主动聊天: %d", 
-                           robotId, stats.getPostCount(), stats.getCommentCount(), stats.getReplyCount(), stats.getProactiveChatCount());
+        return String.format("机器人%s今日统计 - 动态: %d, 评论: %d, 回复: %d, 主动聊天: %d",
+                robotId, stats.getPostCount(), stats.getCommentCount(), stats.getReplyCount(), stats.getProactiveChatCount());
     }
-    
+
     @Override
     public void resetRobotDailyStats(String robotId) {
         RobotDailyStats stats = getDailyStats(robotId);
         stats.reset();
         logger.info("重置机器人每日统计: {}", robotId);
     }
-    
+
     @Override
     public void startBehaviorScheduler() {
         logger.info("启动机器人行为调度器");
     }
-    
+
     @Override
     public void stopBehaviorScheduler() {
         logger.info("停止机器人行为调度器");
     }
-    
+
     /**
      * 定时触发机器人行为（每分钟执行一次）
      */
@@ -786,11 +801,11 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             logger.error("定时机器人行为执行失败: {}", e.getMessage(), e);
         }
     }
-    
+
     /**
      * 为指定机器人触发对近三天帖子的评论
      * 对链接用户的帖子进行评论，机器人之间可以自由互动
-     * 
+     *
      * @param robotId 机器人ID
      */
     private void triggerRobotCommentOnRecentPosts(String robotId) {
@@ -799,35 +814,35 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             if (robot == null) {
                 return;
             }
-            
+
             // 直接检查机器人是否在活跃时间段，不依赖数据库中的isActive字段
             if (!isRobotActive(robot)) {
                 return;
             }
-            
+
             // 获取与机器人有链接的用户ID列表
             List<String> linkedUserIds = userRobotLinkService.getRobotActiveLinks(robotId)
-                .stream()
-                .map(UserRobotLinkService.LinkSummary::getUserId)
-                .collect(Collectors.toList());
-            
+                    .stream()
+                    .map(UserRobotLinkService.LinkSummary::getUserId)
+                    .collect(Collectors.toList());
+
             // 获取今日的帖子，按时间倒序排列（最新的在前）
             LocalDateTime todayStart = LocalDateTime.now().with(LocalTime.MIN);
             // 获取所有机器人ID，作为 connectedRobotIds 传入，currentUserId 传 null
             List<String> allRobotIds = robotRepository.findAll().stream()
-                .map(Robot::getRobotId)
-                .collect(Collectors.toList());
+                    .map(Robot::getRobotId)
+                    .collect(Collectors.toList());
 
             allRobotIds.addAll(linkedUserIds);
 
             List<Post> recentPosts = postRepository
                     .findByCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(todayStart, null, allRobotIds);
-            
+
             if (recentPosts.isEmpty()) {
                 logger.debug("机器人 {} 没有找到今日的帖子", robot.getName());
                 return;
             }
-            
+
             // 分离用户帖子和机器人帖子
             List<Post> linkedUserPosts = new ArrayList<>();
             List<Post> robotPosts = new ArrayList<>();
@@ -837,7 +852,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 if (robotId.equals(post.getAuthorId())) {
                     continue;
                 }
-                
+
                 // 检查机器人是否已经评论过这个帖子
                 boolean hasCommented = commentService.hasRobotCommentedOnPost(robotId, post.getPostId());
                 if (!hasCommented) {
@@ -855,15 +870,15 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
             // 优先选择链接用户的帖子，如果没有则选择机器人的帖子
             List<Post> targetPosts = !linkedUserPosts.isEmpty() ? linkedUserPosts : robotPosts;
-            
+
             if (targetPosts.isEmpty()) {
                 logger.debug("机器人 {} 已经评论过所有可评论的近三天帖子", robot.getName());
                 return;
             }
-            
+
             // 选择最新的帖子（列表已经按时间倒序排列，所以第一个就是最新的）
             Post selectedPost = targetPosts.get(0);
-            
+
             // 触发机器人评论
             boolean success = triggerRobotComment(robotId, selectedPost.getPostId());
             if (success) {
@@ -872,16 +887,16 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             } else {
                 logger.debug("机器人 {} 对帖子 {} 触发评论失败", robot.getName(), selectedPost.getPostId());
             }
-            
+
         } catch (Exception e) {
             logger.error("为机器人 {} 触发近三天帖子评论失败: {}", robotId, e.getMessage(), e);
         }
     }
-    
+
     /**
      * 为指定机器人触发对近三天评论的回复
      * 对链接用户的评论进行回复，机器人之间可以自由互动
-     * 
+     *
      * @param robotId 机器人ID
      */
     private void triggerRobotReplyOnRecentComments(String robotId) {
@@ -890,12 +905,12 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             if (robot == null) {
                 return;
             }
-            
+
             // 直接检查机器人是否在活跃时间段，不依赖数据库中的isActive字段
             if (!isRobotActive(robot)) {
                 return;
             }
-            
+
             // 检查今日回复数量限制
             RobotDailyStats stats = getDailyStats(robotId);
             /*
@@ -903,22 +918,22 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
              * return;
              * }
              */
-            
+
             // 获取与机器人有链接的用户ID列表
             List<String> linkedUserIds = userRobotLinkService.getRobotActiveLinks(robotId)
-                .stream()
-                .map(UserRobotLinkService.LinkSummary::getUserId)
-                .collect(Collectors.toList());
-            
+                    .stream()
+                    .map(UserRobotLinkService.LinkSummary::getUserId)
+                    .collect(Collectors.toList());
+
             // 获取今日的评论，按时间倒序排列（最新的在前）
             LocalDateTime todayStart = LocalDateTime.now().with(LocalTime.MIN);
             List<Comment> recentComments = commentService.findRecentComments(todayStart);
-            
+
             if (recentComments.isEmpty()) {
                 logger.debug("机器人 {} 没有找到今日的评论", robot.getName());
                 return;
             }
-            
+
             // 分离用户评论和机器人评论
             List<Comment> linkedUserComments = new ArrayList<>();
             List<Comment> robotComments = new ArrayList<>();
@@ -928,7 +943,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 if (robotId.equals(comment.getAuthorId())) {
                     continue;
                 }
-                
+
                 // 检查机器人是否已经回复过这个评论
                 boolean hasReplied = commentService.hasRobotRepliedToComment(robotId, comment.getCommentId());
                 if (!hasReplied) {
@@ -946,15 +961,15 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
             // 优先选择链接用户的评论，如果没有则选择机器人的评论
             List<Comment> targetComments = !linkedUserComments.isEmpty() ? linkedUserComments : robotComments;
-            
+
             if (targetComments.isEmpty()) {
                 logger.debug("机器人 {} 已经回复过所有可回复的近三天评论", robot.getName());
                 return;
             }
-            
+
             // 选择最新的评论（列表已经按时间倒序排列，所以第一个就是最新的）
             Comment selectedComment = targetComments.get(0);
-            
+
             // 触发机器人回复
             boolean success = triggerRobotReply(robotId, selectedComment.getCommentId());
             if (success) {
@@ -963,12 +978,12 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             } else {
                 logger.debug("机器人 {} 对评论 {} 触发回复失败", robot.getName(), selectedComment.getCommentId());
             }
-            
+
         } catch (Exception e) {
             logger.error("为机器人 {} 触发近三天评论回复失败: {}", robotId, e.getMessage(), e);
         }
     }
-    
+
     /**
      * 每日重置机器人统计（每天0点执行）
      */
@@ -981,46 +996,46 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             logger.error("重置每日统计失败: {}", e.getMessage(), e);
         }
     }
-    
+
     // 辅助方法
     private RobotDailyStats getDailyStats(String robotId) {
         return dailyStats.computeIfAbsent(robotId, k -> new RobotDailyStats());
     }
-    
+
     private String buildPostContext(Robot robot) {
         LocalDateTime now = LocalDateTime.now();
         LocalTime time = now.toLocalTime();
         String weekDay = now.getDayOfWeek().toString();
         String timeOfDay = getTimeOfDay(time);
-        
+
         //三分之一几率提供天气信息
         String weather = "";
         Double weatherProbability = random.nextDouble();
-        if (weatherProbability < 1.0/3.0) {
+        if (weatherProbability < 1.0 / 3.0) {
             WeatherInfo weatherInfo = getWeather(robot);
             weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
             String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
             weather = String.format("，天气%s, 温度%s", weather, temperature);
         }
-        
+
         return String.format(
                 "现在是%s，%s，%s，%s",
-            now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
+                now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
                 weekDay,
-            timeOfDay,
-            weather);
+                timeOfDay,
+                weather);
     }
-    
+
     private String buildCommentContext(String postContent, Robot robot) {
         LocalDateTime now = LocalDateTime.now();
         LocalTime time = now.toLocalTime();
         String weekDay = now.getDayOfWeek().toString();
         String timeOfDay = getTimeOfDay(time);
-        
+
         //三分之一几率提供天气信息
         String weather = "";
         Double weatherProbability = random.nextDouble();
-        if (weatherProbability < 1.0/3.0) {
+        if (weatherProbability < 1.0 / 3.0) {
             WeatherInfo weatherInfo = getWeather(robot);
             weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
             String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
@@ -1031,7 +1046,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
                 weekDay, timeOfDay, weather);
     }
-    
+
     private String buildReplyContext(String commentContent, Robot robot) {
         LocalDateTime now = LocalDateTime.now();
         LocalTime time = now.toLocalTime();
@@ -1040,7 +1055,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         //三分之一几率提供天气信息
         String weather = "";
         Double weatherProbability = random.nextDouble();
-        if (weatherProbability < 1.0/3.0) {
+        if (weatherProbability < 1.0 / 3.0) {
             WeatherInfo weatherInfo = getWeather(robot);
             weather = weatherInfo != null ? weatherInfo.getDescription() : "未知";
             String temperature = weatherInfo != null ? weatherInfo.getTemperature() : "";
@@ -1050,7 +1065,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
                 weekDay, timeOfDay, weather);
     }
-    
+
     /**
      * 获取时间段描述
      */
@@ -1071,7 +1086,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             return "夜晚时光";
         }
     }
-    
+
     /**
      * 获取随机天气
      */
@@ -1098,7 +1113,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
         return null;
     }
-    
+
     /**
      * 刷新机器人在线状态（每5分钟执行一次）
      * 根据机器人的活跃时间配置更新数据库中的isActive状态
@@ -1109,23 +1124,23 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             logger.info("开始刷新机器人在线状态...");
             List<Robot> allRobots = robotRepository.findAll();
             int updatedCount = 0;
-            
+
             for (Robot robot : allRobots) {
                 boolean shouldBeActive = robot.isInActiveTimeSlot();
                 boolean currentActive = robot.getIsActive();
-                
+
                 // 如果状态需要更新
                 if (shouldBeActive != currentActive) {
                     robot.setIsActive(shouldBeActive);
                     robot.setUpdatedAt(LocalDateTime.now());
                     robotRepository.save(robot);
                     updatedCount++;
-                    
-                    logger.info("机器人 {} 状态更新: {} -> {}", 
-                              robot.getName(), 
-                              currentActive ? "在线" : "离线", 
-                              shouldBeActive ? "在线" : "离线");
-                    
+
+                    logger.info("机器人 {} 状态更新: {} -> {}",
+                            robot.getName(),
+                            currentActive ? "在线" : "离线",
+                            shouldBeActive ? "在线" : "离线");
+
                     // 推送WebSocket消息通知状态变化
                     try {
                         Map<String, Object> statusData = new HashMap<>();
@@ -1134,7 +1149,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                         statusData.put("status", shouldBeActive ? "online" : "offline");
                         statusData.put("statusText", shouldBeActive ? "在线" : "离线");
                         statusData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-                        
+
                         webSocketService.pushRobotAction(statusData);
                         logger.debug("WebSocket机器人状态变化消息推送成功: {}", robot.getName());
                     } catch (Exception e) {
@@ -1142,22 +1157,22 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     }
                 }
             }
-            
+
             if (updatedCount > 0) {
                 logger.info("机器人状态刷新完成，共更新 {} 个机器人状态", updatedCount);
             } else {
                 logger.debug("机器人状态刷新完成，无需更新");
             }
-            
+
         } catch (Exception e) {
             logger.error("刷新机器人在线状态失败: {}", e.getMessage(), e);
         }
     }
-    
+
     /**
      * 触发所有在线机器人对指定动态进行评论
      * 当有新动态发布时，自动触发所有符合条件的机器人进行AI评论
-     * 
+     *
      * @param postId      动态ID
      * @param postContent 动态内容（用于日志记录）
      * @return 成功触发的机器人数量
@@ -1165,9 +1180,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     @Async("aiTaskExecutor")
     public void triggerAllRobotsComment(String postId, String postContent) {
         try {
-            logger.info("开始触发所有在线机器人评论，动态ID: {}, 内容: {}", postId, 
-                       postContent != null ? postContent.substring(0, Math.min(postContent.length(), 50)) + "..." : "无内容");
-            
+            logger.info("开始触发所有在线机器人评论，动态ID: {}, 内容: {}", postId,
+                    postContent != null ? postContent.substring(0, Math.min(postContent.length(), 50)) + "..." : "无内容");
+
             // 先查动态作者ID
             Optional<Post> postOpt = postRepository.findByPostId(postId);
             if (postOpt.isEmpty()) {
@@ -1182,22 +1197,22 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return;
             }
             List<String> linkedRobotIds = userLinks.stream()
-                .map(UserRobotLinkService.LinkSummary::getRobotId)
-                .collect(Collectors.toList());
+                    .map(UserRobotLinkService.LinkSummary::getRobotId)
+                    .collect(Collectors.toList());
             List<Robot> allRobots = linkedRobotIds.stream()
-                .map(robotId -> robotRepository.findByRobotId(robotId).orElse(null))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                    .map(robotId -> robotRepository.findByRobotId(robotId).orElse(null))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
             if (allRobots.isEmpty()) {
                 logger.info("没有找到关联的机器人");
                 return;
             }
-            
+
             int triggeredCount = 0;
             int totalRobots = allRobots.size();
             List<String> triggeredRobots = new ArrayList<>();
             List<String> skippedRobots = new ArrayList<>();
-            
+
             for (Robot robot : allRobots) {
                 try {
                     // 直接检查机器人是否在活跃时间段，不依赖数据库中的isActive字段
@@ -1206,7 +1221,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                         skippedRobots.add(robot.getName() + "(非活跃时间)");
                         continue;
                     }
-                    
+
                     // 检查今日评论数量限制
                     RobotDailyStats stats = getDailyStats(robot.getRobotId());
                     /*if (stats.getCommentCount() >= 20) { // 每日最多20条评论
@@ -1214,7 +1229,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                         skippedRobots.add(robot.getName() + "(评论上限)");
                         continue;
                     }*/
-                    
+
                     // 触发机器人评论
                     boolean success = triggerRobotComment(robot.getRobotId(), postId);
                     if (success) {
@@ -1225,112 +1240,112 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                         skippedRobots.add(robot.getName() + "(触发失败)");
                         logger.debug("机器人 {} 触发评论失败", robot.getName());
                     }
-                    
+
                     // 添加随机延迟，避免机器人同时评论
                     Thread.sleep(random.nextInt(3000) + 1000); // 1-4秒随机延迟
-                    
+
                 } catch (Exception e) {
                     logger.error("触发机器人 {} 评论失败: {}", robot.getName(), e.getMessage());
                     skippedRobots.add(robot.getName() + "(异常:" + e.getMessage() + ")");
                 }
             }
-            
+
             // 记录详细的触发结果
-            logger.info("AI机器人评论触发完成，动态ID: {}, 总机器人: {}, 成功触发: {}", 
-                      postId, totalRobots, triggeredCount);
+            logger.info("AI机器人评论触发完成，动态ID: {}, 总机器人: {}, 成功触发: {}",
+                    postId, totalRobots, triggeredCount);
             logger.info("成功触发的机器人: {}", String.join(", ", triggeredRobots));
             if (!skippedRobots.isEmpty()) {
                 logger.info("跳过的机器人: {}", String.join(", ", skippedRobots));
             }
-            
+
             return;
-            
+
         } catch (Exception e) {
             logger.error("触发所有机器人评论失败: {}", e.getMessage(), e);
             return;
         }
     }
-    
+
     /**
      * 生成动态ID
      */
     private String generatePostId() {
         return "post_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
-    
+
     /**
      * 触发机器人主动聊天
      * 根据用户链接关系和熟悉度，主动发起聊天
-     * 
+     *
      * @param robotId 机器人ID
      */
     private void triggerRobotProactiveChat(String robotId) {
         try {
             logger.info("开始触发机器人主动聊天，机器人ID: {}", robotId);
-            
+
             Robot robot = robotRepository.findByRobotId(robotId).orElse(null);
             if (robot == null) {
                 logger.warn("机器人不存在: {}", robotId);
                 return;
             }
-            
+
             // 检查机器人是否在活跃时间段
             if (!isRobotActive(robot)) {
                 logger.info("机器人不在活跃时间段: {}", robotId);
                 return;
             }
-            
+
             // 检查今日主动聊天次数限制
             RobotDailyStats stats = getDailyStats(robotId);
             if (stats.getProactiveChatCount() >= 5) { // 每日最多5次主动聊天
                 logger.info("机器人今日主动聊天次数已达上限: {}", robotId);
                 return;
             }
-            
+
             // 计算主动聊天触发几率
             double proactiveChatProbability = calculateProactiveChatProbability(robot);
             double randomValue = random.nextDouble();
-            
+
             if (randomValue > proactiveChatProbability) {
-                logger.info("机器人 {} 主动聊天几率检查未通过，几率: {:.2%}, 随机值: {:.2%}", 
-                          robotId, proactiveChatProbability, randomValue);
+                logger.info("机器人 {} 主动聊天几率检查未通过，几率: {:.2%}, 随机值: {:.2%}",
+                        robotId, proactiveChatProbability, randomValue);
                 return;
             }
-            
+
             // 选择聊天对象
             String targetUserId = selectProactiveChatTarget(robot);
             if (targetUserId == null) {
                 logger.info("机器人 {} 没有合适的聊天对象", robotId);
                 return;
             }
-            
+
             // 生成聊天内容
             ProactiveChatResult chatResult = generateProactiveChatContent(robot, targetUserId);
             if (chatResult == null || StringUtils.isBlank(chatResult.getContent())) {
                 logger.warn("机器人 {} 生成聊天内容失败", robotId);
                 return;
             }
-            
+
             // 发送聊天消息
             boolean success = sendProactiveChatMessage(robot, targetUserId, chatResult.getContent(), chatResult.isConfessionTopic());
             if (success) {
                 stats.incrementProactiveChat();
-                logger.info("机器人 {} 成功发起主动聊天，目标用户: {}, 类型: {}, 内容: {}", 
-                          robotId, targetUserId, chatResult.isConfessionTopic() ? "倾诉" : "普通", 
-                          chatResult.getContent().substring(0, Math.min(chatResult.getContent().length(), 100)));
+                logger.info("机器人 {} 成功发起主动聊天，目标用户: {}, 类型: {}, 内容: {}",
+                        robotId, targetUserId, chatResult.isConfessionTopic() ? "倾诉" : "普通",
+                        chatResult.getContent().substring(0, Math.min(chatResult.getContent().length(), 100)));
             } else {
                 logger.warn("机器人 {} 发送聊天消息失败", robotId);
             }
-            
+
         } catch (Exception e) {
             logger.error("触发机器人主动聊天失败: {}", e.getMessage(), e);
         }
     }
-    
+
     /**
      * 选择主动聊天的目标用户
      * 基于用户链接关系、熟悉度、最近互动时间等因素选择
-     * 
+     *
      * @param robot 机器人对象
      * @return 目标用户ID，如果没有合适的目标则返回null
      */
@@ -1338,84 +1353,84 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         try {
             // 获取与机器人有链接的用户列表
             List<UserRobotLinkService.LinkSummary> activeLinks = userRobotLinkService.getRobotActiveLinks(robot.getRobotId());
-            
+
             if (activeLinks.isEmpty()) {
                 logger.debug("机器人 {} 没有活跃链接", robot.getName());
                 return null;
             }
-            
+
             // 过滤出适合主动聊天的用户
             List<UserRobotLinkService.LinkSummary> eligibleUsers = activeLinks.stream()
-                .filter(link -> {
-                    // 检查熟悉度等级（至少需要初识以上）
-                    Integer familiarityLevel = link.getFamiliarityLevel();
-                    if (familiarityLevel == null || familiarityLevel < 1) {
-                        return false;
-                    }
-                    
-                    // 检查最近互动时间（避免过于频繁）
-                    String lastInteractionTime = link.getLastInteractionTime();
-                    if (lastInteractionTime != null) {
-                        try {
-                            LocalDateTime lastTime = LocalDateTime.parse(lastInteractionTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-                            LocalDateTime twoHoursAgo = LocalDateTime.now().minusHours(2);
-                            if (lastTime.isAfter(twoHoursAgo)) {
-                                return false; // 2小时内有互动，跳过
-                            }
-                        } catch (Exception e) {
-                            logger.warn("解析最近互动时间失败: {}", lastInteractionTime);
+                    .filter(link -> {
+                        // 检查熟悉度等级（至少需要初识以上）
+                        Integer familiarityLevel = link.getFamiliarityLevel();
+                        if (familiarityLevel == null || familiarityLevel < 1) {
+                            return false;
                         }
-                    }
-                    
-                    return true;
-                })
-                .collect(Collectors.toList());
-            
+
+                        // 检查最近互动时间（避免过于频繁）
+                        String lastInteractionTime = link.getLastInteractionTime();
+                        if (lastInteractionTime != null) {
+                            try {
+                                LocalDateTime lastTime = LocalDateTime.parse(lastInteractionTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                                LocalDateTime twoHoursAgo = LocalDateTime.now().minusHours(2);
+                                if (lastTime.isAfter(twoHoursAgo)) {
+                                    return false; // 2小时内有互动，跳过
+                                }
+                            } catch (Exception e) {
+                                logger.warn("解析最近互动时间失败: {}", lastInteractionTime);
+                            }
+                        }
+
+                        return true;
+                    })
+                    .collect(Collectors.toList());
+
             if (eligibleUsers.isEmpty()) {
                 logger.debug("机器人 {} 没有合适的聊天对象", robot.getName());
                 return null;
             }
-            
+
             // 按熟悉度和互动次数排序，优先选择熟悉度高的用户
             eligibleUsers.sort((a, b) -> {
                 // 首先按熟悉度等级排序
                 int familiarityCompare = Integer.compare(
-                    b.getFamiliarityLevel() != null ? b.getFamiliarityLevel() : 0,
-                    a.getFamiliarityLevel() != null ? a.getFamiliarityLevel() : 0
+                        b.getFamiliarityLevel() != null ? b.getFamiliarityLevel() : 0,
+                        a.getFamiliarityLevel() != null ? a.getFamiliarityLevel() : 0
                 );
                 if (familiarityCompare != 0) {
                     return familiarityCompare;
                 }
-                
+
                 // 然后按互动次数排序
                 return Integer.compare(
-                    b.getInteractionCount() != null ? b.getInteractionCount() : 0,
-                    a.getInteractionCount() != null ? a.getInteractionCount() : 0
+                        b.getInteractionCount() != null ? b.getInteractionCount() : 0,
+                        a.getInteractionCount() != null ? a.getInteractionCount() : 0
                 );
             });
-            
+
             // 从前几个候选用户中随机选择一个
             int candidateCount = Math.min(3, eligibleUsers.size());
             int selectedIndex = random.nextInt(candidateCount);
             UserRobotLinkService.LinkSummary selectedLink = eligibleUsers.get(selectedIndex);
-            
-            logger.debug("机器人 {} 选择用户 {} 进行主动聊天，熟悉度等级: {}, 互动次数: {}", 
-                        robot.getName(), selectedLink.getUserId(), 
-                        selectedLink.getFamiliarityLevel(), selectedLink.getInteractionCount());
-            
+
+            logger.debug("机器人 {} 选择用户 {} 进行主动聊天，熟悉度等级: {}, 互动次数: {}",
+                    robot.getName(), selectedLink.getUserId(),
+                    selectedLink.getFamiliarityLevel(), selectedLink.getInteractionCount());
+
             return selectedLink.getUserId();
-            
+
         } catch (Exception e) {
             logger.error("选择主动聊天目标用户失败: {}", e.getMessage(), e);
             return null;
         }
     }
-    
+
     /**
      * 生成主动聊天内容
      * 基于机器人性格、用户关系、当前上下文生成个性化的聊天内容
-     * 
-     * @param robot 机器人对象
+     *
+     * @param robot        机器人对象
      * @param targetUserId 目标用户ID
      * @return 生成的聊天内容结果
      */
@@ -1423,45 +1438,45 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         try {
             // 获取用户关系信息
             Optional<UserRobotLinkService.LinkSummary> linkOpt = userRobotLinkService.getRobotActiveLinks(robot.getRobotId())
-                .stream()
-                .filter(link -> link.getUserId().equals(targetUserId))
-                .findFirst();
-            
+                    .stream()
+                    .filter(link -> link.getUserId().equals(targetUserId))
+                    .findFirst();
+
             if (linkOpt.isEmpty()) {
                 logger.warn("找不到用户 {} 与机器人 {} 的链接信息", targetUserId, robot.getRobotId());
                 return null;
             }
-            
+
             UserRobotLinkService.LinkSummary link = linkOpt.get();
-            
+
             // 构建聊天上下文
             String context = buildProactiveChatContext(robot, link);
-            
+
             // 根据熟悉度等级生成不同类型的聊天内容
             ChatPromptResult promptResult = generateChatPrompt(robot, link, context);
-            
+
             // 调用AI服务生成聊天内容
             String chatContent = promptService.generateChatContent(robot, promptResult.getPrompt());
-            
+
             if (StringUtils.isBlank(chatContent)) {
                 logger.warn("AI生成聊天内容为空，机器人: {}, 用户: {}", robot.getRobotId(), targetUserId);
                 return null;
             }
-            
+
             logger.debug("机器人 {} 生成主动聊天内容: {}", robot.getName(), chatContent);
             return new ProactiveChatResult(chatContent, promptResult.isConfessionTopic());
-            
+
         } catch (Exception e) {
             logger.error("生成主动聊天内容失败: {}", e.getMessage(), e);
             return null;
         }
     }
-    
+
     /**
      * 构建主动聊天的上下文信息
-     * 
+     *
      * @param robot 机器人对象
-     * @param link 用户链接信息
+     * @param link  用户链接信息
      * @return 上下文字符串
      */
     private String buildProactiveChatContext(Robot robot, UserRobotLinkService.LinkSummary link) {
@@ -1469,23 +1484,23 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         LocalTime time = now.toLocalTime();
         String weekDay = now.getDayOfWeek().toString();
         String timeOfDay = getTimeOfDay(time);
-        
+
         // 获取天气信息， 1/3 几率提供
         String weather = "";
         Double weatherProbability = random.nextDouble();
-        if (weatherProbability < 1.0/3.0) {
+        if (weatherProbability < 1.0 / 3.0) {
             WeatherInfo weatherInfo = getWeather(robot);
-            weather = weatherInfo != null ? 
-                String.format("，天气%s, 温度%s", weatherInfo.getDescription(), weatherInfo.getTemperature()) : "";
+            weather = weatherInfo != null ?
+                    String.format("，天气%s, 温度%s", weatherInfo.getDescription(), weatherInfo.getTemperature()) : "";
         }
 
         // 获取熟悉度信息
         String familiarityInfo = "";
         if (link.getFamiliarityLevel() != null && link.getFamiliarityLevelName() != null) {
-            familiarityInfo = String.format("，我们的关系是%s（等级%d）", 
-                link.getFamiliarityLevelName(), link.getFamiliarityLevel());
+            familiarityInfo = String.format("，我们的关系是%s（等级%d）",
+                    link.getFamiliarityLevelName(), link.getFamiliarityLevel());
         }
-        
+
         // 获取最近互动信息
         String lastInteractionInfo = "";
         if (link.getLastInteractionTime() != null) {
@@ -1501,15 +1516,15 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 logger.warn("解析最近互动时间失败: {}", link.getLastInteractionTime());
             }
         }
-        
-        return String.format("现在是%s，%s，%s%s%s%s", 
-            now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
-            weekDay, timeOfDay, weather, familiarityInfo, lastInteractionInfo);
+
+        return String.format("现在是%s，%s，%s%s%s%s",
+                now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm")),
+                weekDay, timeOfDay, weather, familiarityInfo, lastInteractionInfo);
     }
-    
+
     /**
      * 根据熟悉度等级计算倾诉主题触发概率
-     * 
+     *
      * @param familiarityLevel 熟悉度等级
      * @return 触发概率（0.0-1.0）
      */
@@ -1517,7 +1532,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         if (familiarityLevel == null) {
             return 0.1; // 默认很低概率
         }
-        
+
         switch (familiarityLevel) {
             case 0: // 陌生人
                 return 0.05; // 5%概率
@@ -1533,31 +1548,31 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return 0.1; // 默认概率
         }
     }
-    
+
     /**
      * 根据熟悉度等级生成聊天提示词
-     * 
-     * @param robot 机器人对象
-     * @param link 用户链接信息
+     *
+     * @param robot   机器人对象
+     * @param link    用户链接信息
      * @param context 上下文信息
      * @return 聊天提示词结果
      */
     private ChatPromptResult generateChatPrompt(Robot robot, UserRobotLinkService.LinkSummary link, String context) {
         String basePrompt = String.format(
-            "你是%s，性格是%s。%s。现在你想主动和用户聊天。",
-            robot.getName(), robot.getPersonality(), context
+                "你是%s，性格是%s。%s。现在你想主动和用户聊天。",
+                robot.getName(), robot.getPersonality(), context
         );
-        
+
         // 决定是否使用倾诉主题（根据熟悉度等级调整概率）
         double confessionProbability = calculateConfessionProbability(link.getFamiliarityLevel());
         boolean useConfessionTopic = random.nextDouble() < confessionProbability;
-        
-        logger.debug("机器人 {} 对用户 {} 的倾诉主题概率: {}% (熟悉度等级: {}), 实际触发: {}", 
-                    robot.getName(), link.getUserId(), 
-                    String.format("%.1f", confessionProbability * 100), 
-                    link.getFamiliarityLevel(), useConfessionTopic);
+
+        logger.debug("机器人 {} 对用户 {} 的倾诉主题概率: {}% (熟悉度等级: {}), 实际触发: {}",
+                robot.getName(), link.getUserId(),
+                String.format("%.1f", confessionProbability * 100),
+                link.getFamiliarityLevel(), useConfessionTopic);
         String topicPrompt = "";
-        
+
         if (useConfessionTopic && StringUtils.isNotBlank(robot.getHiddenTrouble())) {
             // 使用倾诉主题
             String[] troubles = robot.getHiddenTrouble().split("\\n");
@@ -1570,7 +1585,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 }
             }
         }
-        
+
         // 根据熟悉度等级生成不同的聊天策略
         String strategyPrompt = "";
         Integer familiarityLevel = link.getFamiliarityLevel();
@@ -1613,25 +1628,25 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 }
             }
         }
-        
+
         // 添加印象信息
         String impressionPrompt = "";
         if (StringUtils.isNotBlank(link.getImpression())) {
             impressionPrompt = String.format("你对这个用户的印象是：%s。", link.getImpression());
         }
-        
-        String finalPrompt = String.format("%s %s %s %s 请生成一条简短自然的聊天消息，不要太长，保持真实的情感表达。", 
-            basePrompt, topicPrompt, strategyPrompt, impressionPrompt);
-        
+
+        String finalPrompt = String.format("%s %s %s %s 请生成一条简短自然的聊天消息，不要太长，保持真实的情感表达。",
+                basePrompt, topicPrompt, strategyPrompt, impressionPrompt);
+
         return new ChatPromptResult(finalPrompt, useConfessionTopic && StringUtils.isNotBlank(topicPrompt));
     }
-    
+
     /**
      * 发送主动聊天消息
-     * 
-     * @param robot 机器人对象
-     * @param targetUserId 目标用户ID
-     * @param content 聊天内容
+     *
+     * @param robot             机器人对象
+     * @param targetUserId      目标用户ID
+     * @param content           聊天内容
      * @param isConfessionTopic 是否为倾诉主题
      * @return 是否发送成功
      */
@@ -1639,11 +1654,11 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         try {
             // 直接调用AI聊天服务发送消息，传入实际的聊天内容
             ChatMessage chatMessage = aiChatService.sendChatMessage(targetUserId, robot.getRobotId(), content, null, null, null);
-            
+
             if (chatMessage != null) {
                 // 更新用户与机器人的互动记录
                 userRobotLinkService.incrementInteraction(targetUserId, robot.getRobotId());
-                
+
                 // 推送WebSocket消息通知
                 try {
                     Map<String, Object> actionData = new HashMap<>();
@@ -1654,27 +1669,27 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     actionData.put("targetUserId", targetUserId);
                     actionData.put("actionContent", content);
                     actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-                    
+
                     webSocketService.pushRobotAction(actionData);
                     logger.debug("WebSocket主动聊天消息推送成功");
                 } catch (Exception e) {
                     logger.warn("WebSocket消息推送失败", e);
                 }
-                
+
                 return true;
             }
-            
+
             return false;
         } catch (Exception e) {
             logger.error("发送主动聊天消息失败: {}", e.getMessage(), e);
             return false;
         }
     }
-    
+
     /**
      * 计算机器人主动聊天的触发几率
      * 基于机器人性格、当前时间、社交能量等因素综合计算
-     * 
+     *
      * @param robot 机器人对象
      * @return 触发几率（0.0-1.0）
      */
@@ -1682,37 +1697,37 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         try {
             // 基础几率：根据机器人性格调整
             double baseProbability = getBaseProactiveChatProbability(robot);
-            
+
             // 时间因素：不同时间段有不同的主动聊天倾向
             LocalTime currentTime = LocalDateTime.now().toLocalTime();
             double timeMultiplier = getProactiveChatTimeMultiplier(robot, currentTime);
-            
+
             // 社交能量因素：社交能量越高，越容易主动聊天
             double socialEnergyMultiplier = getProactiveChatSocialEnergyMultiplier(robot);
-            
+
             // 心情因素：心情好时更容易主动聊天
             double moodMultiplier = getProactiveChatMoodMultiplier(robot);
-            
+
             // 计算最终几率
             double finalProbability = baseProbability * timeMultiplier * socialEnergyMultiplier * moodMultiplier;
-            
+
             // 限制几率范围在合理区间
             finalProbability = Math.max(0.05, Math.min(0.30, finalProbability));
-            
-            logger.debug("机器人 {} 主动聊天几率计算 - 基础: {:.2%}, 时间系数: {:.2f}, 社交系数: {:.2f}, 心情系数: {:.2f}, 最终: {:.2%}", 
-                        robot.getName(), baseProbability, timeMultiplier, socialEnergyMultiplier, moodMultiplier, finalProbability);
-            
+
+            logger.debug("机器人 {} 主动聊天几率计算 - 基础: {:.2%}, 时间系数: {:.2f}, 社交系数: {:.2f}, 心情系数: {:.2f}, 最终: {:.2%}",
+                    robot.getName(), baseProbability, timeMultiplier, socialEnergyMultiplier, moodMultiplier, finalProbability);
+
             return finalProbability;
-            
+
         } catch (Exception e) {
             logger.error("计算主动聊天几率失败: {}", e.getMessage(), e);
             return 0.10; // 默认10%几率
         }
     }
-    
+
     /**
      * 根据机器人性格获取基础主动聊天几率
-     * 
+     *
      * @param robot 机器人对象
      * @return 基础几率
      */
@@ -1721,7 +1736,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         if (personality == null) {
             return 0.15; // 默认15%
         }
-        
+
         // 根据性格特征调整基础几率
         if (personality.contains("外向") || personality.contains("活泼") || personality.contains("热情")) {
             return 0.20; // 外向性格更容易主动聊天
@@ -1733,17 +1748,17 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             return 0.15; // 默认几率
         }
     }
-    
+
     /**
      * 获取主动聊天的时间系数
-     * 
-     * @param robot 机器人对象
+     *
+     * @param robot       机器人对象
      * @param currentTime 当前时间
      * @return 时间系数
      */
     private double getProactiveChatTimeMultiplier(Robot robot, LocalTime currentTime) {
         int hour = currentTime.getHour();
-        
+
         // 不同时间段的主动聊天倾向
         if (hour >= 8 && hour <= 10) {
             return 1.2; // 早上8-10点，精力充沛，容易主动聊天
@@ -1757,10 +1772,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             return 1.0; // 其他时间正常
         }
     }
-    
+
     /**
      * 获取主动聊天的社交能量系数
-     * 
+     *
      * @param robot 机器人对象
      * @return 社交能量系数
      */
@@ -1769,10 +1784,10 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         // 暂时使用固定值，后续可以扩展为动态计算
         return 1.0;
     }
-    
+
     /**
      * 获取主动聊天的心情系数
-     * 
+     *
      * @param robot 机器人对象
      * @return 心情系数
      */

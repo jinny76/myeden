@@ -145,9 +145,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.4
         comfort_frequency: 0.7
-        share_frequency: 0.6
-        comment_frequency: 0.7
-        reply_frequency: 0.2
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.3  # 情绪波动
         social_energy: 0.6  # 社交能量
         
@@ -225,9 +225,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.6
         comfort_frequency: 0.5
-        share_frequency: 0.7
-        comment_frequency: 0.7
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.2
         social_energy: 0.7
 
@@ -318,9 +318,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.9
         comfort_frequency: 0.8
-        share_frequency: 0.8
-        comment_frequency: 0.7
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.4
         social_energy: 0.9
         
@@ -408,9 +408,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.3
         comfort_frequency: 0.8
-        share_frequency: 0.5
-        comment_frequency: 0.6
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.1
         social_energy: 0.4
 
@@ -502,9 +502,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.8
         comfort_frequency: 0.6
-        share_frequency: 0.7
-        comment_frequency: 0.6
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.2
         social_energy: 0.8
 
@@ -582,9 +582,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.5
         comfort_frequency: 0.6
-        share_frequency: 0.6
-        comment_frequency: 0.7
-        reply_frequency: 0.2
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.2
         social_energy: 0.5
 
@@ -667,9 +667,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.4
         comfort_frequency: 0.9
-        share_frequency: 0.6
-        comment_frequency: 0.7
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.1
         social_energy: 0.3
         
@@ -747,9 +747,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.9
         comfort_frequency: 0.7
-        share_frequency: 0.8
-        comment_frequency: 0.7
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.5
         social_energy: 0.9
         
@@ -830,9 +830,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.8
         comfort_frequency: 0.9  # 高频率"安慰"别人
-        share_frequency: 0.6
-        comment_frequency: 0.8  # 高频率评论，寻找存在感
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4  # 高频率评论，寻找存在感
+        reply_frequency: 0.1
         mood_swings: 0.6  # 情绪波动大
         social_energy: 0.8  # 社交能量高，喜欢参与
         
@@ -915,9 +915,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.2  # 很少主动打招呼
         comfort_frequency: 0.3  # 很少安慰别人
-        share_frequency: 0.4  # 偶尔分享丧气内容
-        comment_frequency: 0.7  # 很少评论
-        reply_frequency: 0.2  # 很少回复
+        share_frequency: 0.1  # 偶尔分享丧气内容
+        comment_frequency: 0.4  # 很少评论
+        reply_frequency: 0.1 # 很少回复
         mood_swings: 0.8  # 情绪波动很大
         social_energy: 0.2  # 社交能量很低
         
@@ -997,9 +997,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.8
         comfort_frequency: 0.9
-        share_frequency: 0.8
-        comment_frequency: 0.6
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.5
         social_energy: 0.9
 
@@ -1069,9 +1069,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.2
         comfort_frequency: 0.3
-        share_frequency: 0.4
-        comment_frequency: 0.3
-        reply_frequency: 0.2
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.8
         social_energy: 0.2
 
@@ -1152,9 +1152,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.5
         comfort_frequency: 0.9
-        share_frequency: 0.7
-        comment_frequency: 0.7
-        reply_frequency: 0.2
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.1
         social_energy: 0.6
 
@@ -1231,9 +1231,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.3
         comfort_frequency: 0.2  # 很少安慰，反而会打击
-        share_frequency: 0.6
-        comment_frequency: 0.8  # 高频率评论，喜欢指点别人
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4  # 高频率评论，喜欢指点别人
+        reply_frequency: 0.1
         mood_swings: 0.1  # 情绪稳定，但总是自信满满
         social_energy: 0.6  # 社交能量中等，喜欢参与但方式不对
         
@@ -1458,9 +1458,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.7
         comfort_frequency: 0.9
-        share_frequency: 0.8
-        comment_frequency: 0.7
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.2
         social_energy: 0.7
       active_hours:
@@ -1548,9 +1548,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.7
         comfort_frequency: 0.8
-        share_frequency: 0.7
-        comment_frequency: 0.7
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.2
         social_energy: 0.8
 
@@ -1643,9 +1643,9 @@ robots:
       behavior_patterns:
         greeting_frequency: 0.7
         comfort_frequency: 0.9
-        share_frequency: 0.8
-        comment_frequency: 0.7
-        reply_frequency: 0.3
+        share_frequency: 0.1
+        comment_frequency: 0.4
+        reply_frequency: 0.1
         mood_swings: 0.2
         social_energy: 0.8
 

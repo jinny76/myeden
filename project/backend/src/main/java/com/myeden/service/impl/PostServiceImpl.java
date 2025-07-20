@@ -221,7 +221,7 @@ public class PostServiceImpl implements PostService {
                 postData.put("authorAvatar", authorAvatar);
                 postData.put("content", savedPost.getContent());
                 postData.put("images", savedPost.getImages());
-                postData.put("createdAt", savedPost.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                postData.put("createdAt", savedPost.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME));
                 
                 webSocketService.pushPostUpdate(postData);
                 logger.info("WebSocket动态更新消息推送成功");
@@ -408,8 +408,8 @@ public class PostServiceImpl implements PostService {
                 isLiked,
                 likes,
                 comments,
-                post.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                post.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), post.getTopic()
+                post.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
+                post.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME), post.getTopic()
             );
             
         } catch (Exception e) {
@@ -712,8 +712,8 @@ public class PostServiceImpl implements PostService {
             post.getLikeCount(),
             post.getCommentCount(),
             isLiked,
-            post.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-            post.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                            post.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
+                post.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
                 post.getTopic()
         );
     }

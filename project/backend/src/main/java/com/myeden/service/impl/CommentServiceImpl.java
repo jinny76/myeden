@@ -207,7 +207,7 @@ public class CommentServiceImpl implements CommentService {
                 commentData.put("innerThoughts", savedComment.getInnerThoughts());
                 commentData.put("parentId", savedComment.getParentId());
                 commentData.put("replyToId", savedComment.getReplyToId());
-                commentData.put("createdAt", savedComment.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                commentData.put("createdAt", savedComment.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME));
                 
                 webSocketService.pushCommentUpdate(commentData);
                 logger.info("WebSocket评论更新消息推送成功");
@@ -220,7 +220,7 @@ public class CommentServiceImpl implements CommentService {
                 savedComment.getContent(),
                 savedComment.getParentId(),
                 savedComment.getReplyToId(),
-                savedComment.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                savedComment.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME)
             );
             
         } catch (Exception e) {
@@ -609,8 +609,8 @@ public class CommentServiceImpl implements CommentService {
                 comment.getReplyCount(),
                 isLiked,
                 likedUsers,
-                comment.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                comment.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                comment.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
+                comment.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME)
             );
             
         } catch (Exception e) {
@@ -827,8 +827,8 @@ public class CommentServiceImpl implements CommentService {
             comment.getLikeCount(),
             comment.getReplyCount(),
             isLiked,
-            comment.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-            comment.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            comment.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
+            comment.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME)
         );
     }
     

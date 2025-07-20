@@ -1320,9 +1320,23 @@ const handleImagePreviewClose = () => {
 const formatTime = (time) => {
   if (!time) return ''
   
-  const date = new Date(time)
+  // 处理服务器返回的时间格式
+  let date
+  if (typeof time === 'string') {
+    // 检测时间格式并处理时区问题
+    if (time.includes('T') && !time.includes('Z') && !time.includes('+')) {
+      // 格式："2025-07-20T22:55:58.201" (无时区信息)
+      // 服务器在GMT+9时区，添加+09:00后缀
+      date = new Date(time + '+09:00')
+    } else {
+      date = new Date(time)
+    }
+  } else {
+    date = new Date(time)
+  }
+  
   const now = new Date()
-  const diff = now - date
+  const diff = now.getTime() - date.getTime()
   
   const minute = 60 * 1000
   const hour = 60 * minute
