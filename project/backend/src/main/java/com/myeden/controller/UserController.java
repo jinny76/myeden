@@ -44,6 +44,29 @@ public class UserController {
     private JwtService jwtService;
     
     /**
+     * 创建安全的用户信息对象，排除敏感字段（密码等）
+     * @param user 用户对象
+     * @param includePhone 是否包含手机号（仅在获取自己信息时包含）
+     * @return 安全的用户信息Map
+     */
+    private Map<String, Object> createSafeUserInfo(User user, boolean includePhone) {
+        Map<String, Object> safeInfo = new java.util.HashMap<>();
+        safeInfo.put("userId", user.getUserId());
+        safeInfo.put("nickname", user.getNickname() != null ? user.getNickname() : "");
+        safeInfo.put("avatar", user.getAvatar() != null ? user.getAvatar() : "");
+        safeInfo.put("role", user.getRole() != null ? user.getRole() : "USER");
+        safeInfo.put("createdAt", user.getCreatedAt());
+        safeInfo.put("updatedAt", user.getUpdatedAt());
+        
+        if (includePhone) {
+            safeInfo.put("phone", user.getPhone() != null ? user.getPhone() : "");
+            safeInfo.put("isFirstLogin", user.getIsFirstLogin() != null ? user.getIsFirstLogin() : false);
+        }
+        
+        return safeInfo;
+    }
+    
+    /**
      * 用户注册
      * POST /api/v1/users/register
      */
@@ -144,7 +167,9 @@ public class UserController {
             }
             
             User user = userOpt.get();
-            return ResponseEntity.ok(EventResponse.success(user, "获取当前用户信息成功"));
+            // 获取自己的信息，包含手机号等私密信息
+            Map<String, Object> safeUserInfo = createSafeUserInfo(user, true);
+            return ResponseEntity.ok(EventResponse.success(safeUserInfo, "获取当前用户信息成功"));
             
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()));
@@ -165,8 +190,10 @@ public class UserController {
             }
             
             User user = userOpt.get();
+            // 获取他人信息，不包含手机号等私密信息
+            Map<String, Object> safeUserInfo = createSafeUserInfo(user, false);
             
-            return ResponseEntity.ok(EventResponse.success(user, "获取用户信息成功"));
+            return ResponseEntity.ok(EventResponse.success(safeUserInfo, "获取用户信息成功"));
             
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()));
@@ -212,8 +239,10 @@ public class UserController {
             
             // 执行用户信息更新
             User updatedUser = userService.updateUser(userId, userUpdate);
+            // 更新自己的信息，返回包含手机号的安全信息
+            Map<String, Object> safeUserInfo = createSafeUserInfo(updatedUser, true);
             
-            return ResponseEntity.ok(EventResponse.success(updatedUser, "更新用户信息成功"));
+            return ResponseEntity.ok(EventResponse.success(safeUserInfo, "更新用户信息成功"));
             
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()));
@@ -347,8 +376,12 @@ public class UserController {
     public ResponseEntity<EventResponse> searchUsers(@RequestParam String nickname, @RequestParam(defaultValue = "10") int limit) {
         try {
             List<User> users = userService.searchUsersByNickname(nickname, limit);
+            // 过滤敏感信息，搜索结果不包含手机号等私密信息
+            List<Map<String, Object>> safeUsers = users.stream()
+                .map(user -> createSafeUserInfo(user, false))
+                .toList();
             
-            return ResponseEntity.ok(EventResponse.success(users, "搜索用户成功"));
+            return ResponseEntity.ok(EventResponse.success(safeUsers, "搜索用户成功"));
             
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()));
@@ -363,8 +396,12 @@ public class UserController {
     public ResponseEntity<EventResponse> getRecentUsers(@RequestParam(defaultValue = "10") int limit) {
         try {
             List<User> users = userService.getRecentUsers(limit);
+            // 过滤敏感信息，最近用户列表不包含手机号等私密信息
+            List<Map<String, Object>> safeUsers = users.stream()
+                .map(user -> createSafeUserInfo(user, false))
+                .toList();
             
-            return ResponseEntity.ok(EventResponse.success(users, "获取最近用户成功"));
+            return ResponseEntity.ok(EventResponse.success(safeUsers, "获取最近用户成功"));
             
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()));
