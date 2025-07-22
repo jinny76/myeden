@@ -1319,6 +1319,12 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return;
             }
 
+            // 新增：检查UserRobotLink的hasPendingMessage标记
+            if (hasPendingMessageInLink(targetUserId, robotId)) {
+                logger.info("用户 {} 与机器人 {} 之间有待沟通消息，跳过本次主动聊天", targetUserId, robotId);
+                return;
+            }
+
             // 生成聊天内容
             ProactiveChatResult chatResult = generateProactiveChatContent(robot, targetUserId);
             if (chatResult == null || StringUtils.isBlank(chatResult.getContent())) {
@@ -1795,5 +1801,19 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         // 这里可以根据机器人的心情状态调整
         // 暂时使用固定值，后续可以扩展为动态计算
         return 1.0;
+    }
+
+    /**
+     * 检查用户与机器人之间是否有待沟通消息（基于UserRobotLink.hasPendingMessage标记位）
+     *
+     * @param userId  用户ID
+     * @param robotId 机器人ID
+     * @return true-有待沟通消息，false-无
+     */
+    private boolean hasPendingMessageInLink(String userId, String robotId) {
+        // 获取UserRobotLink对象
+        return userRobotLinkService.getLink(userId, robotId)
+                .map(link -> Boolean.TRUE.equals(link.getHasPendingMessage()))
+                .orElse(false);
     }
 } 
