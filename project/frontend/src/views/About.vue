@@ -31,7 +31,7 @@
           <div class="info-grid">
             <div class="info-item">
               <span class="info-label">版本</span>
-              <span class="info-value">v1.0.9</span>
+              <span class="info-value">v1.1.0</span>
             </div>
             <div class="info-item">
               <span class="info-label">作者</span>
@@ -39,7 +39,7 @@
             </div>
             <div class="info-item">
               <span class="info-label">更新时间</span>
-              <span class="info-value">2025-07-22</span>
+              <span class="info-value">2025-07-24</span>
             </div>
             <div class="info-item">
               <span class="info-label">开源协议</span>

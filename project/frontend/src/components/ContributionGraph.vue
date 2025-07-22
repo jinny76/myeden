@@ -363,19 +363,19 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .contribution-graph {
   position: relative;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
   border-radius: 20px;
   padding: 30px;
   margin-bottom: 20px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   
   &:hover {
     transform: translateY(-2px);
-    border-color: rgba(34, 211, 107, 0.2);
-    box-shadow: 0 8px 30px rgba(34, 211, 107, 0.1);
+    border-color: var(--color-primary);
+    box-shadow: 0 8px 30px rgba(34, 211, 107, 0.15);
   }
   
   &::before {
@@ -467,13 +467,14 @@ onUnmounted(() => {
   transition: all 0.2s ease;
   
   &:hover {
-    outline: 1px solid rgba(255, 255, 255, 0.5);
+    outline: 2px solid var(--color-primary);
     outline-offset: 1px;
   }
   
+  // 浅色主题样式
   &.level-0 {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-border);
+    border: 1px solid var(--color-border);
   }
   
   &.level-1 {
@@ -493,14 +494,49 @@ onUnmounted(() => {
   
   &.level-4 {
     background: rgba(34, 211, 107, 0.8);
-    border: 1px solid rgba(34, 211, 107, 1);
+    border: 1px solid var(--color-primary);
+  }
+}
+
+// 深色主题特殊处理
+[data-theme='dark'] .contribution-graph,
+.dark-mode .contribution-graph {
+  .day-cell {
+    &.level-0 {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    &.level-1 {
+      background: rgba(34, 211, 107, 0.25);
+      border: 1px solid rgba(34, 211, 107, 0.35);
+    }
+    
+    &.level-2 {
+      background: rgba(34, 211, 107, 0.45);
+      border: 1px solid rgba(34, 211, 107, 0.55);
+    }
+    
+    &.level-3 {
+      background: rgba(34, 211, 107, 0.65);
+      border: 1px solid rgba(34, 211, 107, 0.75);
+    }
+    
+    &.level-4 {
+      background: rgba(34, 211, 107, 0.85);
+      border: 1px solid rgba(34, 211, 107, 1);
+    }
+    
+    &:hover {
+      outline: 2px solid rgba(255, 255, 255, 0.6);
+    }
   }
 }
 
 .graph-tooltip {
   position: absolute;
-  background: rgba(0, 0, 0, 0.9);
-  color: white;
+  background: var(--color-text);
+  color: var(--color-bg);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -509,7 +545,8 @@ onUnmounted(() => {
   pointer-events: none;
   transform: translateX(-50%) translateY(-100%);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   
   .tooltip-date {
     font-weight: 600;
@@ -517,12 +554,12 @@ onUnmounted(() => {
   }
   
   .tooltip-count {
-    color: #22d36b;
+    color: var(--color-primary);
     margin-bottom: 6px;
   }
   
   .tooltip-activities {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--color-border);
     padding-top: 6px;
     
     .activity-item {
@@ -541,9 +578,31 @@ onUnmounted(() => {
       }
       
       .activity-count {
-        color: #22d36b;
+        color: var(--color-primary);
         font-weight: 500;
         font-size: 0.75rem;
+      }
+    }
+  }
+}
+
+// 深色主题tooltip特殊处理
+[data-theme='dark'] .contribution-graph,
+.dark-mode .contribution-graph {
+  .graph-tooltip {
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    
+    .tooltip-count {
+      color: #22d36b;
+    }
+    
+    .tooltip-activities {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      
+      .activity-count {
+        color: #22d36b;
       }
     }
   }
@@ -572,9 +631,10 @@ onUnmounted(() => {
     height: 11px;
     border-radius: 2px;
     
+    // 浅色主题图例
     &.level-0 {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--color-border);
+      border: 1px solid var(--color-border);
     }
     
     &.level-1 {
@@ -594,6 +654,37 @@ onUnmounted(() => {
     
     &.level-4 {
       background: rgba(34, 211, 107, 0.8);
+      border: 1px solid var(--color-primary);
+    }
+  }
+}
+
+// 深色主题图例特殊处理
+[data-theme='dark'] .contribution-graph,
+.dark-mode .contribution-graph {
+  .legend-level {
+    &.level-0 {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    &.level-1 {
+      background: rgba(34, 211, 107, 0.25);
+      border: 1px solid rgba(34, 211, 107, 0.35);
+    }
+    
+    &.level-2 {
+      background: rgba(34, 211, 107, 0.45);
+      border: 1px solid rgba(34, 211, 107, 0.55);
+    }
+    
+    &.level-3 {
+      background: rgba(34, 211, 107, 0.65);
+      border: 1px solid rgba(34, 211, 107, 0.75);
+    }
+    
+    &.level-4 {
+      background: rgba(34, 211, 107, 0.85);
       border: 1px solid rgba(34, 211, 107, 1);
     }
   }
