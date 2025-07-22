@@ -790,8 +790,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                     } else if (randomValue < 0.6) {
                         // 随机选择一个今天的评论进行回复
                         triggerRobotReplyOnRecentComments(robot.getRobotId());
-                    } else if (randomValue < 0.8) {
-                        // 主动发起聊天
+                    } else if (randomValue < 0.65) {
+                        // 主动发起聊天 (降低触发概率从20%到5%)
                         triggerRobotProactiveChat(robot.getRobotId());
                     }
                     // 20%概率什么都不做
@@ -1295,9 +1295,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return;
             }
 
-            // 检查今日主动聊天次数限制
+            // 检查今日主动聊天次数限制 (降低每日上限)
             RobotDailyStats stats = getDailyStats(robotId);
-            if (stats.getProactiveChatCount() >= 5) { // 每日最多5次主动聊天
+            if (stats.getProactiveChatCount() >= 3) { // 每日最多3次主动聊天 (从5次降低到3次)
                 logger.info("机器人今日主动聊天次数已达上限: {}", robotId);
                 return;
             }
@@ -1374,14 +1374,14 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                             return false;
                         }
 
-                        // 检查最近互动时间（避免过于频繁）
+                        // 检查最近互动时间（避免过于频繁，增加冷却期）
                         String lastInteractionTime = link.getLastInteractionTime();
                         if (lastInteractionTime != null) {
                             try {
                                 LocalDateTime lastTime = LocalDateTime.parse(lastInteractionTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-                                LocalDateTime twoHoursAgo = LocalDateTime.now().minusHours(2);
-                                if (lastTime.isAfter(twoHoursAgo)) {
-                                    return false; // 2小时内有互动，跳过
+                                LocalDateTime sixHoursAgo = LocalDateTime.now().minusHours(6); // 冷却期从2小时增加到6小时
+                                if (lastTime.isAfter(sixHoursAgo)) {
+                                    return false; // 6小时内有互动，跳过
                                 }
                             } catch (Exception e) {
                                 logger.warn("解析最近互动时间失败: {}", lastInteractionTime);
@@ -1717,8 +1717,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 计算最终几率
             double finalProbability = baseProbability * timeMultiplier * socialEnergyMultiplier * moodMultiplier;
 
-            // 限制几率范围在合理区间
-            finalProbability = Math.max(0.05, Math.min(0.30, finalProbability));
+            // 限制几率范围在合理区间 (降低上限)
+            finalProbability = Math.max(0.02, Math.min(0.15, finalProbability));
 
             logger.debug("机器人 {} 主动聊天几率计算 - 基础: {:.2%}, 时间系数: {:.2f}, 社交系数: {:.2f}, 心情系数: {:.2f}, 最终: {:.2%}",
                     robot.getName(), baseProbability, timeMultiplier, socialEnergyMultiplier, moodMultiplier, finalProbability);
@@ -1740,18 +1740,18 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     private double getBaseProactiveChatProbability(Robot robot) {
         String personality = robot.getPersonality();
         if (personality == null) {
-            return 0.15; // 默认15%
+            return 0.08; // 默认8% (从15%降低)
         }
 
-        // 根据性格特征调整基础几率
+        // 根据性格特征调整基础几率 (整体降低)
         if (personality.contains("外向") || personality.contains("活泼") || personality.contains("热情")) {
-            return 0.20; // 外向性格更容易主动聊天
+            return 0.12; // 外向性格更容易主动聊天 (从20%降低到12%)
         } else if (personality.contains("内向") || personality.contains("安静") || personality.contains("害羞")) {
-            return 0.10; // 内向性格较少主动聊天
+            return 0.05; // 内向性格较少主动聊天 (从10%降低到5%)
         } else if (personality.contains("友好") || personality.contains("善良") || personality.contains("关心")) {
-            return 0.18; // 友好性格适中
+            return 0.10; // 友好性格适中 (从18%降低到10%)
         } else {
-            return 0.15; // 默认几率
+            return 0.08; // 默认几率 (从15%降低到8%)
         }
     }
 

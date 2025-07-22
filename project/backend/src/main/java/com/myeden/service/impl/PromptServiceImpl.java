@@ -258,14 +258,21 @@ public class PromptServiceImpl implements PromptService {
             }
         }
 
+        // 分析帖子类型和情感
+        String postType = analyzePostType(post);
+        String postEmotion = analyzePostEmotion(post);
+        int targetLength = determineCommentLength(postType, postEmotion);
+        
         // 添加评论生成要求
-        prompt.append("\n\n请根据一下发帖要求，加上你的性格和先前你看到的动态内容，生成一条纯文本的，自然、真实的评论, 仅返回动态本身, 不包含任何标题。");
+        prompt.append("\n\n请根据以下要求，结合你的性格和动态内容，生成一条纯文本的、自然、真实的评论, 仅返回评论内容, 不包含任何标题。");
+        prompt.append(String.format("\n\n## 帖子分析\n- 类型：%s\n- 情感倾向：%s", postType, postEmotion));
+        prompt.append("\n\n## 评论要求");
         prompt.append("\n- 如果动态内容提及多件事情, 请只评论其中一件事情");
         prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
         prompt.append("\n- 评论要符合你的性格特征");
         prompt.append("\n- 语言风格要符合你的说话习惯");
-        prompt.append("\n- 如果动态是在征询意见, 请认真有条理地回复, 长度控制在200字以内, 否则控制在20字以内");
-        //prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
+        prompt.append(getEmotionTemplate(postEmotion, postType));
+        prompt.append(String.format("\n- 回复长度控制在%d字以内", targetLength));
         prompt.append("\n- 后面的背景信息可以作为参考");
         prompt.append("\n- 不得有违法、违规内容，包括但不限于政治敏感话题、色情、暴力、赌博、侵权等违反法律法规和道德伦理的内容。");
 
@@ -332,13 +339,36 @@ public class PromptServiceImpl implements PromptService {
             }
         }
 
+        // 添加上下文分析
+        String replyContext = buildReplyContext(commentDetail, postDetail);
+        prompt.append("\n\n").append(replyContext);
+        
+        // 分析评论意图并确定回复长度
+        String commentIntent = analyzeCommentIntent(commentDetail.getContent());
+        int replyLength = determineReplyLength(commentIntent, commentDetail.getContent());
+        
+        // 判断是否应该参与回复
+        boolean shouldParticipate = shouldRobotParticipate(commentDetail, postDetail);
+        if (!shouldParticipate) {
+            prompt.append("\n\n## 参与判断\n根据对话场景分析，这个讨论可能不需要你主动参与。");
+            prompt.append("\n如果你选择不参与，请返回：\"[不参与]\"");
+            prompt.append("\n如果你认为有必要参与，请按照下面的要求回复。");
+        }
+        
+        // 构建回复目标提示
+        String replyTargetGuidance = buildReplyTargetGuidance(commentDetail, postDetail);
+        
         // 添加回复生成要求
-        prompt.append("\n\n请根据以下要求, 结合你的性格和评论内容，生成一条纯文本的, 自然、真实的回复来回复这条评论，只返回回复内容, 不要任何标题。");
-        prompt.append("\n- 如果评论内容提及多件事情, 请只评论其中一件事情");
+        prompt.append("\n\n请根据以下要求, 结合你的性格和评论内容，生成一条纯文本的, 自然、真实的回复，只返回回复内容, 不要任何标题。");
+        prompt.append(String.format("\n\n## 回复策略\n基于评论意图【%s】进行针对性回复", commentIntent));
+        prompt.append("\n\n").append(replyTargetGuidance);
+        prompt.append("\n\n## 回复要求");
+        prompt.append("\n- 如果评论内容提及多件事情, 请只回复其中一件事情");
         prompt.append("\n- 避免机械感, 广告感, 官方口吻, 要使用口语化, 略带网络感的表达, 偶尔可以有小瑕疵(比如错别字, 用'...'代表思考)");
         prompt.append("\n- 回复要符合你的性格特征");
         prompt.append("\n- 语言风格要符合你的说话习惯");
-        prompt.append("\n- 如果评论是在征询意见, 请认真有条理地回复, 长度控制在200字以内, 否则控制在20字以内");
+        prompt.append(getReplyStrategyTemplate(commentIntent));
+        prompt.append(String.format("\n- 回复长度控制在%d字以内", replyLength));
         //prompt.append("\n- 控制内容与职业相关回答占10%, 内容与职业无关的回答占90%");
         prompt.append("\n- 后面的背景信息可以作为参考");
         prompt.append("\n- 不得有违法、违规内容，包括但不限于政治敏感话题、色情、暴力、赌博、侵权等违反法律法规和道德伦理的内容。");
@@ -860,12 +890,26 @@ public class PromptServiceImpl implements PromptService {
     @Override
     public String generateReplyContent(Robot robot, CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail, String context) {
         try {
+            // 预先判断是否应该参与
+            boolean shouldParticipate = shouldRobotParticipate(commentDetail, postDetail);
+            if (!shouldParticipate) {
+                log.info("机器人 {} 选择不参与评论回复，评论内容: {}", robot.getName(), commentDetail.getContent());
+                return null; // 返回null表示不参与
+            }
+            
             // 使用PromptService构建提示词
             String prompt = buildReplyPrompt(robot, commentDetail, postDetail, context);
             // 调用Dify API
             DifyChatResult result = difyService.callDifyApi(prompt, robot.getRobotId(), robot.getAppKey());
             // 使用PromptService处理生成的内容
             String content = processGeneratedContent(result, robot, "reply").answer;
+            
+            // 检查AI是否选择不参与
+            if (content != null && content.trim().equals("[不参与]")) {
+                log.info("机器人 {} AI决定不参与评论回复", robot.getName());
+                return null;
+            }
+            
             // 保存日志
             saveContentGenerationLog(robot, prompt, content, "reply", context);
             return content;
@@ -1895,5 +1939,308 @@ public class PromptServiceImpl implements PromptService {
     private boolean isNewExpertSession(ChatMessage userMessage) {
         // 简单判断：如果会话ID为空或者是新会话，则认为是新会话
         return userMessage.getConversationId() == null || userMessage.getConversationId().trim().isEmpty();
+    }
+
+    /**
+     * 分析帖子类型
+     */
+    private String analyzePostType(PostService.PostDetail post) {
+        String content = post.getContent().toLowerCase();
+        if (content.contains("求助") || content.contains("请教") || content.contains("怎么办") || content.contains("?") || content.contains("？")) {
+            return "求助类";
+        } else if (content.contains("分享") || content.contains("推荐") || content.contains("安利")) {
+            return "分享类";
+        } else if (content.contains("吐槽") || content.contains("郁闷") || content.contains("烦") || content.contains("累") || content.contains("无奈")) {
+            return "情感类";
+        } else if (post.getImages() != null && !post.getImages().isEmpty()) {
+            return "图片展示类";
+        } else if (content.contains("打卡") || content.contains("记录") || content.contains("今天")) {
+            return "日常记录类";
+        }
+        return "日常类";
+    }
+
+    /**
+     * 分析帖子情感倾向
+     */
+    private String analyzePostEmotion(PostService.PostDetail post) {
+        String content = post.getContent().toLowerCase();
+        // 积极情感关键词
+        if (content.matches(".*(开心|高兴|兴奋|棒|赞|好|爽|哈哈|笑|满足|幸福|美好).*")) {
+            return "积极";
+        } 
+        // 消极情感关键词
+        else if (content.matches(".*(难过|沮丧|失望|烦|累|糟|郁闷|无奈|痛苦|焦虑|担心).*")) {
+            return "消极";
+        }
+        return "中性";
+    }
+
+    /**
+     * 根据帖子类型和情感确定评论长度
+     */
+    private int determineCommentLength(String postType, String emotion) {
+        if ("求助类".equals(postType)) {
+            return 120; // 求助帖需要更详细的回复
+        } else if ("情感类".equals(postType) && "消极".equals(emotion)) {
+            return 80; // 负面情感需要温暖回应
+        } else if ("图片展示类".equals(postType)) {
+            return 30; // 图片帖简短赞美即可
+        } else if ("分享类".equals(postType)) {
+            return 60; // 分享帖需要一定互动
+        }
+        return 50; // 默认长度
+    }
+
+    /**
+     * 获取情感回应模板
+     */
+    private String getEmotionTemplate(String emotion, String postType) {
+        if ("积极".equals(emotion)) {
+            return "- 回复要体现共鸣和支持，可以适当用感叹号表达兴奋，语调要轻松愉快\n";
+        } else if ("消极".equals(emotion)) {
+            return "- 回复要温暖贴心，表达理解和安慰，避免过于轻松的语调，可以分享类似经历或给予鼓励\n";
+        } else if ("求助类".equals(postType)) {
+            return "- 提供具体建议或分享相关经验，语气要诚恳专业，可以询问更多细节\n";
+        } else if ("分享类".equals(postType)) {
+            return "- 表达兴趣和好奇，可以询问更多细节或分享自己的相关经验\n";
+        }
+        return "- 保持自然友好的互动氛围\n";
+    }
+
+    /**
+     * 分析评论意图
+     */
+    private String analyzeCommentIntent(String content) {
+        if (content.contains("?") || content.contains("？")) return "询问";
+        if (content.matches(".*(不错|很棒|厉害|赞|好|牛|强|优秀).*")) return "赞美";
+        if (content.matches(".*(不同意|反对|错|不对|有问题).*")) return "质疑";
+        if (content.matches(".*(哈哈|笑|有趣|搞笑|好玩).*")) return "娱乐";
+        if (content.matches(".*(同感|我也|也是|一样).*")) return "共鸣";
+        return "交流";
+    }
+
+    /**
+     * 构建回复上下文分析
+     */
+    private String buildReplyContext(CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail) {
+        StringBuilder context = new StringBuilder();
+        
+        // 分析回复目标
+        String replyTarget = analyzeReplyTarget(commentDetail, postDetail);
+        context.append("## 对话场景分析\n");
+        context.append(replyTarget).append("\n");
+        
+        // 分析评论意图
+        String commentIntent = analyzeCommentIntent(commentDetail.getContent());
+        context.append("评论意图：").append(commentIntent).append("\n");
+        
+        // 根据不同意图给出回复建议
+        switch (commentIntent) {
+            case "询问":
+                context.append("- 这是一个问题，需要给出具体、有帮助的回答\n");
+                break;
+            case "赞美":
+                context.append("- 这是赞美，可以谦虚回应并继续话题或表达感谢\n");
+                break;
+            case "质疑":
+                context.append("- 对方提出质疑，要理性回应，可以解释或承认不足\n");
+                break;
+            case "共鸣":
+                context.append("- 对方表示共鸣，可以进一步交流相关话题或经历\n");
+                break;
+            case "娱乐":
+                context.append("- 对方觉得有趣，可以继续轻松幽默的互动\n");
+                break;
+            default:
+                context.append("- 进行自然友好的交流互动\n");
+        }
+        
+        return context.toString();
+    }
+
+    /**
+     * 分析回复目标和对话场景
+     */
+    private String analyzeReplyTarget(CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail) {
+        StringBuilder analysis = new StringBuilder();
+        
+        // 判断是否是对帖主的评论
+        boolean isCommentToPostAuthor = commentDetail.getContent().toLowerCase().matches(".*(楼主|博主|你的|你这|你说).*") ||
+                                      !commentDetail.getContent().contains("@");
+        
+        // 判断评论是否需要机器人参与
+        boolean needsRobotParticipation = shouldRobotParticipate(commentDetail, postDetail);
+        
+        if (isCommentToPostAuthor) {
+            analysis.append("- 这条评论主要是对原帖作者说的\n");
+            if (needsRobotParticipation) {
+                analysis.append("- 作为帖子作者，你需要回应这条评论\n");
+            } else {
+                analysis.append("- 你可以选择是否参与这个讨论\n");
+            }
+        } else {
+            analysis.append("- 这条评论可能是对其他评论者或者是一般性讨论\n");
+            if (needsRobotParticipation) {
+                analysis.append("- 你可以作为参与者加入讨论\n");
+                analysis.append("- 回复时要明确你是在回应这条评论，而不是原帖\n");
+            } else {
+                analysis.append("- 这个讨论可能不需要你参与\n");
+            }
+        }
+        
+        return analysis.toString();
+    }
+
+    /**
+     * 判断机器人是否应该参与这个对话
+     */
+    private boolean shouldRobotParticipate(CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail) {
+        String content = commentDetail.getContent().toLowerCase();
+        
+        // 直接提及机器人
+        if (content.contains("@") && content.contains("机器人")) {
+            return true;
+        }
+        
+        // 询问类评论，机器人可以提供帮助
+        if (content.contains("?") || content.contains("？") || content.contains("求助") || content.contains("请教")) {
+            return true;
+        }
+        
+        // 如果是对机器人帖子的评论，且评论者是在对话
+        if ("robot".equals(postDetail.getAuthorType()) && 
+            (content.contains("你") || content.contains("谢谢") || content.contains("不错"))) {
+            return true;
+        }
+        
+        // 话题相关且机器人有专业知识可以贡献
+        if (isTopicRelatedToRobot(content, postDetail)) {
+            return random.nextDouble() < 0.3; // 30%概率参与
+        }
+        
+        return false;
+    }
+
+    /**
+     * 判断话题是否与机器人相关
+     */
+    private boolean isTopicRelatedToRobot(String content, PostService.PostDetail postDetail) {
+        // 可以根据机器人的专业领域、兴趣爱好等判断
+        // 这里简化处理
+        return content.matches(".*(技术|编程|AI|音乐|电影|书籍).*");
+    }
+
+    /**
+     * 根据评论意图确定回复长度
+     */
+    private int determineReplyLength(String commentIntent, String commentContent) {
+        switch (commentIntent) {
+            case "询问":
+                return 100; // 问题需要详细回答
+            case "质疑":
+                return 80; // 质疑需要解释
+            case "赞美":
+                return 40; // 赞美简短回应即可
+            case "共鸣":
+                return 60; // 共鸣可以展开交流
+            case "娱乐":
+                return 50; // 娱乐轻松回应
+            default:
+                return 50; // 默认长度
+        }
+    }
+
+    /**
+     * 获取回复策略模板
+     */
+    private String getReplyStrategyTemplate(String commentIntent) {
+        switch (commentIntent) {
+            case "询问":
+                return "- 认真回答对方的问题，提供有用信息或建议\n";
+            case "赞美":
+                return "- 谦虚回应赞美，可以表达感谢或继续话题\n";
+            case "质疑":
+                return "- 理性对待质疑，可以解释、澄清或承认不足\n";
+            case "共鸣":
+                return "- 进一步交流共同话题，分享相关经历或感受\n";
+            case "娱乐":
+                return "- 保持轻松幽默的氛围，可以延续趣味性\n";
+            default:
+                return "- 进行自然友好的互动交流\n";
+        }
+    }
+
+    /**
+     * 构建回复目标指导
+     */
+    private String buildReplyTargetGuidance(CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail) {
+        StringBuilder guidance = new StringBuilder();
+        guidance.append("## 回复目标指导");
+        
+        // 判断评论是否明确指向帖主
+        boolean isDirectlyToPostAuthor = isCommentDirectlyToPostAuthor(commentDetail, postDetail);
+        
+        // 获取评论者和帖主的信息
+        String commenterName = getCommenterName(commentDetail);
+        String postAuthorName = getPostAuthorName(postDetail);
+        
+        if (isDirectlyToPostAuthor && "robot".equals(postDetail.getAuthorType())) {
+            // 评论是对机器人帖子的直接回应
+            guidance.append("\n- 这条评论是对你的帖子的直接回应，你应该作为帖主回复");
+            guidance.append("\n- 可以直接回复，不需要@提及");
+        } else if (!isDirectlyToPostAuthor) {
+            // 评论可能是对其他人说的或一般性讨论
+            guidance.append(String.format("\n- 这条评论的发布者是：%s", commenterName));
+            guidance.append("\n- 如果你要参与讨论，建议在回复开头使用 @" + commenterName + " 来明确回复对象");
+            guidance.append("\n- 你的回复是作为讨论参与者，而不是帖主身份");
+        } else if ("user".equals(postDetail.getAuthorType())) {
+            // 评论是对用户帖子的回应，机器人作为第三方参与
+            guidance.append(String.format("\n- 原帖作者是：%s，评论者是：%s", postAuthorName, commenterName));
+            guidance.append("\n- 你是作为第三方参与讨论");
+            guidance.append("\n- 建议使用 @" + commenterName + " 来回复这条评论");
+            guidance.append("\n- 或者可以 @" + postAuthorName + " 如果你的回复与原帖更相关");
+        }
+        
+        // 添加@使用示例
+        guidance.append("\n\n## @使用示例");
+        guidance.append("\n- 直接回复评论者：@" + commenterName + " 你说得对...");
+        guidance.append("\n- 回复中涉及帖主：@" + postAuthorName + " 我觉得你的想法...");
+        guidance.append("\n- 一般性讨论：直接发表观点，不用@");
+        
+        return guidance.toString();
+    }
+
+    /**
+     * 判断评论是否直接针对帖主
+     */
+    private boolean isCommentDirectlyToPostAuthor(CommentService.CommentDetail commentDetail, PostService.PostDetail postDetail) {
+        String content = commentDetail.getContent().toLowerCase();
+        
+        // 包含直接称呼的关键词
+        if (content.matches(".*(楼主|博主|up主|你的|你这|你说|你觉得|你认为).*")) {
+            return true;
+        }
+        
+        // 没有@其他人，且内容像是在对帖主说话
+        if (!content.contains("@") && (content.contains("你") || content.contains("赞") || content.contains("同意"))) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * 获取评论者姓名
+     */
+    private String getCommenterName(CommentService.CommentDetail commentDetail) {
+        return commentDetail.getAuthorName() != null ? commentDetail.getAuthorName() : "该用户";
+    }
+
+    /**
+     * 获取帖主姓名
+     */
+    private String getPostAuthorName(PostService.PostDetail postDetail) {
+        return postDetail.getAuthorName() != null ? postDetail.getAuthorName() : "帖主";
     }
 } 
