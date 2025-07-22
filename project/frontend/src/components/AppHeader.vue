@@ -45,6 +45,10 @@
                   <el-icon><Setting /></el-icon>
                   <span>设置</span>
                 </el-dropdown-item>
+                <el-dropdown-item command="about">
+                  <el-icon><InfoFilled /></el-icon>
+                  <span>关于</span>
+                </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon>
                   <span>退出登录</span>
@@ -128,6 +132,10 @@
             <el-icon><Setting /></el-icon>
             <span>设置</span>
           </div>
+          <div class="mobile-nav-item" @click="navigateTo('/about')">
+            <el-icon><InfoFilled /></el-icon>
+            <span>关于</span>
+          </div>
           <div class="mobile-nav-item logout-item" @click="handleLogout">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
@@ -157,7 +165,7 @@ import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
 import { 
   ChatDotRound, Compass, User, Menu, Close, House, SwitchButton, 
-  UserFilled, ArrowRight, Star, Setting, Plus, View, Bell 
+  UserFilled, ArrowRight, Star, Setting, Plus, View, Bell, InfoFilled 
 } from '@element-plus/icons-vue'
 import { getUserAvatarUrl } from '@/utils/avatar'
 
@@ -182,6 +190,9 @@ const handleUserCommand = async (command) => {
       break
     case 'logout':
       await handleLogout()
+      break
+    case 'about':
+      router.push('/about')
       break
   }
 }
@@ -533,7 +544,9 @@ onUnmounted(() => {
 }
 
 .mobile-menu-content {
-  padding: 20px 24px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-bottom: 16px;
 }
 
 .mobile-nav-item {
