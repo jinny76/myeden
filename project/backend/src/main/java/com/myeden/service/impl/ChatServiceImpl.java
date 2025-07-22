@@ -4,6 +4,7 @@ import com.myeden.entity.ChatMessage;
 import com.myeden.repository.ChatMessageRepository;
 import com.myeden.service.ChatService;
 import com.myeden.service.ActivityService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,10 @@ public class ChatServiceImpl implements ChatService {
     public void sendMessage(ChatMessage message) {
         if (message == null || message.getSenderId() == null || message.getReceiverId() == null || message.getContent() == null) {
             throw new IllegalArgumentException("消息内容、发送者和接收者不能为空");
+        }
+
+        if(StringUtils.isBlank(message.getExpertThemeId())) {
+            message.setExpertThemeId(null);
         }
 
         chatMessageRepository.save(message);

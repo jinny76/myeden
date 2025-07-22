@@ -20,29 +20,35 @@
     </div>
     <div class="chat-messages" ref="messagesContainer">
       <div v-if="loadingHistory" class="loading-history">历史消息加载中...</div>
-      <div v-for="msg in messages" :key="msg.id" :class="['chat-message', msg.senderType, { 'voice-message': msg.asrResult }]">
-        <el-avatar :src="getAvatar(msg)" />
-        <div 
-          class="message-content"
-          :class="{ 'clickable': msg.senderType === 'robot' || msg.senderType === 'ai' }"
-          @click="handleMessageClick(msg)"
-          :title="(msg.senderType === 'robot' || msg.senderType === 'ai') ? '点击播放语音' : ''"
-        >
-          <template v-if="msg.asrResult">           
-            {{ msg.asrResult.text || getContent(msg.content) }}
-            <span v-if="msg.asrResult.emotion && msg.asrResult.emotion !== 'NEUTRAL'" class="emotion-label">
-              <template v-if="msg.asrResult.emotion === 'HAPPY'">😊</template>
-              <template v-else-if="msg.asrResult.emotion === 'SAD'">😢</template>
-              <template v-else-if="msg.asrResult.emotion === 'ANGRY'">😠</template>
-              <template v-else-if="msg.asrResult.emotion === 'SURPRISED'">😲</template>
-              <template v-else-if="msg.asrResult.emotion === 'DISGUSTED'">😒</template>
-              <template v-else-if="msg.asrResult.emotion === 'FEARFUL'">😨</template>              
-              <template v-else-if="msg.asrResult.emotion === 'CONFUSED'">😕</template>
-            </span>
-          </template>
-          <template v-else>
-            {{ getContent(msg.content) }}
-          </template>          
+      <div v-for="(msg, idx) in messages" :key="msg.id || ('user-' + idx)">
+        <!-- 时间分割线 -->
+        <div v-if="shouldShowTime(idx)" class="chat-time-divider">
+          {{ formatTime(msg.createdAt) }}
+        </div>
+        <div :class="['chat-message', msg.senderType, { 'voice-message': msg.asrResult }]">
+          <el-avatar :src="getAvatar(msg)" />
+          <div 
+            class="message-content"
+            :class="{ 'clickable': msg.senderType === 'robot' || msg.senderType === 'ai' }"
+            @click="handleMessageClick(msg)"
+            :title="(msg.senderType === 'robot' || msg.senderType === 'ai') ? '点击播放语音' : ''"
+          >
+            <template v-if="msg.asrResult">           
+              {{ msg.asrResult.text || getContent(msg.content) }}
+              <span v-if="msg.asrResult.emotion && msg.asrResult.emotion !== 'NEUTRAL'" class="emotion-label">
+                <template v-if="msg.asrResult.emotion === 'HAPPY'">😊</template>
+                <template v-else-if="msg.asrResult.emotion === 'SAD'">😢</template>
+                <template v-else-if="msg.asrResult.emotion === 'ANGRY'">😠</template>
+                <template v-else-if="msg.asrResult.emotion === 'SURPRISED'">😲</template>
+                <template v-else-if="msg.asrResult.emotion === 'DISGUSTED'">😒</template>
+                <template v-else-if="msg.asrResult.emotion === 'FEARFUL'">😨</template>              
+                <template v-else-if="msg.asrResult.emotion === 'CONFUSED'">😕</template>
+              </span>
+            </template>
+            <template v-else>
+              {{ getContent(msg.content) }}
+            </template>          
+          </div>
         </div>
       </div>
       <div v-if="loading" class="loading">加载中...</div>
@@ -141,6 +147,7 @@ import { useWebSocketStore } from '@/stores/websocket'
 import { Back, VideoCamera, Refresh, Microphone, VideoPlay, Position } from '@element-plus/icons-vue'
 import { message } from '@/utils/message'
 import { tts } from '@/api/tts'
+import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
@@ -809,6 +816,38 @@ const endExpertSession = async () => {
     message.error('结束会话失败，请重试')
   }
 }
+
+/**
+ * 判断当前消息是否需要显示时间分割线
+ * @param {number} idx - 当前消息索引
+ * @returns {boolean}
+ */
+function shouldShowTime(idx) {
+  if (idx === 0) return true
+  const prev = messages.value[idx - 1]
+  const curr = messages.value[idx]
+  if (!prev || !curr) return false
+  const prevTime = dayjs(prev.createdAt)
+  const currTime = dayjs(curr.createdAt)
+  return currTime.diff(prevTime, 'minute') >= 10
+}
+
+/**
+ * 格式化时间
+ * @param {string|number} ts
+ * @returns {string}
+ */
+function formatTime(ts) {
+  const now = dayjs()
+  const msgTime = dayjs(ts)
+  if (msgTime.isSame(now, 'day')) {
+    // 今天的消息只显示时分
+    return msgTime.format('HH:mm')
+  } else {
+    // 非今天的消息显示完整日期
+    return msgTime.format('YYYY-MM-DD HH:mm')
+  }
+}
 </script>
 
 <style scoped>
@@ -1346,6 +1385,14 @@ const endExpertSession = async () => {
   font-size: 0.95em;
 }
 
+.chat-time-divider {
+  text-align: center;
+  color: rgba(170, 170, 170, 0.5);
+  font-size: 11px;
+  margin: 12px 0 4px 0;
+  letter-spacing: 1px;
+}
+
 .fullscreen-video-mask {
   position: fixed;
   left: 0; top: 0; right: 0; bottom: 0;
@@ -1447,7 +1494,7 @@ const endExpertSession = async () => {
   .chat-messages {
     padding: 8px;
     padding-top: 48px;
-    margin-top: -20px;
+    margin-top: 70px;
     font-size: 15px;
   }
   .chat-input {
