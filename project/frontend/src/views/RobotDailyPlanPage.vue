@@ -14,11 +14,22 @@
           end-placeholder="结束日期"
           style="width: 320px; margin-right: 16px;"
         />
-        <el-button type="primary" @click="fetchPlans">查询</el-button>
+        <el-button type="primary" @click="handleSearch">查询</el-button>
       </div>
     </div>
     <div class="plan-list">
-      <el-empty v-if="plans.length === 0" description="暂无计划" />
+      <!-- 初始加载状态 -->
+      <div v-if="initialLoading" class="loading-container">
+        <el-icon class="is-loading loading-icon">
+          <Loading />
+        </el-icon>
+        <span class="loading-text">正在加载计划...</span>
+      </div>
+      
+      <!-- 空状态 -->
+      <el-empty v-else-if="plans.length === 0 && !initialLoading" description="暂无计划" />
+      
+      <!-- 计划列表 -->
       <div v-else>
         <el-card v-for="plan in plans" :key="plan.id" class="plan-card">
           <div class="plan-header">
@@ -50,14 +61,38 @@
             </template>
           </div>
         </el-card>
+        
+        <!-- 加载更多状态指示器 -->
+        <div v-if="plans.length > 0" class="load-more-container">
+          <!-- 正在加载更多 -->
+          <div v-if="loading" class="loading-more">
+            <el-icon class="is-loading loading-icon">
+              <Loading />
+            </el-icon>
+            <span class="loading-text">正在加载更多...</span>
+          </div>
+          
+          <!-- 没有更多数据 -->
+          <div v-else-if="!hasMore" class="no-more">
+            <span class="no-more-text">没有更多的活动了</span>
+          </div>
+          
+          <!-- 手动加载更多按钮（备用） -->
+          <div v-else class="manual-load">
+            <el-button type="text" @click="loadMorePlans" class="load-more-btn">
+              滚动到底部自动加载更多
+            </el-button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
 import api from '@/api/robot' // 假设有robot相关API
 import dayjs from 'dayjs'
 
@@ -66,6 +101,13 @@ const selectedRobotId = ref()
 const dateRange = ref([])
 const plans = ref([])
 const currentTimeStr = computed(() => dayjs().format('HH:mm'))
+
+// 分页状态管理
+const currentPage = ref(0)
+const pageSize = ref(20)
+const hasMore = ref(true)
+const loading = ref(false)
+const initialLoading = ref(false)
 
 /**
  * 获取机器人名称
@@ -99,28 +141,102 @@ async function fetchRobots() {
 }
 
 /**
- * 获取计划列表。如果未选择日期范围，默认最近三天（含今天）。
+ * 滚动监听处理函数
  */
-async function fetchPlans() {
+function handleScroll() {
+  // 防抖：如果正在加载或没有更多数据，直接返回
+  if (loading.value || !hasMore.value) return
+  
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+  const windowHeight = window.innerHeight
+  const documentHeight = document.documentElement.scrollHeight
+  
+  // 当滚动到距离底部100px时触发加载
+  if (scrollTop + windowHeight >= documentHeight - 100) {
+    loadMorePlans()
+  }
+}
+
+/**
+ * 处理搜索按钮点击事件
+ */
+async function handleSearch() {
+  // 重置分页状态
+  currentPage.value = 0
+  hasMore.value = true
+  plans.value = []
+  
+  // 执行搜索
+  await fetchPlans(false)
+}
+
+/**
+ * 获取计划列表。如果未选择日期范围，默认最近三天（含今天）。
+ * @param {boolean} isLoadMore 是否为加载更多（追加数据）
+ */
+async function fetchPlans(isLoadMore = false) {
   try {
+    // 设置加载状态
+    if (isLoadMore) {
+      loading.value = true
+    } else {
+      initialLoading.value = true
+    }
+    
     // 如果未选择日期范围，默认最近三天（含今天）
     if (!dateRange.value || dateRange.value.length !== 2) {
       const today = dayjs()
       const twoDaysAgo = today.subtract(2, 'day')
       dateRange.value = [twoDaysAgo.toDate(), today.toDate()]
     }
+    
     const params = {
       robotId: selectedRobotId.value,
       startDate: dayjs(dateRange.value[0]).format('YYYY-MM-DD'),
       endDate: dayjs(dateRange.value[1]).format('YYYY-MM-DD'),
-      page: 0,
-      size: 20
+      page: currentPage.value,
+      size: pageSize.value
     }
+    
+    console.log('fetchPlans params:', params) // 添加调试日志
+    
     const res = await api.getDailyPlanList(params)
-    plans.value = res.data || []
+    const newPlans = res.data || []
+    
+    console.log('fetchPlans result:', newPlans.length, 'plans') // 添加调试日志
+    
+    if (isLoadMore) {
+      // 追加数据
+      plans.value = [...plans.value, ...newPlans]
+    } else {
+      // 替换数据
+      plans.value = newPlans
+    }
+    
+    // 判断是否还有更多数据
+    hasMore.value = newPlans.length === pageSize.value
+    
+    // 如果成功加载，页码+1（为下次加载更多做准备）
+    if (newPlans.length > 0) {
+      currentPage.value++
+    }
+    
   } catch (e) {
+    console.error('fetchPlans error:', e) // 添加错误日志
     ElMessage.error('获取计划失败')
+    hasMore.value = false
+  } finally {
+    loading.value = false
+    initialLoading.value = false
   }
+}
+
+/**
+ * 加载更多计划数据
+ */
+async function loadMorePlans() {
+  if (loading.value || !hasMore.value) return
+  await fetchPlans(true)
 }
 
 /**
@@ -161,6 +277,13 @@ function isLastStartedSlot(plan, slot) {
 onMounted(() => {
   fetchRobots()
   fetchPlans()
+  // 添加滚动监听
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  // 移除滚动监听
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
@@ -320,6 +443,77 @@ onMounted(() => {
   margin: 60px 0 40px 0;
 }
 
+/* 加载状态指示器样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--color-text);
+}
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 20px;
+  margin-top: 20px;
+}
+
+.loading-more,
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.loading-icon {
+  font-size: 24px;
+  color: var(--color-primary);
+}
+
+.loading-text {
+  font-size: 14px;
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.no-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-more-text {
+  font-size: 14px;
+  color: var(--color-text);
+  opacity: 0.5;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(34, 211, 107, 0.05);
+  border: 1px solid rgba(34, 211, 107, 0.1);
+}
+
+.manual-load {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.load-more-btn {
+  font-size: 13px;
+  color: var(--color-text);
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.load-more-btn:hover {
+  color: var(--color-primary);
+  opacity: 1;
+}
+
 /* 响应式优化 */
 @media (max-width: 900px) {
   .robot-daily-plan-page {
@@ -327,6 +521,12 @@ onMounted(() => {
   }
   .plan-card {
     padding: 18px 10px 14px 14px;
+  }
+  .loading-container {
+    padding: 40px 20px;
+  }
+  .load-more-container {
+    padding: 24px 20px;
   }
 }
 @media (max-width: 600px) {
@@ -341,6 +541,25 @@ onMounted(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
+  }
+  .loading-container {
+    padding: 32px 16px;
+  }
+  .load-more-container {
+    padding: 20px 16px;
+  }
+  .loading-icon {
+    font-size: 20px;
+  }
+  .loading-text {
+    font-size: 13px;
+  }
+  .no-more-text {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+  .load-more-btn {
+    font-size: 12px;
   }
 }
 </style> 
