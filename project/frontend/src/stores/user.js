@@ -91,7 +91,7 @@ export const useUserStore = defineStore('user', () => {
         setRefreshToken(refreshToken)
         userInfo.value = user || { userId, isFirstLogin }
         isLoggedIn.value = true
-        saveCredentials({ phone: loginData.phone, password: loginData.password })
+        //saveCredentials({ phone: loginData.phone, password: loginData.password })
         console.log('✅ 用户登录成功:', userInfo.value.nickname)
         return response
       } else {

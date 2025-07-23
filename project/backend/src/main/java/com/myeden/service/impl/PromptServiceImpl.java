@@ -450,6 +450,22 @@ public class PromptServiceImpl implements PromptService {
         if (processedContent.contains("</think>")) {
             processedContent = processedContent.substring(processedContent.indexOf("</think>\n") + "</think>\n".length());
         }
+        if (processedContent.contains("<think>") && !processedContent.contains("</think>")) {
+            String content = processedContent;
+            int thinkIdx = content.indexOf("<think>");
+            content = content.substring(thinkIdx + "<think>".length()).trim();
+            int lastColon = content.lastIndexOf(':');
+            if (lastColon != -1 && lastColon < content.length() - 1) {
+                processedContent = content.substring(lastColon + 1).trim();
+            } else {
+                int lastComma = content.lastIndexOf(',');
+                if (lastComma != -1 && lastComma < content.length() - 1) {
+                    processedContent = content.substring(lastComma + 1).trim();
+                } else {
+                    processedContent = content.trim();
+                }
+            }
+        }
 
         log.info(processedContent);
         result.answer = processedContent;

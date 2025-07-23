@@ -228,8 +228,8 @@ project/
 ## Deployment Notes
 
 ### Development Environment
-- **Backend**: Runs on port 38080 (configured in application.yml)
-- **Frontend**: Runs on port 35000 (configured in vite.config.js)
+- **Backend**: Runs on port 38081 (configured in application.yml)
+- **Frontend**: Runs on port 35001 (configured in vite.config.js)
 - **Database**: MongoDB on default port 27017
 - **Redis**: On default port 6379 for caching
 
@@ -254,3 +254,112 @@ Based on the project's Cursor rules:
 - Only modify necessary code, avoid generating test pages or documentation
 - Don't create unnecessary fix scripts or automation
 - Follow existing component patterns and API integration approaches
+
+## Testing and Quality Assurance
+
+### Backend Testing
+```bash
+cd project/backend
+
+# Run all tests
+mvn test
+
+# Run specific test class
+mvn test -Dtest=ClassName
+
+# Run tests with coverage
+mvn test jacoco:report
+```
+
+### Frontend Testing
+```bash
+cd project/frontend
+
+# Lint check
+npm run lint
+
+# Format code
+npm run format
+
+# Check for dependency vulnerabilities
+npm audit
+```
+
+## Build and Deployment Commands
+
+### Backend Build
+```bash
+cd project/backend
+
+# Development build
+mvn clean install
+
+# Production build with profiles
+mvn clean package -Pprod
+
+# Run with specific profile
+mvn spring-boot:run -Dspring-profiles.active=dev
+```
+
+### Frontend Build
+```bash
+cd project/frontend
+
+# Production build
+npm run build
+
+# Preview production build locally
+npm run preview
+
+# Build with analysis
+npm run build --report
+```
+
+## API Documentation and Swagger
+
+### Accessing API Documentation
+- **Swagger UI**: Available at `http://localhost:38081/swagger-ui.html` when backend is running
+- **OpenAPI Spec**: Available at `http://localhost:38081/v3/api-docs`
+
+### Key API Endpoints
+- **Authentication**: `/api/v1/auth/*` - User authentication and token management
+- **Posts**: `/api/v1/posts/*` - Social media post operations
+- **Chat**: `/api/v1/chat/*` - Real-time chat functionality
+- **Robots**: `/api/v1/robots/*` - AI robot management
+- **Users**: `/api/v1/users/*` - User profile management
+
+## Database Schema and Relationships
+
+### Core Collections
+- **users**: User profiles with authentication data
+- **robots**: AI robot configurations and personalities
+- **userRobotLinks**: Relationship mapping with familiarity levels (0-4)
+- **chatMessages**: Real-time message storage
+- **posts**: Social media posts with metadata
+- **comments**: Nested comment structures
+
+### Familiarity Level System
+- **Level 0**: Stranger - Basic interactions only
+- **Level 1**: Acquaintance - Limited personal topics
+- **Level 2**: Friend - Casual conversations and shared interests
+- **Level 3**: Close Friend - Personal matters and advice
+- **Level 4**: Intimate - Deep emotional connections and support
+
+## Configuration Management
+
+### Environment Configuration
+- **Development**: Default settings in `application.yml`
+- **Production**: Override with environment variables or external config
+- **Database**: Configure MongoDB connection in `application.yml`
+- **External APIs**: Set Dify API keys and SearXNG endpoints
+
+### Robot Configuration
+- **Personality Settings**: `config/robots-config.yaml` - Defines AI personalities and behaviors
+- **World Settings**: `config/world-config.yaml` - Virtual world parameters
+- **Behavior Scheduling**: Configured via `@Scheduled` annotations in service classes
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
