@@ -144,27 +144,25 @@ public interface UserService {
      */
     class UserLoginResult {
         private String userId;
-        private String token;
+        private String accessToken;
+        private String refreshToken;
         private Boolean isFirstLogin;
         private User user;
-        
-        public UserLoginResult(String userId, String token, Boolean isFirstLogin, User user) {
+        public UserLoginResult(String userId, String accessToken, String refreshToken, Boolean isFirstLogin, User user) {
             this.userId = userId;
-            this.token = token;
+            this.accessToken = accessToken;
+            this.refreshToken = refreshToken;
             this.isFirstLogin = isFirstLogin;
             this.user = user;
         }
-        
-        // Getter和Setter方法
         public String getUserId() { return userId; }
         public void setUserId(String userId) { this.userId = userId; }
-        
-        public String getToken() { return token; }
-        public void setToken(String token) { this.token = token; }
-        
+        public String getAccessToken() { return accessToken; }
+        public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
+        public String getRefreshToken() { return refreshToken; }
+        public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
         public Boolean getIsFirstLogin() { return isFirstLogin; }
         public void setIsFirstLogin(Boolean isFirstLogin) { this.isFirstLogin = isFirstLogin; }
-        
         public User getUser() { return user; }
         public void setUser(User user) { this.user = user; }
     }

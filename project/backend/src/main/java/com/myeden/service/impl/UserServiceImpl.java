@@ -123,18 +123,15 @@ public class UserServiceImpl implements UserService {
         if (userOpt.isEmpty()) {
             throw new RuntimeException("用户不存在");
         }
-        
         User user = userOpt.get();
-        
         // 验证密码
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("密码错误");
         }
-        
-        // 生成JWT token
-        String token = jwtService.generateToken(user.getUserId());
-        
-        return new UserLoginResult(user.getUserId(), token, user.getIsFirstLogin(), user);
+        // 生成accessToken和refreshToken
+        String accessToken = jwtService.generateAccessToken(user.getUserId());
+        String refreshToken = jwtService.generateRefreshToken(user.getUserId());
+        return new UserLoginResult(user.getUserId(), accessToken, refreshToken, user.getIsFirstLogin(), user);
     }
     
     @Override

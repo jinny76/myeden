@@ -74,7 +74,8 @@ spring:
 
 # JWT配置
 jwt:
-  secret: myeden-secret-key-2025-very-long-and-secure
+  secret: "a8f7d6c5b4e3f2a1a8f7d6c5b4e3f2a1"
+  refreshSecret: "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p"
   expiration: 604800000  # 7天
   refresh-expiration: 604800000  # 7天
   issuer: myeden

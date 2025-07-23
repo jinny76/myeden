@@ -34,6 +34,12 @@ public class JwtService {
     
     @Value("${jwt.expiration:86400000}")
     private long expiration;
+
+    @Value("${jwt.refreshSecret:myeden-refresh-secret-key}")
+    private String refreshSecret;
+
+    @Value("${jwt.refreshExpiration:2592000000}") // 30天
+    private long refreshExpiration;
     
     /**
      * 获取签名密钥
@@ -41,6 +47,14 @@ public class JwtService {
      */
     private SecretKey getSigningKey() {
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    /**
+     * 获取refreshToken签名密钥
+     */
+    private SecretKey getRefreshSigningKey() {
+        byte[] keyBytes = refreshSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
     
@@ -67,6 +81,48 @@ public class JwtService {
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    /**
+     * 生成accessToken（短期）
+     */
+    public String generateAccessToken(String userId) {
+        return Jwts.builder()
+                .setSubject(userId)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
+     * 生成refreshToken（长期）
+     */
+    public String generateRefreshToken(String userId) {
+        return Jwts.builder()
+                .setSubject(userId)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
+                .signWith(getRefreshSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
+     * 校验refreshToken并提取userId
+     */
+    public String extractUserIdFromRefreshToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .setSigningKey(getRefreshSigningKey())
+                    .parseClaimsJws(token)
+                    .getBody();
+            if (claims.getExpiration().before(new Date())) {
+                return null;
+            }
+            return claims.getSubject();
+        } catch (Exception e) {
+            return null;
+        }
     }
     
     /**

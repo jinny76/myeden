@@ -113,7 +113,6 @@ public class UserController {
         try {
             String phone = request.get("phone");
             String password = request.get("password");
-            
             // 参数验证
             if (phone == null || phone.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(EventResponse.error(400, "手机号不能为空"));
@@ -121,12 +120,33 @@ public class UserController {
             if (password == null || password.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(EventResponse.error(400, "密码不能为空"));
             }
-            
             // 执行登录
             UserService.UserLoginResult result = userService.login(phone, password);
-            
             return ResponseEntity.ok(EventResponse.success(result, "登录成功"));
-            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * 刷新accessToken
+     * POST /api/v1/users/refresh-token
+     * @param request { refreshToken: string }
+     * @return 新的accessToken
+     */
+    @PostMapping("/refresh-token")
+    public ResponseEntity<EventResponse> refreshToken(@RequestBody Map<String, String> request) {
+        try {
+            String refreshToken = request.get("refreshToken");
+            if (refreshToken == null || refreshToken.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(EventResponse.error(400, "refreshToken不能为空"));
+            }
+            String userId = jwtService.extractUserIdFromRefreshToken(refreshToken);
+            if (userId == null) {
+                return ResponseEntity.status(401).body(EventResponse.error(401, "refreshToken无效或已过期"));
+            }
+            String newAccessToken = jwtService.generateAccessToken(userId);
+            return ResponseEntity.ok(EventResponse.success(Map.of("accessToken", newAccessToken), "刷新token成功"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()));
         }

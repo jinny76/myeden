@@ -184,6 +184,19 @@ export function getCurrentUserPersonalStatistics() {
   })
 }
 
+/**
+ * 刷新accessToken
+ * @param {string} refreshToken
+ * @returns {Promise} 新的accessToken
+ */
+export function refreshToken(refreshToken) {
+  return request({
+    url: '/users/refresh-token',
+    method: 'post',
+    data: { refreshToken }
+  })
+}
+
 // 导出所有API方法
 export const userApi = {
   register,
@@ -198,5 +211,6 @@ export const userApi = {
   getRecentUsers,
   getUserStatistics,
   getUserPersonalStatistics,
-  getCurrentUserPersonalStatistics
+  getCurrentUserPersonalStatistics,
+  refreshToken
 } 

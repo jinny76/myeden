@@ -33,6 +33,18 @@ export const useUserStore = defineStore('user', () => {
   const phone = computed(() => userInfo.value?.phone || '')
   const isFirstLogin = computed(() => userInfo.value?.isFirstLogin || false)
 
+  const refreshTokenKey = 'refreshToken'
+
+  function setRefreshToken(token) {
+    if (token) localStorage.setItem(refreshTokenKey, token)
+  }
+  function getRefreshToken() {
+    return localStorage.getItem(refreshTokenKey) || ''
+  }
+  function removeRefreshToken() {
+    localStorage.removeItem(refreshTokenKey)
+  }
+
   /**
    * 初始化用户状态
    */
@@ -70,29 +82,16 @@ export const useUserStore = defineStore('user', () => {
     try {
       loading.value = true
       error.value = null
-      
       const response = await userApi.login(loginData)
-      
       if (response.code === 200 && response.data) {
-        const { userId, token: newToken, isFirstLogin, user } = response.data
-        
+        const { userId, accessToken, refreshToken, isFirstLogin, user } = response.data
         // 保存token和用户信息
-        token.value = newToken
-        userInfo.value = user || {
-          userId,
-          isFirstLogin
-        }
+        token.value = accessToken
+        setToken(accessToken)
+        setRefreshToken(refreshToken)
+        userInfo.value = user || { userId, isFirstLogin }
         isLoggedIn.value = true
-        
-        // 保存到本地存储
-        setToken(newToken)
-        
-        // 保存用户凭据用于自动登录
-        saveCredentials({
-          phone: loginData.phone,
-          password: loginData.password
-        })
-        
+        saveCredentials({ phone: loginData.phone, password: loginData.password })
         console.log('✅ 用户登录成功:', userInfo.value.nickname)
         return response
       } else {
@@ -322,18 +321,13 @@ export const useUserStore = defineStore('user', () => {
    * 用户登出
    */
   const logout = () => {
-    // 清除状态
     token.value = ''
     userInfo.value = null
     userStatistics.value = null
     isLoggedIn.value = false
-    
-    // 清除本地存储
     removeToken()
-    
-    // 清除保存的凭据
+    removeRefreshToken()
     clearCredentials()
-    
     console.log('🔌 用户已登出')
   }
 
@@ -351,15 +345,13 @@ export const useUserStore = defineStore('user', () => {
    */
   const refreshToken = async () => {
     try {
-      const response = await userApi.refreshToken()
-      
-      // 适配新的后端响应格式 (EventResponse)
+      const refreshTokenVal = getRefreshToken()
+      if (!refreshTokenVal) throw new Error('refreshToken不存在')
+      const response = await userApi.refreshToken(refreshTokenVal)
       if (response.code === 200 && response.data) {
-        const { token: newToken } = response.data
-        
-        token.value = newToken
-        setToken(newToken)
-        
+        const { accessToken } = response.data
+        token.value = accessToken
+        setToken(accessToken)
         console.log('✅ Token刷新成功')
         return response
       } else {
