@@ -206,4 +206,13 @@ public interface PromptService {
      * @return AI回复结果
      */
     DifyService.DifyChatResult generateExpertChatReply(Robot robot, String themeId, com.myeden.entity.ChatMessage userMessage, String memoryContext);
+    
+    /**
+     * 根据动态内容生成配图搜索关键字
+     * 
+     * @param postContent 动态内容
+     * @param robot 机器人信息
+     * @return 搜索关键字，如果生成失败则返回null
+     */
+    String generateImageSearchKeywords(String postContent, Robot robot);
 }

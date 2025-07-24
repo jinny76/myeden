@@ -31,6 +31,12 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.Optional;
 import java.util.Objects;
+import java.io.*;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import com.myeden.service.impl.PromptServiceImpl;
 
@@ -272,6 +278,11 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
                 // 保存到数据库
                 Post savedPost = postRepository.save(post);
+
+                // 随机2/3几率添加配图
+                if (savedPost != null && new Random().nextInt(3) < 2) {
+                    tryAddPostImage(savedPost, robot, content);
+                }
 
                 if (savedPost != null) {
                     stats.incrementPost();
@@ -1815,5 +1826,98 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         return userRobotLinkService.getLink(userId, robotId)
                 .map(link -> Boolean.TRUE.equals(link.getHasPendingMessage()))
                 .orElse(false);
+    }
+
+    /**
+     * 尝试为动态添加配图
+     * @param post 已保存的动态
+     * @param robot 机器人信息
+     * @param content 动态内容
+     */
+    private void tryAddPostImage(Post post, Robot robot, String content) {
+        try {
+            logger.info("开始为动态添加配图: postId={}, content={}", post.getPostId(), content.substring(0, Math.min(content.length(), 30)));
+            
+            // 1. 使用AI生成配图搜索关键字
+            String searchKeywords = promptService.generateImageSearchKeywords(content, robot);
+            if (searchKeywords == null || searchKeywords.trim().isEmpty()) {
+                logger.warn("AI生成配图搜索关键字失败，跳过添加配图");
+                return;
+            }
+            
+            logger.info("AI生成的配图搜索关键字: {}", searchKeywords);
+            
+            // 2. 搜索图片
+            List<Map<String, Object>> imageResults = searchContentService.searchImages(searchKeywords);
+            if (imageResults.isEmpty()) {
+                logger.warn("未找到配图搜索结果，跳过添加配图");
+                return;
+            }
+            
+            // 3. 获取第一张图片
+            Map<String, Object> firstImage = imageResults.get(0);
+            String imgSrc = (String) firstImage.get("imgSrc");
+            String title = (String) firstImage.get("title");
+            
+            if (imgSrc == null || imgSrc.trim().isEmpty()) {
+                logger.warn("第一张图片URL为空，跳过添加配图");
+                return;
+            }
+            
+            logger.info("开始下载图片: {}", imgSrc);
+            
+            // 4. 下载并保存图片
+            String savedImagePath = downloadAndSaveImage(imgSrc, post.getPostId());
+            if (savedImagePath != null) {
+                // 5. 更新动态，添加图片
+                post.addImage(savedImagePath);
+                if (title != null && !title.trim().isEmpty()) {
+                    post.getImageInfos().add(title.trim());
+                } else {
+                    post.getImageInfos().add("配图");
+                }
+                
+                // 保存更新后的动态
+                postRepository.save(post);
+                logger.info("成功为动态添加配图: postId={}, imagePath={}", post.getPostId(), savedImagePath);
+            }
+            
+        } catch (Exception e) {
+            logger.error("为动态添加配图时发生异常: postId={}, error={}", post.getPostId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 下载图片并保存到本地
+     * @param imageUrl 图片URL
+     * @param postId 动态ID
+     * @return 保存的本地路径，失败返回null
+     */
+    private String downloadAndSaveImage(String imageUrl, String postId) {
+        try {
+            // 创建uploads/images目录
+            Path uploadsDir = Paths.get("uploads", "images");
+            Files.createDirectories(uploadsDir);
+            
+            // 生成文件名：postId_timestamp.jpg
+            String timestamp = String.valueOf(System.currentTimeMillis());
+            String fileName = postId + "_" + timestamp + ".jpg";
+            Path filePath = uploadsDir.resolve(fileName);
+            
+            // 下载图片
+            URL url = new URL(imageUrl);
+            try (InputStream inputStream = url.openStream()) {
+                Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
+            }
+            
+            // 返回相对路径
+            String relativePath = "/uploads/images/" + fileName;
+            logger.info("图片下载成功: {} -> {}", imageUrl, relativePath);
+            return relativePath;
+            
+        } catch (Exception e) {
+            logger.error("下载图片失败: imageUrl={}, error={}", imageUrl, e.getMessage(), e);
+            return null;
+        }
     }
 } 

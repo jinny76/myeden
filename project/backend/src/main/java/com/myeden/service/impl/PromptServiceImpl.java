@@ -2259,4 +2259,45 @@ public class PromptServiceImpl implements PromptService {
     private String getPostAuthorName(PostService.PostDetail postDetail) {
         return postDetail.getAuthorName() != null ? postDetail.getAuthorName() : "帖主";
     }
+
+    @Override
+    public String generateImageSearchKeywords(String postContent, Robot robot) {
+        try {
+            // 构建提示词
+            StringBuilder prompt = new StringBuilder();
+            prompt.append("/no_think 请根据以下动态内容，生成1-3个适合搜索配图的关键词。");
+            prompt.append("关键词应该简洁明了，适合图片搜索，用空格分隔。");
+            prompt.append("请只返回关键词，不要包含其他内容。");
+            prompt.append("\n\n动态内容：");
+            prompt.append(postContent);
+            prompt.append("\n\n搜索关键词：");
+
+            // 调用AI生成关键词
+            DifyChatResult result = difyService.callDifyApi(prompt.toString(), robot.getRobotId(), robot.getAppKey());
+            
+            if (result != null && result.answer != null && !result.answer.trim().isEmpty()) {
+                result = processGeneratedContent(result, robot, "normal");
+                // 清理和处理生成的关键词
+                String keywords = result.answer.trim()
+                    .replaceAll("[\\n\\r]+", " ")  // 替换换行为空格
+                    .replaceAll("\\s+", " ")      // 多个空格合并为一个
+                    .replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9\\s]", ""); // 只保留中英文数字和空格
+                
+                // 限制长度
+                if (keywords.length() > 50) {
+                    keywords = keywords.substring(0, 50);
+                }
+                
+                log.info("为动态内容生成配图搜索关键词成功: {} -> {}", postContent.substring(0, Math.min(postContent.length(), 30)), keywords);
+                return keywords.trim();
+            }
+            
+            log.warn("AI生成配图搜索关键词失败，返回内容为空");
+            return null;
+            
+        } catch (Exception e) {
+            log.error("生成配图搜索关键词时发生异常: {}", e.getMessage(), e);
+            return null;
+        }
+    }
 } 

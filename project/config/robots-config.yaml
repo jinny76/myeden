@@ -67,6 +67,10 @@ robots:
       - name: "分享糗事"
         frequency: 5
         content: "分享自己最近遇到的糗事"
+      - name: "分享视频"
+        frequency: 5
+        content: "分享自己喜欢的视频"
+        dataType: "video"
     
   # 机器人列表 - 更贴近真人的设定
   list:

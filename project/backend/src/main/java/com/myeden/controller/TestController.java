@@ -12,9 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,7 +25,6 @@ import io.swagger.v3.oas.models.media.MediaType;
 import com.myeden.service.impl.DifyImageResult;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.StringUtils;
-import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -69,6 +66,9 @@ public class TestController {
 
     @Autowired
     private WebSocketService webSocketService;
+
+    @Autowired
+    private RobotBehaviorService robotBehaviorService;
 
     /**
      * 公开测试接口
@@ -288,6 +288,38 @@ public class TestController {
         actionData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 
         webSocketService.pushRobotAction(actionData);
+    }
+
+    /**
+     * 手动触发机器人发帖
+     * @param robotId 机器人ID（可选，不传则随机选择）
+     * @return 操作结果
+     */
+    @Operation(summary = "手动触发机器人发帖")
+    @PostMapping("/trigger-robot-post")
+    public Map<String, Object> triggerRobotPost(@RequestParam(value = "robotId", required = false) String robotId) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (robotId != null && !robotId.trim().isEmpty()) {
+                // 触发指定机器人发帖
+                Optional<Robot> robot = robotRepository.findByRobotId(robotId);
+                if (!robot.isPresent()) {
+                    response.put("success", false);
+                    response.put("message", "机器人不存在: " + robotId);
+                    return response;
+                }
+                robotBehaviorService.triggerRobotPost(robot.get().getRobotId());
+                response.put("message", "已触发机器人 " + robotId + " 发帖");
+            }
+            response.put("success", true);
+            logger.info("手动触发机器人发帖 - robotId: {}", robotId != null ? robotId : "all");
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "触发失败: " + e.getMessage());
+            logger.error("手动触发机器人发帖失败", e);
+        }
+        response.put("timestamp", System.currentTimeMillis());
+        return response;
     }
     
 } 

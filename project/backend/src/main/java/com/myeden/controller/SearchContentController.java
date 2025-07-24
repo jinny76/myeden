@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * SearchContentController
@@ -65,5 +66,25 @@ public class SearchContentController {
     public EventResponse triggerSearch(@RequestParam String query, @RequestParam String sourceType) {
         boolean result = searchContentService.triggerSearch(query, sourceType);
         return EventResponse.success(result);
+    }
+
+    /**
+     * 图片搜索
+     */
+    @Operation(summary = "图片搜索")
+    @GetMapping("/search-images")
+    public EventResponse searchImages(@RequestParam String query) {
+        List<Map<String, Object>> results = searchContentService.searchImages(query);
+        return EventResponse.success(results);
+    }
+
+    /**
+     * 视频搜索
+     */
+    @Operation(summary = "视频搜索")
+    @GetMapping("/search-videos")
+    public EventResponse searchVideos(@RequestParam String query) {
+        List<Map<String, Object>> results = searchContentService.searchVideos(query);
+        return EventResponse.success(results);
     }
 } 
