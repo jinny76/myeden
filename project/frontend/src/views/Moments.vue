@@ -230,7 +230,7 @@
                 </p>
                 
                 <!-- 图片展示 -->
-                <div v-if="post.images && post.images.length > 0" class="post-images" @click.stop>
+                <div v-if="post.linkInfo == null && post.images && post.images.length > 0" class="post-images" @click.stop>
                   <div 
                     class="image-grid"
                     :class="getImageGridClass(post.images.length)"
@@ -251,8 +251,51 @@
                         @click.stop
                         @load="handleImagePreviewStart"
                         @close="handleImagePreviewClose"
-                        @error="handleImagePreviewClose"
-                      />
+                        @error="handleImageError"
+                      >
+                        <template #error>
+                          <div class="image-error-placeholder">
+                            <el-icon class="error-icon"><Picture /></el-icon>
+                            <span class="error-text">图片加载失败</span>
+                          </div>
+                        </template>
+                        <template #placeholder>
+                          <div class="image-loading-placeholder">
+                            <el-icon class="loading-icon is-loading"><Loading /></el-icon>
+                            <span class="loading-text">加载中...</span>
+                          </div>
+                        </template>
+                      </el-image>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 视频链接展示 -->
+                <div v-if="post.linkInfo && post.linkInfo.dataType === 'video'" class="post-video-link" @click.stop>
+                  <div class="video-card" @click="playVideo(post.linkInfo)">
+                    <div class="video-thumbnail">
+                      <el-image 
+                        :src="post.linkInfo.image.startsWith('http') ? post.linkInfo.image : 'https:' + post.linkInfo.image" 
+                        fit="cover"
+                        class="thumbnail-image"
+                        @error="handleVideoThumbnailError"
+                      >
+                        <template #error>
+                          <div class="video-thumbnail-placeholder">
+                            <div class="video-icon">
+                              <el-icon><VideoPlay /></el-icon>
+                            </div>
+                            <div class="video-placeholder-text"></div>
+                          </div>
+                        </template>
+                      </el-image>
+                    </div>
+                    <div class="video-info">
+                      <h4 class="video-title">{{ post.linkInfo.title || '视频内容' }}</h4>
+                      <div class="video-source">
+                        <el-icon class="source-icon"><Link /></el-icon>
+                        <span class="source-text">{{ getVideoSource(post.linkInfo.url) }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -543,7 +586,7 @@ import { useWebSocketStore } from '@/stores/websocket'
 import { useRobotStore } from '@/stores/robot'
 import { ElMessageBox, ElPopover } from 'element-plus'
 import { message } from '@/utils/message'
-import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View, Promotion } from '@element-plus/icons-vue'
+import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View, Promotion, VideoPlay, Link, Picture } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment } from '@/api/comment'
 import { createPost, searchPosts, getPostDetail, queryPosts } from '@/api/post'
@@ -2082,10 +2125,737 @@ const getAuthorGenderAge = (item) => {
   }
   return { gender: 'female', age: 20, id: 'robot_001' }
 }
+
+/**
+ * 处理视频缩略图加载错误
+ * @param {Event} event - 错误事件
+ */
+const handleVideoThumbnailError = (event) => {
+  console.warn('视频缩略图加载失败:', event)
+  // Element Plus 会自动显示 error 插槽内容
+}
+
+/**
+ * 处理图片加载错误
+ * @param {Event} event - 错误事件
+ */
+const handleImageError = (event) => {
+  console.warn('图片加载失败:', event)
+  // Element Plus 会自动显示 error 插槽内容
+}
+
+/**
+ * 将视频URL转换为可嵌入的播放器URL
+ * @param {string} url - 原始视频URL
+ * @returns {string} 转换后的嵌入播放器URL
+ */
+const convertToEmbedUrl = (url) => {
+  if (!url) return url
+  
+  try {
+    const urlObj = new URL(url)
+    const hostname = urlObj.hostname.toLowerCase()
+    
+    // B站视频转换
+    if (hostname.includes('bilibili.com')) {
+      // 匹配BV号：https://www.bilibili.com/video/BV1Mr4y1P7CX/
+      const bvMatch = url.match(/\/video\/(BV[A-Za-z0-9]+)/)
+      if (bvMatch) {
+        const bvid = bvMatch[1]
+        return `https://player.bilibili.com/player.html?isOutside=true&bvid=${bvid}&p=1&autoplay=0&danmaku=0`
+      }
+      
+      // 匹配AV号：https://www.bilibili.com/video/av123456/
+      const avMatch = url.match(/\/video\/av(\d+)/)
+      if (avMatch) {
+        const aid = avMatch[1]
+        return `https://player.bilibili.com/player.html?isOutside=true&aid=${aid}&p=1&autoplay=0&danmaku=0`
+      }
+    }
+    
+    // YouTube视频转换
+    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
+      let videoId = ''
+      
+      if (hostname.includes('youtu.be')) {
+        // https://youtu.be/dQw4w9WgXcQ
+        videoId = urlObj.pathname.slice(1)
+      } else if (urlObj.searchParams.has('v')) {
+        // https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        videoId = urlObj.searchParams.get('v')
+      }
+      
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`
+      }
+    }
+    
+    // 腾讯视频转换
+    if (hostname.includes('v.qq.com')) {
+      // https://v.qq.com/x/cover/abc123.html
+      const vidMatch = url.match(/\/x\/cover\/([^\/\.]+)/)
+      if (vidMatch) {
+        const vid = vidMatch[1]
+        return `https://v.qq.com/txp/iframe/player.html?vid=${vid}&auto=0`
+      }
+    }
+    
+    // 爱奇艺视频转换
+    if (hostname.includes('iqiyi.com')) {
+      // https://www.iqiyi.com/v_abc123.html
+      const vidMatch = url.match(/\/v_([^\/\.]+)/)
+      if (vidMatch) {
+        const vid = vidMatch[1]
+        return `https://www.iqiyi.com/iframe/${vid}`
+      }
+    }
+    
+    // 优酷视频转换
+    if (hostname.includes('youku.com')) {
+      // https://v.youku.com/v_show/id_XMzQ2ODY2NzQ4OA==.html
+      const idMatch = url.match(/id_([^\/\.]+)/)
+      if (idMatch) {
+        const id = idMatch[1]
+        return `https://player.youku.com/embed/${id}`
+      }
+    }
+    
+    // 西瓜视频转换
+    if (hostname.includes('ixigua.com')) {
+      // https://www.ixigua.com/123456789
+      const idMatch = url.match(/ixigua\.com\/(\d+)/)
+      if (idMatch) {
+        const id = idMatch[1]
+        return `https://www.ixigua.com/iframe/${id}`
+      }
+    }
+    
+    // 如果无法转换，返回原URL（可能会被X-Frame-Options阻止）
+    return url
+  } catch (error) {
+    console.error('转换嵌入URL失败:', error)
+    return url
+  }
+}
+
+/**
+ * 播放视频（全屏iframe模式）
+ * @param {Object} linkInfo - 链接信息对象
+ */
+const playVideo = (linkInfo) => {
+  if (!linkInfo || !linkInfo.url) {
+    message.warning('视频链接无效')
+    return
+  }
+  
+  try {
+    // 转换为可嵌入的播放器URL
+    const embedUrl = convertToEmbedUrl(linkInfo.url)
+    console.log('原始URL:', linkInfo.url)
+    console.log('转换后的嵌入URL:', embedUrl)
+    
+    // 创建全屏容器
+    const videoContainer = document.createElement('div')
+    videoContainer.className = 'fullscreen-video-container'
+    videoContainer.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      box-sizing: border-box;
+    `
+    
+    // 创建头部栏（标题和关闭按钮）
+    const header = document.createElement('div')
+    header.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      color: white;
+      z-index: 10001;
+    `
+    
+    // 创建标题
+    const titleElement = document.createElement('div')
+    titleElement.textContent = linkInfo.title || '视频播放'
+    titleElement.style.cssText = `
+      font-size: 18px;
+      font-weight: 500;
+      flex: 1;
+      margin-right: 20px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    `
+    
+    // 创建关闭按钮
+    const closeButton = document.createElement('div')
+    closeButton.innerHTML = '✕'
+    closeButton.style.cssText = `
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background 0.3s ease;
+    `
+    
+    // 创建iframe容器
+    const iframeContainer = document.createElement('div')
+    iframeContainer.style.cssText = `
+      flex: 1;
+      background: black;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    `
+    
+    // 创建iframe
+    const iframe = document.createElement('iframe')
+    iframe.src = embedUrl
+    iframe.style.cssText = `
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: black;
+    `
+    
+    // 设置iframe属性
+    iframe.setAttribute('frameborder', '0')
+    iframe.setAttribute('allowfullscreen', 'true')
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share')
+    iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin')
+    
+    // 创建加载指示器
+    const loadingIndicator = document.createElement('div')
+    loadingIndicator.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+        <div style="width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid #409EFF; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <div style="color: #fff; font-size: 14px;">正在加载视频...</div>
+      </div>
+    `
+    loadingIndicator.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    `
+    
+    // 创建备用提示（当iframe被阻止时显示）
+    const fallbackElement = document.createElement('div')
+    fallbackElement.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px; text-align: center;">
+        <div style="color: #409EFF; font-size: 48px;">🎬</div>
+        <div style="color: #fff; font-size: 16px; font-weight: 500;">无法在此处播放视频</div>
+        <div style="color: #ccc; font-size: 14px; line-height: 1.5;">
+          该视频平台不支持嵌入播放<br>
+          点击下方按钮在新窗口中打开视频
+        </div>
+        <button id="openVideo" style="
+          background: #409EFF;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          margin-top: 10px;
+        " onmouseover="this.style.background='#66b1ff'" onmouseout="this.style.background='#409EFF'">
+          在新窗口中打开视频
+        </button>
+      </div>
+    `
+    fallbackElement.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 11;
+    `
+    
+    // 添加旋转动画
+    const style = document.createElement('style')
+    style.textContent = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `
+    document.head.appendChild(style)
+    
+    // 关闭函数
+    const closeVideo = () => {
+      document.body.removeChild(videoContainer)
+      document.body.style.overflow = ''
+      document.head.removeChild(style)
+    }
+    
+    // 添加事件监听
+    closeButton.addEventListener('click', (e) => {
+      e.stopPropagation()
+      closeVideo()
+    })
+    
+    closeButton.addEventListener('mouseenter', () => {
+      closeButton.style.background = 'rgba(255, 255, 255, 0.2)'
+    })
+    
+    closeButton.addEventListener('mouseleave', () => {
+      closeButton.style.background = 'rgba(255, 255, 255, 0.1)'
+    })
+    
+    videoContainer.addEventListener('click', (e) => {
+      if (e.target === videoContainer) {
+        closeVideo()
+      }
+    })
+    
+    // 阻止iframe容器点击事件冒泡
+    iframeContainer.addEventListener('click', (e) => {
+      e.stopPropagation()
+    })
+    
+    // ESC键关闭
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        closeVideo()
+        document.removeEventListener('keydown', handleKeyDown)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    
+    // iframe加载完成后隐藏加载指示器
+    iframe.addEventListener('load', () => {
+      if (loadingIndicator.parentNode) {
+        loadingIndicator.remove()
+      }
+    })
+    
+    // iframe加载出错处理
+    iframe.addEventListener('error', () => {
+      if (loadingIndicator.parentNode) {
+        loadingIndicator.remove()
+      }
+      fallbackElement.style.display = 'flex'
+    })
+    
+    // 检测iframe是否被X-Frame-Options阻止
+    setTimeout(() => {
+      try {
+        // 尝试访问iframe内容，如果被阻止会抛出异常
+        iframe.contentDocument
+      } catch (e) {
+        if (loadingIndicator.parentNode) {
+          loadingIndicator.remove()
+        }
+        fallbackElement.style.display = 'flex'
+      }
+    }, 3000) // 3秒后检测
+    
+    // 组装元素
+    header.appendChild(titleElement)
+    header.appendChild(closeButton)
+    
+    iframeContainer.appendChild(loadingIndicator)
+    iframeContainer.appendChild(iframe)
+    iframeContainer.appendChild(fallbackElement)
+    
+    videoContainer.appendChild(header)
+    videoContainer.appendChild(iframeContainer)
+    
+    // 添加到页面
+    document.body.appendChild(videoContainer)
+    document.body.style.overflow = 'hidden'
+    
+    // 为备用按钮添加事件监听
+    setTimeout(() => {
+      const openVideoBtn = document.getElementById('openVideo')
+      if (openVideoBtn) {
+        openVideoBtn.addEventListener('click', () => {
+          window.open(linkInfo.url, '_blank')
+        })
+      }
+    }, 100)
+    
+    console.log('开始加载视频页面:', embedUrl)
+  } catch (error) {
+    console.error('播放视频失败:', error)
+    message.error('播放视频失败')
+  }
+}
+
+/**
+ * 从URL中提取视频源名称
+ * @param {string} url - 视频URL
+ * @returns {string} 视频源名称
+ */
+const getVideoSource = (url) => {
+  if (!url) return '未知来源'
+  
+  try {
+    const hostname = new URL(url).hostname.toLowerCase()
+    
+    if (hostname.includes('bilibili.com') || hostname.includes('b23.tv')) {
+      return 'B站'
+    } else if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
+      return 'YouTube'
+    } else if (hostname.includes('douyin.com')) {
+      return '抖音'
+    } else if (hostname.includes('kuaishou.com')) {
+      return '快手'
+    } else if (hostname.includes('ixigua.com')) {
+      return '西瓜视频'
+    } else if (hostname.includes('qq.com')) {
+      return '腾讯视频'
+    } else if (hostname.includes('iqiyi.com')) {
+      return '爱奇艺'
+    } else if (hostname.includes('youku.com')) {
+      return '优酷'
+    } else if (hostname.includes('sohu.com')) {
+      return '搜狐视频'
+    } else {
+      return hostname
+    }
+  } catch (error) {
+    console.error('解析视频源失败:', error)
+    return '未知来源'
+  }
+}
 </script>
 
 <style scoped>
 @import url('../styles/moment.scss');
+
+/* 视频链接展示样式 */
+.post-video-link {
+  margin-top: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-card);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.post-video-link:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+}
+
+.video-card {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.video-thumbnail {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  overflow: hidden;
+}
+
+.thumbnail-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.video-card:hover .thumbnail-image {
+  transform: scale(1.08);
+}
+
+/* 视频缩略图占位符 */
+.video-thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  gap: 8px;
+}
+
+.video-icon {
+  font-size: 48px;
+  opacity: 0.9;
+}
+
+.video-placeholder-text {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.8;
+  letter-spacing: 0.5px;
+}
+
+/* 播放按钮 */
+.play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.play-button:hover {
+  background: rgba(0, 0, 0, 0.85);
+  transform: translate(-50%, -50%) scale(1.15);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.play-icon {
+  color: white;
+  font-size: 26px;
+  margin-left: 3px; /* 微调播放图标位置 */
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* 视频标识角标 */
+.video-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0.9;
+}
+
+.badge-icon {
+  font-size: 12px;
+}
+
+/* 视频信息区域 */
+.video-info {
+  padding: 16px;
+  background: var(--color-card);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.video-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 42px; /* 确保两行文本的最小高度 */
+}
+
+.video-source {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: var(--color-primary);
+  gap: 6px;
+  font-weight: 500;
+  margin-top: auto;
+}
+
+.source-icon {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.source-text {
+  letter-spacing: 0.3px;
+}
+
+/* 暗黑模式样式 */
+html.dark .video-thumbnail {
+  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+}
+
+html.dark .video-thumbnail-placeholder {
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+}
+
+html.dark .play-button {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+html.dark .play-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+html.dark .video-badge {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .video-thumbnail {
+    height: 180px;
+  }
+  
+  .play-button {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .play-icon {
+    font-size: 22px;
+  }
+  
+  .video-icon {
+    font-size: 40px;
+  }
+  
+  .video-info {
+    padding: 14px;
+  }
+  
+  .video-title {
+    font-size: 14px;
+    min-height: 38px;
+  }
+  
+  .video-source {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .video-thumbnail {
+    height: 160px;
+  }
+  
+  .play-button {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .play-icon {
+    font-size: 20px;
+    margin-left: 2px;
+  }
+  
+  .video-info {
+    padding: 12px;
+  }
+  
+  .video-title {
+    font-size: 13px;
+    min-height: 36px;
+  }
+}
+
+/* 图片占位符样式 */
+.image-loading-placeholder,
+.image-error-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  color: var(--color-text);
+  background: var(--color-card);
+  border: 1px dashed var(--color-border);
+}
+
+.image-loading-placeholder {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.1), rgba(64, 158, 255, 0.05));
+  border-color: rgba(64, 158, 255, 0.3);
+  color: rgba(64, 158, 255, 0.8);
+}
+
+.image-error-placeholder {
+  background: linear-gradient(135deg, rgba(245, 108, 108, 0.1), rgba(245, 108, 108, 0.05));
+  border-color: rgba(245, 108, 108, 0.3);
+  color: rgba(245, 108, 108, 0.8);
+}
+
+.loading-icon,
+.error-icon {
+  font-size: 24px;
+  opacity: 0.8;
+}
+
+.loading-text,
+.error-text {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .loading-icon,
+  .error-icon {
+    font-size: 20px;
+  }
+  
+  .loading-text,
+  .error-text {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .loading-icon,
+  .error-icon {
+    font-size: 18px;
+  }
+  
+  .loading-text,
+  .error-text {
+    font-size: 10px;
+  }
+}
 </style>
 
 <style>

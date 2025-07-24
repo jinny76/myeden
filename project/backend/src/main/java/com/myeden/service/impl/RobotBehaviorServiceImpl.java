@@ -280,7 +280,7 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 Post savedPost = postRepository.save(post);
 
                 // 随机2/3几率添加配图
-                if (savedPost != null && new Random().nextInt(3) < 2) {
+                if (savedPost != null && (savedPost.getLink() == null || savedPost.getLink().getImage() == null || new Random().nextInt(3) < 2)) {
                     tryAddPostImage(savedPost, robot, content);
                 }
 

@@ -409,7 +409,9 @@ public class PostServiceImpl implements PostService {
                 likes,
                 comments,
                 post.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
-                post.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME), post.getTopic()
+                post.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME), 
+                post.getTopic(),
+                post.getLink()
             );
             
         } catch (Exception e) {
@@ -712,9 +714,10 @@ public class PostServiceImpl implements PostService {
             post.getLikeCount(),
             post.getCommentCount(),
             isLiked,
-                            post.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
-                post.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
-                post.getTopic()
+            post.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
+            post.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
+            post.getTopic(),
+            post.getLink()
         );
     }
     

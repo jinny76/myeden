@@ -7,12 +7,8 @@ import com.myeden.entity.Post.LinkInfo;
 import com.myeden.repository.RobotDailyPlanRepository;
 import com.myeden.repository.RobotRepository;
 import com.myeden.repository.UserRepository;
-import com.myeden.service.DifyService;
-import com.myeden.service.PromptService;
+import com.myeden.service.*;
 import com.myeden.service.DifyService.DifyChatResult;
-import com.myeden.service.PostService;
-import com.myeden.service.AIAnalysisService;
-import com.myeden.service.CommentService;
 import com.myeden.config.RobotConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,14 +22,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import com.myeden.service.ExternalDataCacheService;
 import com.myeden.model.external.HotSearchItem;
 import org.springframework.context.annotation.Lazy;
 import com.myeden.model.external.WeatherInfo;
 import com.myeden.repository.ContentGenerationLogRepository;
 import com.myeden.repository.UserRobotLinkRepository;
 import com.myeden.repository.PostRepository;
-import com.myeden.service.ExpertMemoryService;
 import com.myeden.config.RobotConfig.ExpertTheme;
 
 /**
@@ -85,6 +79,9 @@ public class PromptServiceImpl implements PromptService {
     
     @Autowired
     private ExpertMemoryService expertMemoryService;
+
+    @Autowired
+    private SearchContentService searchContentService;
 
     private final Random random = new Random();
 
@@ -1626,6 +1623,62 @@ public class PromptServiceImpl implements PromptService {
                             linkInfo.setImage(item.getImage());
                         }
                     }
+                }
+                break;
+            case "video":
+                // B站分类主题
+                String[] bilibiliCategories = {
+                    "游戏", "动画", "音乐", "舞蹈", "影视", "娱乐", "知识", "科技", 
+                    "资讯", "美食", "生活", "汽车", "时尚", "运动", "动物圈"
+                };
+                String randomCategory = bilibiliCategories[rand.nextInt(bilibiliCategories.length)];
+                
+                try {
+                    // 调用视频搜索服务
+                    List<Map<String, Object>> videoResults = searchContentService.searchVideos(randomCategory);
+                    if (videoResults != null && !videoResults.isEmpty()) {
+                        // 筛选B站视频
+                        List<Map<String, Object>> bilibiliVideos = videoResults.stream()
+                                .filter(video -> {
+                                    String url = (String) video.get("url");
+                                    return url != null && url.contains("bilibili.com");
+                                })
+                                .collect(java.util.stream.Collectors.toList());
+                        
+                        if (!bilibiliVideos.isEmpty()) {
+                            // 随机选择一个B站视频
+                            Map<String, Object> selectedVideo = bilibiliVideos.get(rand.nextInt(bilibiliVideos.size()));
+                            String title = (String) selectedVideo.get("title");
+                            String url = (String) selectedVideo.get("url");
+                            String content = (String) selectedVideo.get("content");
+                            String thumbnail = (String) selectedVideo.get("thumbnail");
+                            
+                            background = "推荐视频(" + randomCategory + ")：" + title;
+                            if (content != null && !content.trim().isEmpty()) {
+                                // 截取前100个字符作为描述
+                                String description = content.length() > 100 ? content.substring(0, 100) + "..." : content;
+                                background += " - " + description;
+                            }
+                            
+                            // 创建链接信息
+                            linkInfo = new Post.LinkInfo();
+                            linkInfo.setTitle(title);
+                            linkInfo.setUrl(url);
+                            linkInfo.setDataType("video");
+                            if (thumbnail != null && !thumbnail.trim().isEmpty()) {
+                                linkInfo.setImage(thumbnail);
+                            }
+                        } else {
+                            // 如果没有B站视频，使用通用描述
+                            background = "推荐观看" + randomCategory + "类视频内容";
+                        }
+                    } else {
+                        // 搜索失败时的备用内容
+                        background = "推荐观看" + randomCategory + "类视频内容";
+                    }
+                } catch (Exception e) {
+                    log.error("搜索视频内容失败: {}", e.getMessage(), e);
+                    background = "推荐观看视频内容";
                 }
                 break;
             default:

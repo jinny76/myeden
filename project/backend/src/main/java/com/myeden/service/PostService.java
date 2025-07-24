@@ -186,10 +186,12 @@ public interface PostService {
         private boolean isLiked;
         private String createdAt;
         private String updatedAt;
+        private com.myeden.entity.Post.LinkInfo linkInfo;
         
         public PostSummary(String postId, String authorId, String authorType, String authorName, 
                           String authorAvatar, String content, List<String> images, int likeCount, 
-                          int commentCount, boolean isLiked, String createdAt, String updatedAt, List<String> topic) {
+                          int commentCount, boolean isLiked, String createdAt, String updatedAt, 
+                          List<String> topic, com.myeden.entity.Post.LinkInfo linkInfo) {
             this.postId = postId;
             this.authorId = authorId;
             this.authorType = authorType;
@@ -203,6 +205,7 @@ public interface PostService {
             this.createdAt = createdAt;
             this.updatedAt = updatedAt;
             this.topic = topic;
+            this.linkInfo = linkInfo;
         }
         
         // Getter方法
@@ -218,6 +221,7 @@ public interface PostService {
         public boolean isLiked() { return isLiked; }
         public String getCreatedAt() { return createdAt; }
         public String getUpdatedAt() { return updatedAt; }
+        public com.myeden.entity.Post.LinkInfo getLinkInfo() { return linkInfo; }
     }
     
     /**
@@ -251,11 +255,13 @@ public interface PostService {
         private List<CommentSummary> comments; // 新增：评论列表
         private String createdAt;
         private String updatedAt;
+        private com.myeden.entity.Post.LinkInfo linkInfo;
         
         public PostDetail(String postId, String authorId, String authorType, String authorName, 
                          String authorAvatar, String content, List<String> images, List<String> imageInfos, int likeCount, 
                          int commentCount, boolean isLiked, List<LikeDetail> likes, 
-                         List<CommentSummary> comments, String createdAt, String updatedAt, List<String> topic) {
+                         List<CommentSummary> comments, String createdAt, String updatedAt, 
+                         List<String> topic, com.myeden.entity.Post.LinkInfo linkInfo) {
             this.postId = postId;
             this.authorId = authorId;
             this.authorType = authorType;
@@ -272,6 +278,7 @@ public interface PostService {
             this.createdAt = createdAt;
             this.updatedAt = updatedAt;
             this.topic = topic;
+            this.linkInfo = linkInfo;
         }
         
         // Getter方法
@@ -290,6 +297,7 @@ public interface PostService {
         public List<CommentSummary> getComments() { return comments; }
         public String getCreatedAt() { return createdAt; }
         public String getUpdatedAt() { return updatedAt; }
+        public com.myeden.entity.Post.LinkInfo getLinkInfo() { return linkInfo; }
     }
     
     /**
