@@ -9,6 +9,7 @@ import com.myeden.repository.RobotRepository;
 import com.myeden.repository.PostRepository;
 import com.myeden.repository.CommentRepository;
 import com.myeden.service.*;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1854,8 +1855,8 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 return;
             }
             
-            // 3. 获取第一张图片
-            Map<String, Object> firstImage = imageResults.get(0);
+            // 3. 获取随机图
+            Map<String, Object> firstImage = imageResults.get(RandomUtils.nextInt(0, imageResults.size()));
             String imgSrc = (String) firstImage.get("imgSrc");
             String title = (String) firstImage.get("title");
             

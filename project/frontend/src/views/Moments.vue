@@ -285,7 +285,7 @@
                             <div class="video-icon">
                               <el-icon><VideoPlay /></el-icon>
                             </div>
-                            <div class="video-placeholder-text"></div>
+                            <div class="video-placeholder-text">视频封面</div>
                           </div>
                         </template>
                       </el-image>
@@ -2588,7 +2588,7 @@ const getVideoSource = (url) => {
   transform: scale(1.08);
 }
 
-/* 视频缩略图占位符 */
+/* 视频缩略图占位符 - 高级设计 */
 .video-thumbnail-placeholder {
   width: 100%;
   height: 100%;
@@ -2596,21 +2596,127 @@ const getVideoSource = (url) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 100%);
   color: white;
-  gap: 8px;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  
+  /* 添加动态背景效果 */
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: shimmer 4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  
+  /* 添加网格纹理效果 */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    opacity: 0.5;
+  }
 }
 
 .video-icon {
   font-size: 48px;
-  opacity: 0.9;
+  opacity: 0.95;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  
+  /* 添加脉冲效果 */
+  &::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    opacity: 0;
+    animation: videoPulse 2s ease-in-out infinite;
+    pointer-events: none;
+  }
+  
+  &:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 
+      0 12px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+  
+  .el-icon {
+    font-size: 32px;
+    margin-left: 3px; /* 微调播放按钮位置 */
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+    color: rgba(255, 255, 255, 0.95);
+    transition: all 0.2s ease;
+  }
+  
+  &:hover .el-icon {
+    color: white;
+    filter: drop-shadow(0 3px 12px rgba(0, 0, 0, 0.5));
+  }
 }
 
 .video-placeholder-text {
-  font-size: 14px;
-  font-weight: 500;
-  opacity: 0.8;
-  letter-spacing: 0.5px;
+  font-size: 15px;
+  font-weight: 600;
+  opacity: 0.9;
+  letter-spacing: 0.8px;
+  text-align: center;
+  color: white;
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  
+  &::before {
+    content: '🎬';
+    margin-right: 6px;
+    font-size: 16px;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+  }
 }
 
 /* 播放按钮 */
@@ -2708,13 +2814,25 @@ const getVideoSource = (url) => {
   letter-spacing: 0.3px;
 }
 
+/* 视频占位符动画 */
+@keyframes videoPulse {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.1);
+  }
+}
+
 /* 暗黑模式样式 */
 html.dark .video-thumbnail {
   background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
 }
 
 html.dark .video-thumbnail-placeholder {
-  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+  background: linear-gradient(135deg, #1f2937 0%, #374151 30%, #4b5563 100%) !important;
 }
 
 html.dark .play-button {
@@ -2762,6 +2880,36 @@ html.dark .video-badge {
   .video-source {
     font-size: 12px;
   }
+  
+  /* 修复移动端视频缩略图占位符显示 */
+  .video-thumbnail-placeholder {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 100%) !important;
+    color: white !important;
+    min-height: 180px;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .thumbnail-image {
+    background: transparent !important;
+  }
+  
+  .video-placeholder-text {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 5px 12px !important;
+  }
+  
+  .video-icon {
+    width: 60px !important;
+    height: 60px !important;
+    
+    .el-icon {
+      font-size: 28px !important;
+    }
+  }
 }
 
 @media (max-width: 480px) {
@@ -2786,6 +2934,32 @@ html.dark .video-badge {
   .video-title {
     font-size: 13px;
     min-height: 36px;
+  }
+  
+  /* 确保超小屏幕下的视频缩略图占位符正确显示 */
+  .video-thumbnail-placeholder {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 100%) !important;
+    color: white !important;
+    min-height: 160px;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .video-placeholder-text {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 4px 10px !important;
+  }
+  
+  .video-icon {
+    width: 56px !important;
+    height: 56px !important;
+    
+    .el-icon {
+      font-size: 26px !important;
+    }
   }
 }
 
