@@ -422,10 +422,10 @@ const filteredRobots = computed(() => {
   if (searchKeyword.value.trim()) {
     const keyword = searchKeyword.value.toLowerCase().trim()
     robots = robots.filter(robot => 
-      robot.name.toLowerCase().includes(keyword) ||
-      robot.description.toLowerCase().includes(keyword) ||
-      robot.personality.toLowerCase().includes(keyword) ||
-      robot.nickname.toLowerCase().includes(keyword)
+      (robot.name?.toLowerCase() || '').includes(keyword) ||
+      (robot.description?.toLowerCase() || '').includes(keyword) ||
+      (robot.personality?.toLowerCase() || '').includes(keyword) ||
+      (robot.nickname?.toLowerCase() || '').includes(keyword)
     )
   }
 
@@ -475,7 +475,9 @@ const filteredRobots = computed(() => {
     }
     
     // 5. 最后按机器人名称排序
-    return a.name.localeCompare(b.name)
+    const aName = a.name || ''
+    const bName = b.name || ''
+    return aName.localeCompare(bName)
   })
 })
 

@@ -1,0 +1,18 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+
+## 使用Figma设计稿还原前端原则
+
+- 使用Element Plus组件库
+- 使用Tailwind 样式库
+- 将figma中定义的style, variable都定义成公共的css变量, 在其他的样式中引用
+- 如果某些颜色在figma没连接到style或者variable, 但是公共的css变量已经有定义, 请使用变量
+- 如果设计稿定义成组件, 那么就生成对应的组件, 保存到project\frontend\src\components下面
+- 在project\frontend\src\view中保存页面, 注意尽量使用已经封装好的组件
+- 根据figma的node-id, 设置生成的html element的node-id, 以便后面查找
+- 如果图层有名字, 在生成的template插入注释, 说明对应图层
+- 支持响应式布局
+- 图片下载到project\frontend\src\assets目录下面
