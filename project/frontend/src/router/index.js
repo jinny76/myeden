@@ -183,10 +183,19 @@ router.beforeEach(async (to, from, next) => {
         await userStore.checkAuth()
       } catch (error) {
         console.error('认证检查失败:', error)
-        message.error('登录状态已过期，请重新登录')
-        userStore.logout()
-        next('/login')
-        return
+        // 尝试刷新token
+        try {
+          await userStore.refreshToken()
+          // 刷新成功，继续导航
+          next()
+          return
+        } catch (refreshError) {
+          console.error('Token刷新失败:', refreshError)
+          message.error('登录状态已过期，请重新登录')
+          userStore.logout()
+          next('/login')
+          return
+        }
       }
     }
   }

@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { userApi } from '@/api/user'
-import { setToken, getToken, removeToken } from '@/utils/auth'
-import { saveCredentials, getCredentials, clearCredentials, autoLogin } from '@/utils/credentials'
+import { setToken, getToken, removeToken, setRefreshToken, getRefreshToken, removeRefreshToken } from '@/utils/auth'
 
 /**
  * 用户状态管理
@@ -33,17 +32,17 @@ export const useUserStore = defineStore('user', () => {
   const phone = computed(() => userInfo.value?.phone || '')
   const isFirstLogin = computed(() => userInfo.value?.isFirstLogin || false)
 
-  const refreshTokenKey = 'refreshToken'
-
-  function setRefreshToken(token) {
-    if (token) localStorage.setItem(refreshTokenKey, token)
-  }
-  function getRefreshToken() {
-    return localStorage.getItem(refreshTokenKey) || ''
-  }
-  function removeRefreshToken() {
-    localStorage.removeItem(refreshTokenKey)
-  }
+  // 移除重复的refreshToken方法，统一使用auth.js中的方法
+  // const refreshTokenKey = 'refreshToken'
+  // function setRefreshToken(token) {
+  //   if (token) localStorage.setItem(refreshTokenKey, token)
+  // }
+  // function getRefreshToken() {
+  //   return localStorage.getItem(refreshTokenKey) || ''
+  // }
+  // function removeRefreshToken() {
+  //   localStorage.removeItem(refreshTokenKey)
+  // }
 
   /**
    * 初始化用户状态
@@ -64,8 +63,8 @@ export const useUserStore = defineStore('user', () => {
         }
       }
       
-      // 如果没有token，尝试自动登录
-      return await autoLogin(login)
+      // 如果没有token，返回false
+      return false
     } catch (error) {
       console.error('初始化用户状态失败:', error)
       return false
@@ -91,7 +90,7 @@ export const useUserStore = defineStore('user', () => {
         setRefreshToken(refreshToken)
         userInfo.value = user || { userId, isFirstLogin }
         isLoggedIn.value = true
-        //saveCredentials({ phone: loginData.phone, password: loginData.password })
+
         console.log('✅ 用户登录成功:', userInfo.value.nickname)
         return response
       } else {
@@ -312,7 +311,7 @@ export const useUserStore = defineStore('user', () => {
       return true
     } catch (error) {
       console.error('认证检查失败:', error)
-      logout()
+      // 不自动登出，让调用方决定如何处理
       throw error
     }
   }
@@ -327,7 +326,6 @@ export const useUserStore = defineStore('user', () => {
     isLoggedIn.value = false
     removeToken()
     removeRefreshToken()
-    clearCredentials()
     console.log('🔌 用户已登出')
   }
 
@@ -349,9 +347,13 @@ export const useUserStore = defineStore('user', () => {
       if (!refreshTokenVal) throw new Error('refreshToken不存在')
       const response = await userApi.refreshToken(refreshTokenVal)
       if (response.code === 200 && response.data) {
-        const { accessToken } = response.data
+        const { accessToken, refreshToken: newRefreshToken } = response.data
         token.value = accessToken
         setToken(accessToken)
+        // 如果返回了新的refreshToken，也更新它
+        if (newRefreshToken) {
+          setRefreshToken(newRefreshToken)
+        }
         console.log('✅ Token刷新成功')
         return response
       } else {

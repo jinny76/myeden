@@ -48,6 +48,12 @@ export const getToken = () => {
  */
 export const removeToken = () => {
   Cookies.remove(TOKEN_KEY)
+}
+
+/**
+ * 删除刷新Token
+ */
+export const removeRefreshToken = () => {
   Cookies.remove(REFRESH_TOKEN_KEY)
 }
 

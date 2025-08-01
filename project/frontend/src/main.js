@@ -14,7 +14,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 
 // 开发环境测试工具
-import { testCredentials } from '@/utils/credentials'
+
 
 // 配置dayjs
 dayjs.locale('zh-cn')
@@ -84,6 +84,5 @@ if (import.meta.env.DEV) {
   console.log('🔧 后端地址: http://localhost:8080')
   console.log('🌐 WebSocket: ws://localhost:8080/ws')
   
-  // 测试凭据管理功能
-  testCredentials()
+
 } 

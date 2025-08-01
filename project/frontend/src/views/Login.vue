@@ -171,26 +171,12 @@ const handleLogin = async () => {
   }
 }
 
-// 页面加载时尝试自动登录
-onMounted(async () => {
+// 页面加载时的处理
+onMounted(() => {
   // 如果已经登录，直接跳转到首页
   if (userStore.isLoggedIn) {
     router.push('/')
     return
-  }
-  
-  // 尝试自动登录
-  loading.value = true
-  try {
-    const success = await userStore.initUser()
-    if (success) {
-      message.success('自动登录成功！')
-      router.push('/')
-    }
-  } catch (error) {
-    console.log('自动登录失败或未启用:', error)
-  } finally {
-    loading.value = false
   }
 })
 </script>
