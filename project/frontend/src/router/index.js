@@ -161,9 +161,10 @@ router.beforeEach(async (to, from, next) => {
     if (!userStore.isLoggedIn) {
       // 尝试从本地存储恢复用户状态
       try {
-        await userStore.initUser()
-        if (userStore.isLoggedIn) {
+        const initSuccess = await userStore.initUser()
+        if (initSuccess && userStore.isLoggedIn) {
           // 状态恢复成功，继续导航
+          console.log('✅ 用户状态恢复成功，继续导航到:', to.path)
           next()
           return
         }
@@ -187,6 +188,7 @@ router.beforeEach(async (to, from, next) => {
         try {
           await userStore.refreshToken()
           // 刷新成功，继续导航
+          console.log('✅ Token刷新成功，继续导航到:', to.path)
           next()
           return
         } catch (refreshError) {
@@ -197,6 +199,12 @@ router.beforeEach(async (to, from, next) => {
           return
         }
       }
+    }
+    
+    // 如果用户已登录，确保导航到首页
+    if (userStore.isLoggedIn && to.path === '/login') {
+      next('/')
+      return
     }
   }
   

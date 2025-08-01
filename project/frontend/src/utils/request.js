@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElMessageBox } from 'element-plus'
-import { getToken, removeToken } from '@/utils/auth'
+import { getToken, removeToken, isTokenExpiringSoon, isTokenExpired } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
 import { message } from '@/utils/message'
 import router from '@/router'
@@ -30,7 +30,42 @@ const service = axios.create({
 
 // 请求拦截器
 service.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // 检查token是否即将过期或已过期
+    if (!config.url.includes('refresh-token') 
+      && !config.url.includes('login')
+      && !config.url.includes('register')
+      && !config.url.includes('check-phone')
+      && !config.url.includes('check-nickname')
+      && (isTokenExpiringSoon() || isTokenExpired())) {
+      const userStore = useUserStore()
+      try {
+        console.log('🔄 请求前主动刷新Token...')
+        await userStore.refreshToken()
+        console.log('✅ 请求前Token刷新成功')
+        
+        // 刷新成功后，更新请求头中的token
+        const newToken = getToken()
+        if (newToken) {
+          config.headers.Authorization = `Bearer ${newToken}`
+        }
+      } catch (error) {
+        console.error('❌ 请求前Token刷新失败:', error)
+        // 刷新失败，清除用户状态并跳转到登录页
+        userStore.logout()
+        await ElMessageBox.alert(
+          '登录已过期，请重新登录',
+          '提示',
+          {
+            confirmButtonText: '确定',
+            type: 'warning'
+          }
+        )
+        router.push('/login')
+        return Promise.reject(new Error('Token刷新失败'))
+      }
+    }
+    
     // 添加Token到请求头
     const token = getToken()
     if (token) {
@@ -66,8 +101,14 @@ service.interceptors.response.use(
       return response.data
     } else if (code === 401) {
       // Token过期或无效
-      handleTokenExpired()
-      return Promise.reject(new Error(responseMessage || '登录已过期'))
+      return handleTokenExpired().then(success => {
+        if (success) {
+          // 刷新成功，重新发起请求
+          return service.request(response.config)
+        } else {
+          return Promise.reject(new Error(responseMessage || '登录已过期'))
+        }
+      })
     } else if (code === 403) {
       // 权限不足
       message.error(responseMessage || '权限不足')
@@ -89,8 +130,15 @@ service.interceptors.response.use(
           message.error(data?.message || '请求参数错误')
           break
         case 401:
-          handleTokenExpired()
-          break
+          // 处理401错误，尝试刷新token后重试
+          return handleTokenExpired().then(success => {
+            if (success) {
+              // 刷新成功，重新发起请求
+              return service.request(error.config)
+            } else {
+              return Promise.reject(error)
+            }
+          })
         case 403:
           message.error('权限不足')
           break
@@ -131,6 +179,10 @@ const handleTokenExpired = async () => {
     // 尝试刷新Token
     await userStore.refreshToken()
     message.lightSuccess('登录状态已刷新')
+    
+    // 刷新成功后，重新发起原来的请求
+    // 这里可以通过重试机制来实现
+    return true
   } catch (error) {
     // 刷新失败，清除用户状态并跳转到登录页
     userStore.logout()
@@ -145,6 +197,7 @@ const handleTokenExpired = async () => {
     )
     
     router.push('/login')
+    return false
   }
 }
 

@@ -70,6 +70,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/users/login").permitAll()
                 .requestMatchers("/api/v1/users/check-phone").permitAll()
                 .requestMatchers("/api/v1/users/check-nickname").permitAll()
+                .requestMatchers("/api/v1/users/refresh-token").permitAll()
                 .requestMatchers("/api/v1/world/**").permitAll()
                 .requestMatchers("/api/v1/robots").permitAll()
                 .requestMatchers("/api/v1/robots/{robotId}").permitAll()

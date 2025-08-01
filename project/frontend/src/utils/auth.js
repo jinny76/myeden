@@ -7,6 +7,7 @@ import Cookies from 'js-cookie'
  * - Token的存储和获取
  * - Token的删除
  * - Token的有效性检查
+ * - 主动刷新Token机制
  * 
  * @author MyEden Team
  * @version 1.0.0
@@ -20,6 +21,13 @@ const REFRESH_TOKEN_KEY = 'myeden_refresh_token'
 // Token过期时间（天）
 const TOKEN_EXPIRE_DAYS = 1
 const REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+// Token刷新阈值（分钟）- 在过期前30分钟开始刷新
+const TOKEN_REFRESH_THRESHOLD_MINUTES = 30
+
+// 刷新状态标记，防止重复刷新
+let isRefreshing = false
+let refreshPromise = null
 
 /**
  * 设置Token
@@ -54,7 +62,7 @@ export const removeToken = () => {
  * 删除刷新Token
  */
 export const removeRefreshToken = () => {
-  Cookies.remove(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
 }
 
 /**
@@ -63,11 +71,7 @@ export const removeRefreshToken = () => {
  */
 export const setRefreshToken = (refreshToken) => {
   if (refreshToken) {
-    Cookies.set(REFRESH_TOKEN_KEY, refreshToken, { 
-      expires: REFRESH_TOKEN_EXPIRE_DAYS,
-      secure: import.meta.env.PROD,
-      sameSite: 'strict'
-    })
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
   }
 }
 
@@ -76,7 +80,7 @@ export const setRefreshToken = (refreshToken) => {
  * @returns {string|null} 刷新Token字符串或null
  */
 export const getRefreshToken = () => {
-  return Cookies.get(REFRESH_TOKEN_KEY) || null
+  return localStorage.getItem(REFRESH_TOKEN_KEY) || null
 }
 
 /**
@@ -92,7 +96,7 @@ export const hasToken = () => {
  * @param {number} thresholdMinutes - 过期阈值（分钟），默认30分钟
  * @returns {boolean} 是否即将过期
  */
-export const isTokenExpiringSoon = (thresholdMinutes = 30) => {
+export const isTokenExpiringSoon = (thresholdMinutes = TOKEN_REFRESH_THRESHOLD_MINUTES) => {
   const token = getToken()
   if (!token) {
     return true
@@ -106,6 +110,28 @@ export const isTokenExpiringSoon = (thresholdMinutes = 30) => {
     const threshold = thresholdMinutes * 60 * 1000 // 转换为毫秒
     
     return (exp - now) < threshold
+  } catch (error) {
+    console.error('解析Token失败:', error)
+    return true
+  }
+}
+
+/**
+ * 检查Token是否已过期
+ * @returns {boolean} 是否已过期
+ */
+export const isTokenExpired = () => {
+  const token = getToken()
+  if (!token) {
+    return true
+  }
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const exp = payload.exp * 1000 // 转换为毫秒
+    const now = Date.now()
+    
+    return now >= exp
   } catch (error) {
     console.error('解析Token失败:', error)
     return true
@@ -156,10 +182,81 @@ export const getTokenUserInfo = () => {
 }
 
 /**
+ * 主动刷新Token
+ * @param {Function} refreshFunction - 刷新Token的函数
+ * @returns {Promise<boolean>} 是否刷新成功
+ */
+export const proactiveRefreshToken = async (refreshFunction) => {
+  // 如果正在刷新，返回现有的Promise
+  if (isRefreshing) {
+    return refreshPromise
+  }
+  
+  // 检查是否需要刷新
+  if (!isTokenExpiringSoon() && !isTokenExpired()) {
+    return true
+  }
+  
+  // 检查是否有refreshToken
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) {
+    console.warn('没有refreshToken，无法主动刷新')
+    return false
+  }
+  
+  // 设置刷新状态
+  isRefreshing = true
+  
+  try {
+    console.log('🔄 主动刷新Token...')
+    refreshPromise = refreshFunction()
+    const result = await refreshPromise
+    console.log('✅ Token主动刷新成功')
+    return result
+  } catch (error) {
+    console.error('❌ Token主动刷新失败:', error)
+    return false
+  } finally {
+    isRefreshing = false
+    refreshPromise = null
+  }
+}
+
+/**
+ * 启动Token监控
+ * @param {Function} refreshFunction - 刷新Token的函数
+ * @param {number} checkInterval - 检查间隔（毫秒），默认5分钟
+ */
+export const startTokenMonitor = (refreshFunction, checkInterval = 5 * 60 * 1000) => {
+  console.log('🔍 启动Token监控...')
+  
+  const checkAndRefresh = async () => {
+    try {
+      await proactiveRefreshToken(refreshFunction)
+    } catch (error) {
+      console.error('Token监控检查失败:', error)
+    }
+  }
+  
+  // 立即检查一次
+  checkAndRefresh()
+  
+  // 设置定期检查
+  const intervalId = setInterval(checkAndRefresh, checkInterval)
+  
+  // 返回停止函数
+  return () => {
+    clearInterval(intervalId)
+    console.log('🔍 停止Token监控')
+  }
+}
+
+/**
  * 清除所有认证相关的数据
  */
 export const clearAuthData = () => {
   removeToken()
+  removeRefreshToken()
   
   // 清除localStorage中的用户相关数据
   localStorage.removeItem('userInfo')

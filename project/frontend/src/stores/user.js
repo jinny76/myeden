@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { userApi } from '@/api/user'
-import { setToken, getToken, removeToken, setRefreshToken, getRefreshToken, removeRefreshToken } from '@/utils/auth'
+import { setToken, getToken, removeToken, setRefreshToken, getRefreshToken, removeRefreshToken, startTokenMonitor, proactiveRefreshToken } from '@/utils/auth'
 
 /**
  * 用户状态管理
@@ -24,6 +24,9 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = ref(false)
   const loading = ref(false)
   const error = ref(null)
+  
+  // Token监控相关
+  let tokenMonitorStop = null
 
   // 计算属性
   const userId = computed(() => userInfo.value?.userId || '')
@@ -31,18 +34,6 @@ export const useUserStore = defineStore('user', () => {
   const avatar = computed(() => userInfo.value?.avatar || '')
   const phone = computed(() => userInfo.value?.phone || '')
   const isFirstLogin = computed(() => userInfo.value?.isFirstLogin || false)
-
-  // 移除重复的refreshToken方法，统一使用auth.js中的方法
-  // const refreshTokenKey = 'refreshToken'
-  // function setRefreshToken(token) {
-  //   if (token) localStorage.setItem(refreshTokenKey, token)
-  // }
-  // function getRefreshToken() {
-  //   return localStorage.getItem(refreshTokenKey) || ''
-  // }
-  // function removeRefreshToken() {
-  //   localStorage.removeItem(refreshTokenKey)
-  // }
 
   /**
    * 初始化用户状态
@@ -52,18 +43,53 @@ export const useUserStore = defineStore('user', () => {
       const savedToken = getToken()
       if (savedToken) {
         token.value = savedToken
-        // 尝试获取用户信息，但不抛出错误
+        // 尝试获取用户信息
         try {
           await fetchUserInfo()
+          // 启动Token监控
+          startTokenMonitoring()
           return true
         } catch (error) {
-          console.warn('获取用户信息失败，可能是token过期:', error)
-          // 不清除token，让用户手动处理
+          console.warn('获取用户信息失败，尝试刷新token:', error)
+          // 尝试刷新token
+          try {
+            await refreshToken()
+            // 刷新成功后，重新获取用户信息
+            await fetchUserInfo()
+            // 启动Token监控
+            startTokenMonitoring()
+            console.log('✅ Token刷新成功，用户状态已恢复')
+            return true
+          } catch (refreshError) {
+            console.error('Token刷新失败:', refreshError)
+            // 刷新失败，清除token
+            logout()
+            return false
+          }
+        }
+      }
+      
+      // 如果没有accessToken，尝试使用refreshToken刷新
+      const refreshTokenVal = getRefreshToken()
+      if (refreshTokenVal) {
+        console.log('没有accessToken，尝试使用refreshToken刷新...')
+        try {
+          await refreshToken()
+          // 刷新成功后，重新获取用户信息
+          await fetchUserInfo()
+          // 启动Token监控
+          startTokenMonitoring()
+          console.log('✅ 使用refreshToken刷新成功，用户状态已恢复')
+          return true
+        } catch (refreshError) {
+          console.error('使用refreshToken刷新失败:', refreshError)
+          // 刷新失败，清除token
+          logout()
           return false
         }
       }
       
-      // 如果没有token，返回false
+      // 如果既没有accessToken也没有refreshToken，返回false
       return false
     } catch (error) {
       console.error('初始化用户状态失败:', error)
@@ -90,6 +116,9 @@ export const useUserStore = defineStore('user', () => {
         setRefreshToken(refreshToken)
         userInfo.value = user || { userId, isFirstLogin }
         isLoggedIn.value = true
+
+        // 启动Token监控
+        startTokenMonitoring()
 
         console.log('✅ 用户登录成功:', userInfo.value.nickname)
         return response
@@ -326,6 +355,13 @@ export const useUserStore = defineStore('user', () => {
     isLoggedIn.value = false
     removeToken()
     removeRefreshToken()
+    
+    // 停止Token监控
+    if (tokenMonitorStop) {
+      tokenMonitorStop()
+      tokenMonitorStop = null
+    }
+    
     console.log('🔌 用户已登出')
   }
 
@@ -354,7 +390,17 @@ export const useUserStore = defineStore('user', () => {
         if (newRefreshToken) {
           setRefreshToken(newRefreshToken)
         }
-        console.log('✅ Token刷新成功')
+        
+        // 重新获取用户信息
+        try {
+          await fetchUserInfo()
+          isLoggedIn.value = true
+          console.log('✅ Token刷新成功，用户信息已更新')
+        } catch (userInfoError) {
+          console.warn('Token刷新成功，但获取用户信息失败:', userInfoError)
+          // 即使获取用户信息失败，token刷新也算成功
+        }
+        
         return response
       } else {
         throw new Error(response.message || 'Token刷新失败')
@@ -363,6 +409,29 @@ export const useUserStore = defineStore('user', () => {
       console.error('❌ Token刷新失败:', error)
       logout()
       throw error
+    }
+  }
+
+  /**
+   * 启动Token监控
+   */
+  const startTokenMonitoring = () => {
+    if (tokenMonitorStop) {
+      tokenMonitorStop()
+    }
+    
+    tokenMonitorStop = startTokenMonitor(refreshToken, 5 * 60 * 1000) // 每5分钟检查一次
+    console.log('🔍 启动Token监控')
+  }
+
+  /**
+   * 停止Token监控
+   */
+  const stopTokenMonitoring = () => {
+    if (tokenMonitorStop) {
+      tokenMonitorStop()
+      tokenMonitorStop = null
+      console.log('🔍 停止Token监控')
     }
   }
 
@@ -474,6 +543,8 @@ export const useUserStore = defineStore('user', () => {
     logout,
     updateActiveTime,
     refreshToken,
+    startTokenMonitoring,
+    stopTokenMonitoring,
     completeFirstLogin,
     checkPhone,
     checkNickname,
