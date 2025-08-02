@@ -1619,6 +1619,16 @@ const preprocessThreeJsCode = (code) => {
     console.log('未找到代码标记，使用原始代码处理')
   }
   
+  // 检查是否是完整的函数声明（以function开头并包含参数列表）
+  const functionRegex = /^function\s*\([^)]*\)\s*\{([\s\S]*)\}$/
+  const match = processedCode.match(functionRegex)
+  
+  if (match) {
+    // 如果是完整函数声明，提取函数体内容
+    processedCode = match[1].trim()
+    console.log('检测到函数声明，已提取函数体')
+  }
+  
   // 移除 import 语句
   processedCode = processedCode.replace(/import\s+.*?from\s+['"][^'"]*['"];?\s*/g, '')
   
