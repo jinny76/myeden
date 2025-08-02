@@ -40,6 +40,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
 import com.myeden.service.impl.PromptServiceImpl;
+import com.myeden.service.DifyService;
+import com.myeden.integration.StableDiffusionClient;
+import com.myeden.config.DifyConfig;
+import com.myeden.config.DifyApiKeysConfig;
 
 /**
  * 机器人行为管理服务实现类
@@ -86,6 +90,18 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
     @Autowired
     private AIChatService aiChatService;
+
+    @Autowired
+    private DifyService difyService;
+
+    @Autowired
+    private StableDiffusionClient stableDiffusionClient;
+
+    @Autowired
+    private DifyConfig difyConfig;
+
+    @Autowired
+    private DifyApiKeysConfig difyApiKeysConfig;
 
     private final Random random = new Random();
     private final ConcurrentHashMap<String, RobotDailyStats> dailyStats = new ConcurrentHashMap<>();
@@ -1831,67 +1847,182 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
     /**
      * 尝试为动态添加配图
-     * @param post 已保存的动态
-     * @param robot 机器人信息
+     *
+     * @param post    已保存的动态
+     * @param robot   机器人信息
      * @param content 动态内容
      */
     private void tryAddPostImage(Post post, Robot robot, String content) {
         try {
             logger.info("开始为动态添加配图: postId={}, content={}", post.getPostId(), content.substring(0, Math.min(content.length(), 30)));
-            
-            // 1. 使用AI生成配图搜索关键字
-            String searchKeywords = promptService.generateImageSearchKeywords(content, robot);
-            if (searchKeywords == null || searchKeywords.trim().isEmpty()) {
-                logger.warn("AI生成配图搜索关键字失败，跳过添加配图");
-                return;
+
+            // 决定使用图片生成还是图片搜索（50%概率）
+            boolean useImageGeneration = random.nextBoolean();
+            logger.info("图片处理方式: {}", useImageGeneration ? "AI生成" : "图片搜索");
+
+            String savedImagePath = null;
+            String imageTitle = null;
+
+            if (useImageGeneration) {
+                // 使用AI生成图片
+                savedImagePath = generateAndSaveImage(post, robot, content);
+                imageTitle = "AI生成配图";
             }
-            
-            logger.info("AI生成的配图搜索关键字: {}", searchKeywords);
-            
-            // 2. 搜索图片
-            List<Map<String, Object>> imageResults = searchContentService.searchImages(searchKeywords);
-            if (imageResults.isEmpty()) {
-                logger.warn("未找到配图搜索结果，跳过添加配图");
-                return;
+
+            // 如果AI生成失败或选择图片搜索，则使用图片搜索
+            if (savedImagePath == null) {
+                logger.info("使用图片搜索作为备选方案");
+                savedImagePath = searchAndSaveImage(post, robot, content);
+                imageTitle = "配图";
             }
-            
-            // 3. 获取随机图
-            Map<String, Object> firstImage = imageResults.get(RandomUtils.nextInt(0, imageResults.size()));
-            String imgSrc = (String) firstImage.get("imgSrc");
-            String title = (String) firstImage.get("title");
-            
-            if (imgSrc == null || imgSrc.trim().isEmpty()) {
-                logger.warn("第一张图片URL为空，跳过添加配图");
-                return;
-            }
-            
-            logger.info("开始下载图片: {}", imgSrc);
-            
-            // 4. 下载并保存图片
-            String savedImagePath = downloadAndSaveImage(imgSrc, post.getPostId());
+
             if (savedImagePath != null) {
-                // 5. 更新动态，添加图片
+                // 更新动态，添加图片
                 post.addImage(savedImagePath);
-                if (title != null && !title.trim().isEmpty()) {
-                    post.getImageInfos().add(title.trim());
-                } else {
-                    post.getImageInfos().add("配图");
-                }
-                
+                post.getImageInfos().add(imageTitle);
+
                 // 保存更新后的动态
                 postRepository.save(post);
-                logger.info("成功为动态添加配图: postId={}, imagePath={}", post.getPostId(), savedImagePath);
+                logger.info("成功为动态添加配图: postId={}, imagePath={}, method={}",
+                        post.getPostId(), savedImagePath, useImageGeneration ? "AI生成" : "图片搜索");
             }
-            
+
         } catch (Exception e) {
             logger.error("为动态添加配图时发生异常: postId={}, error={}", post.getPostId(), e.getMessage(), e);
         }
     }
 
     /**
+     * 生成并保存AI图片
+     */
+    private String generateAndSaveImage(Post post, Robot robot, String content) {
+        try {
+            logger.info("开始AI图片生成流程");
+
+            // 1. 使用AI生成配图搜索关键字
+            String searchKeywords = promptService.generateImageSearchKeywords(content, robot);
+            if (searchKeywords == null || searchKeywords.trim().isEmpty()) {
+                logger.warn("AI生成配图搜索关键字失败");
+                return null;
+            }
+
+            logger.info("AI生成的配图搜索关键字: {}", searchKeywords);
+
+            // 2. 使用Dify翻译提示词
+            String translationPrompt = buildTranslationPrompt(searchKeywords, robot.getName());
+            DifyService.DifyChatResult result = difyService.callDifyApi(translationPrompt, robot.getRobotId(), difyApiKeysConfig.getTranslationApiKey());
+            String translatedPrompt = null;
+            if (result != null && result.success && result.answer != null) {
+                translatedPrompt = extractTranslatedPrompt(result.answer);
+            }
+            if (translatedPrompt == null || translatedPrompt.trim().isEmpty()) {
+                logger.warn("Dify翻译提示词失败，使用原始关键字");
+                translatedPrompt = searchKeywords;
+            }
+
+            logger.info("翻译后的提示词: {}", translatedPrompt);
+
+            // 3. 检查SD服务是否可用
+            if (!stableDiffusionClient.isServiceAvailable()) {
+                logger.warn("SD服务不可用，跳过AI图片生成");
+                return null;
+            }
+
+            // 4. 调用SD生成图片
+            byte[] imageData = stableDiffusionClient.generateImage(translatedPrompt);
+            if (imageData == null || imageData.length == 0) {
+                logger.warn("SD生成图片失败");
+                return null;
+            }
+
+            // 5. 保存生成的图片
+            String savedImagePath = saveGeneratedImage(imageData, post.getPostId());
+            if (savedImagePath != null) {
+                logger.info("AI图片生成成功: {}", savedImagePath);
+                return savedImagePath;
+            }
+
+        } catch (Exception e) {
+            logger.error("AI图片生成过程中发生异常: error={}", e.getMessage(), e);
+        }
+
+        return null;
+    }
+
+    /**
+     * 搜索并保存图片
+     */
+    private String searchAndSaveImage(Post post, Robot robot, String content) {
+        try {
+            // 1. 使用AI生成配图搜索关键字
+            String searchKeywords = promptService.generateImageSearchKeywords(content, robot);
+            if (searchKeywords == null || searchKeywords.trim().isEmpty()) {
+                logger.warn("AI生成配图搜索关键字失败，跳过添加配图");
+                return null;
+            }
+
+            logger.info("AI生成的配图搜索关键字: {}", searchKeywords);
+
+            // 2. 搜索图片
+            List<Map<String, Object>> imageResults = searchContentService.searchImages(searchKeywords);
+            if (imageResults.isEmpty()) {
+                logger.warn("未找到配图搜索结果，跳过添加配图");
+                return null;
+            }
+
+            // 3. 获取随机图
+            Map<String, Object> firstImage = imageResults.get(RandomUtils.nextInt(0, imageResults.size()));
+            String imgSrc = (String) firstImage.get("imgSrc");
+
+            if (imgSrc == null || imgSrc.trim().isEmpty()) {
+                logger.warn("第一张图片URL为空，跳过添加配图");
+                return null;
+            }
+
+            logger.info("开始下载图片: {}", imgSrc);
+
+            // 4. 下载并保存图片
+            return downloadAndSaveImage(imgSrc, post.getPostId());
+
+        } catch (Exception e) {
+            logger.error("搜索图片过程中发生异常: error={}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 保存生成的图片
+     */
+    private String saveGeneratedImage(byte[] imageData, String postId) {
+        try {
+            // 创建uploads/images目录
+            Path uploadsDir = Paths.get("uploads", "images");
+            Files.createDirectories(uploadsDir);
+
+            // 生成文件名：postId_timestamp_generated.jpg
+            String timestamp = String.valueOf(System.currentTimeMillis());
+            String fileName = postId + "_" + timestamp + "_generated.jpg";
+            Path filePath = uploadsDir.resolve(fileName);
+
+            // 保存图片数据
+            Files.write(filePath, imageData);
+
+            // 返回相对路径
+            String relativePath = "/uploads/images/" + fileName;
+            logger.info("AI生成图片保存成功: {} -> {}", fileName, relativePath);
+            return relativePath;
+
+        } catch (Exception e) {
+            logger.error("保存AI生成图片失败: error={}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
      * 下载图片并保存到本地
+     *
      * @param imageUrl 图片URL
-     * @param postId 动态ID
+     * @param postId   动态ID
      * @return 保存的本地路径，失败返回null
      */
     private String downloadAndSaveImage(String imageUrl, String postId) {
@@ -1899,25 +2030,86 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
             // 创建uploads/images目录
             Path uploadsDir = Paths.get("uploads", "images");
             Files.createDirectories(uploadsDir);
-            
+
             // 生成文件名：postId_timestamp.jpg
             String timestamp = String.valueOf(System.currentTimeMillis());
             String fileName = postId + "_" + timestamp + ".jpg";
             Path filePath = uploadsDir.resolve(fileName);
-            
+
             // 下载图片
             URL url = new URL(imageUrl);
             try (InputStream inputStream = url.openStream()) {
                 Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
             }
-            
+
             // 返回相对路径
             String relativePath = "/uploads/images/" + fileName;
             logger.info("图片下载成功: {} -> {}", imageUrl, relativePath);
             return relativePath;
-            
+
         } catch (Exception e) {
             logger.error("下载图片失败: imageUrl={}, error={}", imageUrl, e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 构建翻译提示词
+     *
+     * @param searchKeywords 搜索关键词
+     * @param robotName      机器人名称
+     * @return 翻译提示词
+     */
+    private String buildTranslationPrompt(String searchKeywords, String robotName) {
+        return String.format(
+                "请将以下图片搜索关键词翻译成适合AI图片生成的英文提示词，要求：\n" +
+                        "1. 保持关键词的核心含义\n" +
+                        "2. 使用适合Stable Diffusion的英文表达\n" +
+                        "3. 添加适当的艺术风格描述,确保图片效果高质量,写实风格,不要卡通风格,不要文字.\n" +
+                        "4. 确保提示词简洁明了\n\n" +
+                        "搜索关键词：%s\n" +
+                        "机器人名称：%s\n\n" +
+                        "请直接返回翻译后的英文提示词，不要包含任何解释。",
+                searchKeywords, robotName
+        );
+    }
+
+    /**
+     * 从Dify响应中提取翻译后的提示词
+     *
+     * @param difyResponse Dify API响应内容
+     * @return 提取的翻译提示词，失败返回null
+     */
+    private String extractTranslatedPrompt(String difyResponse) {
+        try {
+            if (difyResponse == null || difyResponse.trim().isEmpty()) {
+                return null;
+            }
+
+            // 清理响应内容，去除多余的换行和空格
+            String cleaned = difyResponse.trim();
+
+            // 如果响应包含"翻译后的提示词："等前缀，尝试提取
+            if (cleaned.contains("：")) {
+                String[] parts = cleaned.split("：", 2);
+                if (parts.length > 1) {
+                    return parts[1].trim();
+                }
+            }
+
+            // 如果响应包含"prompt:"等英文前缀，尝试提取
+            if (cleaned.toLowerCase().contains("prompt:")) {
+                String[] parts = cleaned.split("prompt:", 2);
+                if (parts.length > 1) {
+                    return parts[1].trim();
+                }
+            }
+
+            // 直接返回清理后的内容
+            return cleaned;
+
+        } catch (Exception e) {
+            logger.error("提取翻译提示词失败: response={}, error={}", difyResponse, e.getMessage());
             return null;
         }
     }

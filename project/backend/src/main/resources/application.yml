@@ -119,6 +119,17 @@ dify:
     apiKey: app-jey4nbiLS9jyiUDWeIQTcvZ5
   data:
     apiKey: app-WykrFiNbfUTbRMtbSgAEHlAU
+  translation:
+    apiKey: app-hytQFbneWFbumZmDxXyOZfTQ
+
+# Stable Diffusion API配置
+sd:
+  api:
+    url: "http://192.168.1.38:7860"
+    timeout: 30000  # 30秒超时
+  connection:
+    max-sessions-per-user: 3  # 每个用户最大会话数
+    session-timeout: 3600000  # 1小时会话超时
 
 # ASR语音识别服务配置
 asr:
