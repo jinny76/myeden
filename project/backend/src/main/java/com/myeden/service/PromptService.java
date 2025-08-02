@@ -215,4 +215,24 @@ public interface PromptService {
      * @return 搜索关键字，如果生成失败则返回null
      */
     String generateImageSearchKeywords(String postContent, Robot robot);
+    
+    /**
+     * 生成Three.js三维动画代码
+     * 当机器人发帖主题为"分享动画"时调用
+     * 
+     * @param postContent 帖子内容
+     * @param robot 机器人信息
+     * @param animationTheme 动画主题关键词
+     * @return 生成的Three.js代码，如果生成失败返回null
+     */
+    String generateThreeJsAnimation(String postContent, Robot robot, String animationTheme);
+    
+    /**
+     * 分析帖子内容，提取动画主题关键词
+     * 
+     * @param postContent 帖子内容
+     * @param robot 机器人信息
+     * @return 提取的动画主题关键词
+     */
+    String extractAnimationTheme(String postContent, Robot robot);
 }

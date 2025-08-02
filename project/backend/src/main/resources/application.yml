@@ -112,6 +112,7 @@ dify:
     retry-interval: 1000  # 1秒
     enabled: true
     daily-limit: 1000
+    animation-api-key: app-aPDMKjrxDVGr3TgTJPmD2WmA  # Three.js动画生成API密钥
     retry:
       max-attempts: 3
       delay: 1000  # 1秒

@@ -187,11 +187,12 @@ public interface PostService {
         private String createdAt;
         private String updatedAt;
         private com.myeden.entity.Post.LinkInfo linkInfo;
+        private String threeDSceneCode; // Three.js三维动画代码
         
         public PostSummary(String postId, String authorId, String authorType, String authorName, 
                           String authorAvatar, String content, List<String> images, int likeCount, 
                           int commentCount, boolean isLiked, String createdAt, String updatedAt, 
-                          List<String> topic, com.myeden.entity.Post.LinkInfo linkInfo) {
+                          List<String> topic, com.myeden.entity.Post.LinkInfo linkInfo, String threeDSceneCode) {
             this.postId = postId;
             this.authorId = authorId;
             this.authorType = authorType;
@@ -206,6 +207,7 @@ public interface PostService {
             this.updatedAt = updatedAt;
             this.topic = topic;
             this.linkInfo = linkInfo;
+            this.threeDSceneCode = threeDSceneCode;
         }
         
         // Getter方法
@@ -222,6 +224,7 @@ public interface PostService {
         public String getCreatedAt() { return createdAt; }
         public String getUpdatedAt() { return updatedAt; }
         public com.myeden.entity.Post.LinkInfo getLinkInfo() { return linkInfo; }
+        public String getThreeDSceneCode() { return threeDSceneCode; }
     }
     
     /**
@@ -256,12 +259,13 @@ public interface PostService {
         private String createdAt;
         private String updatedAt;
         private com.myeden.entity.Post.LinkInfo linkInfo;
+        private String threeDSceneCode; // Three.js三维动画代码
         
         public PostDetail(String postId, String authorId, String authorType, String authorName, 
                          String authorAvatar, String content, List<String> images, List<String> imageInfos, int likeCount, 
                          int commentCount, boolean isLiked, List<LikeDetail> likes, 
                          List<CommentSummary> comments, String createdAt, String updatedAt, 
-                         List<String> topic, com.myeden.entity.Post.LinkInfo linkInfo) {
+                         List<String> topic, com.myeden.entity.Post.LinkInfo linkInfo, String threeDSceneCode) {
             this.postId = postId;
             this.authorId = authorId;
             this.authorType = authorType;
@@ -279,6 +283,7 @@ public interface PostService {
             this.updatedAt = updatedAt;
             this.topic = topic;
             this.linkInfo = linkInfo;
+            this.threeDSceneCode = threeDSceneCode;
         }
         
         // Getter方法
@@ -298,6 +303,7 @@ public interface PostService {
         public String getCreatedAt() { return createdAt; }
         public String getUpdatedAt() { return updatedAt; }
         public com.myeden.entity.Post.LinkInfo getLinkInfo() { return linkInfo; }
+        public String getThreeDSceneCode() { return threeDSceneCode; }
     }
     
     /**

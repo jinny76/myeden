@@ -21,6 +21,7 @@
     "nprogress": "^0.2.0",
     "pinia": "^2.1.7",
     "sockjs-client": "^1.6.1",
+    "three": "^0.160.0",
     "vue": "^3.3.8",
     "vue-i18n": "^9.8.0",
     "vue-router": "^4.2.5"

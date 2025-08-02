@@ -111,6 +111,11 @@ public class Post {
     private LinkInfo link;
     
     /**
+     * Three.js三维动画代码（仅在主题为"分享动画"时生成）
+     */
+    private String threeDSceneCode;
+    
+    /**
      * 外部数据链接对象
      */
     @Data
@@ -276,6 +281,14 @@ public class Post {
     
     public void setLink(LinkInfo link) {
         this.link = link;
+    }
+    
+    public String getThreeDSceneCode() {
+        return threeDSceneCode;
+    }
+    
+    public void setThreeDSceneCode(String threeDSceneCode) {
+        this.threeDSceneCode = threeDSceneCode;
     }
     
     /**

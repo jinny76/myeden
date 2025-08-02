@@ -299,6 +299,58 @@
                     </div>
                   </div>
                 </div>
+
+                <!-- Three.js 三维动画展示 -->
+                <div v-if="post.threeDSceneCode" class="post-animation" @click.stop>
+                  <div class="animation-container">
+                    <div class="animation-header">
+                      <el-icon class="animation-icon"><MagicStick /></el-icon>
+                      <span class="animation-title">三维动画</span>
+                      <div class="animation-controls">
+                        <el-button 
+                          v-if="!animationStates[post.postId]?.playing" 
+                          @click="playAnimation(post.postId)" 
+                          type="primary" 
+                          size="small"
+                          circle
+                        >
+                          <el-icon><VideoPlay /></el-icon>
+                        </el-button>
+                        <el-button 
+                          v-else 
+                          @click="pauseAnimation(post.postId)" 
+                          type="primary" 
+                          size="small"
+                          circle
+                        >
+                          <el-icon><VideoPause /></el-icon>
+                        </el-button>
+                        <el-button 
+                          @click="resetAnimation(post.postId)" 
+                          size="small"
+                          circle
+                        >
+                          <el-icon><RefreshRight /></el-icon>
+                        </el-button>
+                      </div>
+                    </div>
+                    <div 
+                      :id="`three-canvas-${post.postId}`" 
+                      class="three-canvas-container"
+                      :class="{ 'animation-error': animationStates[post.postId]?.error }"
+                    >
+                      <div v-if="animationStates[post.postId]?.loading" class="animation-loading">
+                        <el-icon class="loading-icon is-loading"><Loading /></el-icon>
+                        <span class="loading-text">正在加载动画...</span>
+                      </div>
+                      <div v-if="animationStates[post.postId]?.error" class="animation-error-placeholder">
+                        <el-icon class="error-icon"><Warning /></el-icon>
+                        <span class="error-text">动画加载失败</span>
+                        <el-button @click="retryAnimation(post.postId)" size="small" type="text">重试</el-button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <!-- 动态统计（点赞/评论） -->
@@ -578,7 +630,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, nextTick, onUnmounted, watch, markRaw } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMomentsStore } from '@/stores/moments'
@@ -586,11 +638,14 @@ import { useWebSocketStore } from '@/stores/websocket'
 import { useRobotStore } from '@/stores/robot'
 import { ElMessageBox, ElPopover } from 'element-plus'
 import { message } from '@/utils/message'
-import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View, Promotion, VideoPlay, Link, Picture } from '@element-plus/icons-vue'
+import { Plus, ChatDotRound, MoreFilled, Close, Loading, Menu, House, User, SwitchButton, Search, Star, StarFilled, View, Promotion, VideoPlay, VideoPause, Link, Picture, MagicStick, Warning, RefreshRight } from '@element-plus/icons-vue'
 import { getUserAvatarUrl, getRobotAvatarUrl, handleRobotAvatarError } from '@/utils/avatar'
 import { getCommentList, createComment, replyComment, deleteComment, likeComment, unlikeComment } from '@/api/comment'
 import { createPost, searchPosts, getPostDetail, queryPosts } from '@/api/post'
 import { tts } from '@/api/tts'
+import * as THREE from 'three'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 // 响应式数据
 const router = useRouter()
@@ -605,6 +660,10 @@ const isMobileMenuOpen = ref(false)
 
 // 移动端发布相关
 const showMobileEditor = ref(false)
+
+// Three.js 动画相关状态管理
+const animationStates = ref({})
+const threeScenes = ref({})
 
 // 滚动加载相关状态
 const isLoadingMore = ref(false)
@@ -1541,6 +1600,215 @@ const goToPostDetail = (post) => {
   // 明细页已被移除，此函数不再需要
   console.log('明细页功能已被移除')
 }
+// 预处理 Three.js 代码，移除 import 语句
+const preprocessThreeJsCode = (code) => {
+  // 移除 import 语句
+  let processedCode = code.replace(/import\s+.*?from\s+['"][^'"]*['"];?\s*/g, '')
+  
+  // 移除 ES6 模块导入语法
+  processedCode = processedCode.replace(/import\s*\*\s*as\s*\w+\s*from\s*['"][^'"]*['"];?\s*/g, '')
+  processedCode = processedCode.replace(/import\s*\{[^}]*\}\s*from\s*['"][^'"]*['"];?\s*/g, '')
+  
+  return processedCode.trim()
+}
+
+// Three.js 动画相关函数
+const initializeAnimation = async (postId, threeDSceneCode) => {
+  try {
+    console.log('initializeAnimation', postId, threeDSceneCode);
+    // 设置加载状态
+    if (!animationStates.value[postId]) {
+      animationStates.value[postId] = {}
+    }
+    animationStates.value[postId].loading = true
+    animationStates.value[postId].error = false
+
+    const container = document.getElementById(`three-canvas-${postId}`)
+    if (!container) {
+      throw new Error('Canvas container not found')
+    }
+
+    // 清理之前的场景
+    cleanupAnimation(postId)
+
+    // 等待容器渲染完成
+    await nextTick()
+
+    // 检查容器尺寸
+    console.log('Container dimensions:', container.clientWidth, container.clientHeight)
+    const width = container.clientWidth || 400
+    const height = 300
+
+    // 创建 Three.js 场景
+    const scene = new THREE.Scene()
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000)
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    
+    renderer.setSize(width, height)
+    renderer.setClearColor(0x87ceeb, 1) // 设置天蓝色背景
+    
+    // 启用阴影系统以支持更精致的渲染效果
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    
+    // 启用物理正确的光照
+    renderer.physicallyCorrectLights = true
+    
+    // 设置色调映射以获得更好的视觉效果
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.0
+    
+    container.appendChild(renderer.domElement)
+
+    // 预处理代码，移除 import 语句
+    const processedCode = preprocessThreeJsCode(threeDSceneCode)
+
+    // 执行生成的 Three.js 代码，提供所有必要的模块
+    console.log('Executing Three.js code:', processedCode)
+    let animationResult = null
+    
+    try {
+      const animationFunction = new Function(
+        'scene', 'camera', 'renderer', 'THREE', 'OrbitControls', 'GLTFLoader', 
+        processedCode
+      )
+      
+      animationResult = animationFunction(
+        scene, camera, renderer, THREE, 
+        OrbitControls, GLTFLoader
+      )
+      
+      console.log('Animation result:', animationResult)
+      console.log('Scene children:', scene.children.length)
+      
+      // 如果场景为空，添加一个测试立方体
+      if (scene.children.length === 0) {
+        console.log('Scene is empty, adding test cube')
+        const geometry = new THREE.BoxGeometry()
+        const material = new THREE.MeshBasicMaterial({ color: 0xff6666 })
+        const cube = new THREE.Mesh(geometry, material)
+        scene.add(cube)
+        camera.position.z = 5
+      }
+      
+    } catch (error) {
+      console.error('Error executing Three.js code:', error)
+      // 创建一个简单的测试场景
+      const geometry = new THREE.BoxGeometry()
+      const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+      const cube = new THREE.Mesh(geometry, material)
+      scene.add(cube)
+      camera.position.z = 5
+    }
+
+    // 存储场景和动画相关对象（使用markRaw防止响应式化）
+    threeScenes.value[postId] = markRaw({
+      scene,
+      camera,
+      renderer,
+      container,
+      animate: animationResult?.animate || null,
+      cleanup: animationResult?.cleanup || null,
+      isPlaying: false
+    })
+
+    // 立即渲染一次场景
+    renderer.render(scene, camera)
+
+    // 设置完成状态
+    animationStates.value[postId].loading = false
+    animationStates.value[postId].playing = false
+
+    // 等待下一个tick，确保场景数据已存储，然后自动开始播放动画
+    await nextTick()
+    setTimeout(() => {
+      console.log('自动播放动画:', postId)
+      playAnimation(postId)
+    }, 200)
+
+  } catch (error) {
+    console.error(`动画初始化失败 (Post: ${postId}):`, error)
+    animationStates.value[postId].loading = false
+    animationStates.value[postId].error = true
+  }
+}
+
+const playAnimation = (postId) => {
+  console.log('playAnimation called for:', postId)
+  const sceneData = threeScenes.value[postId]
+  if (!sceneData) {
+    console.log('No scene data found for:', postId)
+    return
+  }
+
+  console.log('Starting animation for:', postId)
+  sceneData.isPlaying = true
+  animationStates.value[postId].playing = true
+
+  const animate = () => {
+    if (!sceneData.isPlaying) return
+    
+    // 如果有自定义动画函数，调用它
+    if (sceneData.animate) {
+      sceneData.animate()
+    }
+    
+    // 始终渲染场景
+    sceneData.renderer.render(sceneData.scene, sceneData.camera)
+    requestAnimationFrame(animate)
+  }
+  animate()
+}
+
+const pauseAnimation = (postId) => {
+  const sceneData = threeScenes.value[postId]
+  if (!sceneData) return
+
+  sceneData.isPlaying = false
+  animationStates.value[postId].playing = false
+}
+
+const resetAnimation = (postId) => {
+  const post = momentsStore.posts.find(p => p.postId === postId)
+  if (!post || !post.threeDSceneCode) return
+
+  pauseAnimation(postId)
+  // 重新初始化动画
+  nextTick(() => {
+    initializeAnimation(postId, post.threeDSceneCode)
+  })
+}
+
+const retryAnimation = (postId) => {
+  const post = momentsStore.posts.find(p => p.postId === postId)
+  if (!post || !post.threeDSceneCode) return
+
+  nextTick(() => {
+    initializeAnimation(postId, post.threeDSceneCode)
+  })
+}
+
+const cleanupAnimation = (postId) => {
+  const sceneData = threeScenes.value[postId]
+  if (!sceneData) return
+
+  sceneData.isPlaying = false
+  
+  // 执行自定义清理函数
+  if (sceneData.cleanup) {
+    sceneData.cleanup()
+  }
+
+  // 清理 Three.js 对象
+  if (sceneData.renderer) {
+    sceneData.renderer.dispose()
+    if (sceneData.container && sceneData.renderer.domElement) {
+      sceneData.container.removeChild(sceneData.renderer.domElement)
+    }
+  }
+
+  delete threeScenes.value[postId]
+}
 
 // WebSocket事件处理函数 - 仅在支持增量刷新时启用
 let handlePostUpdate, handleCommentUpdate, handleRobotAction;
@@ -1610,6 +1878,17 @@ onMounted(async () => {
       }
       await momentsStore.loadPosts({}, true)
       await loadAllCommentsAndReplies()
+
+      // 自动初始化新加载的 Three.js 动画
+      console.log('检查posts中的三维动画:', momentsStore.posts.length)
+      momentsStore.posts.forEach(post => {
+        if (post.threeDSceneCode && !threeScenes.value[post.postId]) {
+          console.log('发现新的三维动画:', post.postId)
+          nextTick(() => {
+            initializeAnimation(post.postId, post.threeDSceneCode)
+          })
+        }
+      })
     }
   }
   
@@ -1687,6 +1966,16 @@ onMounted(async () => {
 watch(() => momentsStore.posts, () => {
   nextTick(() => {
     observeAll()
+    
+    // 自动初始化新的Three.js动画
+    momentsStore.posts.forEach(post => {
+      if (post.threeDSceneCode && !threeScenes.value[post.postId]) {
+        console.log('在watch中发现新的三维动画:', post.postId)
+        nextTick(() => {
+          initializeAnimation(post.postId, post.threeDSceneCode)
+        })
+      }
+    })
   })
 }, { deep: true })
 
@@ -1703,6 +1992,11 @@ onUnmounted(() => {
   
   // 移除滚动事件监听器
   window.removeEventListener('scroll', throttledHandleScroll)
+  
+  // 清理所有 Three.js 动画
+  Object.keys(threeScenes.value).forEach(postId => {
+    cleanupAnimation(postId)
+  })
   
   // 只在移动端移除触摸事件监听器
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -2960,6 +3254,122 @@ html.dark .video-badge {
     .el-icon {
       font-size: 26px !important;
     }
+  }
+}
+
+/* Three.js 动画展示样式 */
+.post-animation {
+  margin-top: 16px;
+  border: 1px solid rgba(var(--el-border-color-light-rgb), 0.8);
+  border-radius: 12px;
+  background: linear-gradient(135deg, 
+    rgba(var(--el-color-primary-rgb), 0.03) 0%, 
+    rgba(var(--el-color-primary-rgb), 0.01) 100%);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.post-animation:hover {
+  border-color: rgba(var(--el-color-primary-rgb), 0.3);
+  box-shadow: 0 4px 12px rgba(var(--el-color-primary-rgb), 0.1);
+}
+
+.animation-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.animation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(var(--el-color-primary-rgb), 0.05);
+  border-bottom: 1px solid rgba(var(--el-border-color-light-rgb), 0.5);
+}
+
+.animation-icon {
+  color: var(--el-color-primary);
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.animation-title {
+  color: var(--el-color-primary);
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1;
+  letter-spacing: 0.5px;
+}
+
+.animation-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.three-canvas-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.three-canvas-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+}
+
+.animation-loading,
+.animation-error-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+.animation-loading .loading-icon,
+.animation-error-placeholder .error-icon {
+  font-size: 24px;
+}
+
+.animation-loading .loading-icon {
+  color: var(--el-color-primary);
+}
+
+.animation-error-placeholder .error-icon {
+  color: var(--el-color-danger);
+}
+
+.animation-error-placeholder .el-button {
+  margin-top: 8px;
+  color: var(--el-color-primary);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .animation-header {
+    padding: 10px 12px;
+  }
+  
+  .animation-title {
+    font-size: 13px;
+  }
+  
+  .animation-controls .el-button {
+    padding: 6px;
+  }
+  
+  .three-canvas-container {
+    height: 250px;
   }
 }
 

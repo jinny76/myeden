@@ -395,6 +395,14 @@ public class FileController {
             case "html":
             case "htm":
                 return "text/html";
+            case "glb":
+                return "model/gltf-binary";
+            case "gltf":
+                return "model/gltf+json";
+            case "obj":
+                return "model/obj";
+            case "fbx":
+                return "model/fbx";
             default:
                 return "application/octet-stream";
         }

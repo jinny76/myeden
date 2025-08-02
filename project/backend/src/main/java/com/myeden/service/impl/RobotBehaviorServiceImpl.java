@@ -296,6 +296,11 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
                 // 保存到数据库
                 Post savedPost = postRepository.save(post);
 
+                // 检查是否是"分享动画"主题，如果是则生成Three.js动画代码
+                if (savedPost != null && isAnimationTopic(savedPost)) {
+                    tryGenerateThreeJsAnimation(savedPost, robot, content);
+                }
+
                 // 随机2/3几率添加配图
                 if (savedPost != null && (savedPost.getLink() == null || savedPost.getLink().getImage() == null || new Random().nextInt(3) < 2)) {
                     tryAddPostImage(savedPost, robot, content);
@@ -2111,6 +2116,91 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
         } catch (Exception e) {
             logger.error("提取翻译提示词失败: response={}, error={}", difyResponse, e.getMessage());
             return null;
+        }
+    }
+    
+    /**
+     * 检查动态是否包含"分享动画"主题
+     * 
+     * @param post 动态对象
+     * @return 如果包含动画主题返回true，否则返回false
+     */
+    private boolean isAnimationTopic(Post post) {
+        if (post == null || post.getTopic() == null || post.getTopic().isEmpty()) {
+            return false;
+        }
+        
+        // 检查主题列表中是否包含"分享动画"相关关键词
+        for (String topic : post.getTopic()) {
+            if (topic != null && (topic.contains("分享动画") || topic.contains("动画") || topic.contains("三维") || topic.contains("3D"))) {
+                logger.info("检测到动画主题: {}", topic);
+                return true;
+            }
+        }
+        
+        // 检查动态内容是否包含动画相关关键词
+        String content = post.getContent();
+        if (content != null && (content.contains("分享动画") || content.contains("三维动画") || content.contains("3D动画"))) {
+            logger.info("动态内容包含动画关键词");
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 尝试为动态生成Three.js动画代码
+     * 
+     * @param post 已保存的动态
+     * @param robot 机器人信息
+     * @param content 动态内容
+     */
+    private void tryGenerateThreeJsAnimation(Post post, Robot robot, String content) {
+        try {
+            logger.info("开始为动态生成Three.js动画代码: postId={}, robotId={}", post.getPostId(), robot.getRobotId());
+            
+            // 1. 提取动画主题关键词
+            String animationTheme = promptService.extractAnimationTheme(content, robot);
+            if (animationTheme == null || animationTheme.trim().isEmpty()) {
+                logger.warn("提取动画主题失败，跳过动画代码生成");
+                return;
+            }
+            
+            logger.info("提取的动画主题: {}", animationTheme);
+            
+            // 2. 生成Three.js动画代码
+            String threeJsCode = promptService.generateThreeJsAnimation(content, robot, animationTheme);
+            if (threeJsCode != null && !threeJsCode.trim().isEmpty()) {
+                // 3. 保存动画代码到数据库
+                post.setThreeDSceneCode(threeJsCode);
+                post.setUpdatedAt(LocalDateTime.now());
+                postRepository.save(post);
+                
+                logger.info("Three.js动画代码生成成功并已保存: postId={}, 代码长度={}", 
+                           post.getPostId(), threeJsCode.length());
+                
+                // 4. 推送WebSocket消息通知前端
+                try {
+                    Map<String, Object> animationData = new HashMap<>();
+                    animationData.put("robotId", robot.getRobotId());
+                    animationData.put("robotName", robot.getName());
+                    animationData.put("actionType", "animation_generated");
+                    animationData.put("postId", post.getPostId());
+                    animationData.put("animationTheme", animationTheme);
+                    animationData.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                    
+                    webSocketService.pushRobotAction(animationData);
+                    logger.info("Three.js动画生成通知已推送");
+                } catch (Exception e) {
+                    logger.warn("推送动画生成通知失败: {}", e.getMessage());
+                }
+            } else {
+                logger.warn("Three.js动画代码生成失败，返回内容为空");
+            }
+            
+        } catch (Exception e) {
+            logger.error("生成Three.js动画代码时发生异常: postId={}, error={}", 
+                        post.getPostId(), e.getMessage(), e);
         }
     }
 } 

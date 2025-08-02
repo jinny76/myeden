@@ -411,7 +411,8 @@ public class PostServiceImpl implements PostService {
                 post.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
                 post.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME), 
                 post.getTopic(),
-                post.getLink()
+                post.getLink(),
+                post.getThreeDSceneCode()
             );
             
         } catch (Exception e) {
@@ -717,7 +718,8 @@ public class PostServiceImpl implements PostService {
             post.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
             post.getUpdatedAt().format(DateTimeFormatter.ISO_DATE_TIME),
             post.getTopic(),
-            post.getLink()
+            post.getLink(),
+            post.getThreeDSceneCode()
         );
     }
     

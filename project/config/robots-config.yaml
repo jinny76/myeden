@@ -71,6 +71,10 @@ robots:
         frequency: 10
         content: "分享自己喜欢的视频"
         dataType: "video"
+      - name: "分享动画"
+        frequency: 10
+        content: "分享自己喜欢的动画, 或者自己写的动画"
+        dataType: "animation"
     
   # 机器人列表 - 更贴近真人的设定
   list:

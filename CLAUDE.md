@@ -255,6 +255,74 @@ Based on the project's Cursor rules:
 - Don't create unnecessary fix scripts or automation
 - Follow existing component patterns and API integration approaches
 
+## Known Code Quality Issues
+
+### Critical Security Issues
+- **Hardcoded Secrets**: JWT secrets, database passwords, and API keys are hardcoded in `application.yml` (lines 77-109)
+  - Use environment variables: `${JWT_SECRET:default}` instead of hardcoded values
+  - Move sensitive data to environment-specific configuration
+- **Weak JWT Secrets**: Current JWT secret is predictable and should be replaced with cryptographically secure random strings
+
+### Code Duplication Problems
+- **Authentication Logic**: Identical JWT validation code appears 5+ times across controllers
+  - Location: `UserController.java` lines 169-181, 241-253, 290-302, 330-342, 480-492
+  - Solution: Create a unified `@Component` authentication helper or use Spring Security filters
+- **Error Handling**: Same exception pattern `ResponseEntity.badRequest().body(EventResponse.error(e.getMessage()))` appears 34+ times
+  - Risk: Exposes internal error details to users
+  - Solution: Implement `@ControllerAdvice` global exception handler
+
+### Performance Issues
+- **Database Queries**: Multiple `findAll()` calls load entire collections into memory
+  - Locations: 16 occurrences across 8 service files
+  - Risk: Memory exhaustion and poor performance with large datasets
+  - Solution: Replace with paginated queries and proper indexing
+- **N+1 Query Problem**: Potential N+1 queries in relationship loading (check `UserRobotLinkService`)
+
+### Architecture Inconsistencies
+- **Mixed Authentication**: Some endpoints use manual JWT validation, others rely on Spring Security
+- **Exception Logging**: Inconsistent error logging patterns across services
+- **Response Format**: While `EventResponse` is used consistently, error codes are not standardized
+
+## Refactoring Priorities
+
+### High Priority (Security & Performance)
+1. **Environment Variable Migration**: Replace all hardcoded secrets with environment variables
+2. **Authentication Unification**: Create centralized authentication component
+3. **Database Query Optimization**: Replace `findAll()` with paginated alternatives
+4. **Global Exception Handler**: Implement `@ControllerAdvice` for consistent error handling
+
+### Medium Priority (Code Quality)
+1. **Response Standardization**: Create enum for HTTP status codes and error types
+2. **Logging Standardization**: Implement consistent logging patterns across services
+3. **Input Validation**: Add comprehensive validation annotations
+4. **Service Layer Cleanup**: Remove duplicate business logic patterns
+
+### Low Priority (Maintenance)
+1. **Documentation Updates**: Sync API documentation with current implementation
+2. **Test Coverage**: Add unit tests for critical business logic
+3. **Code Comments**: Add JavaDoc for complex business methods
+
+## AI Integration Architecture
+
+The system implements a sophisticated AI relationship system:
+
+### Familiarity Progression System
+- **Communication Scoring**: AI evaluates conversation quality via Dify API
+- **Behavioral Adaptation**: Robot responses change based on relationship depth
+- **Proactive Messaging**: AI initiates conversations based on user activity patterns
+- **Memory Management**: Conversation context preserved across sessions
+
+### Key Integration Points
+- **DifyService**: Handles all AI API communications (`project/backend/src/main/java/com/myeden/service/impl/DifyServiceImpl.java`)
+- **UserRobotLinkService**: Manages relationship state and familiarity scoring
+- **RobotBehaviorService**: Orchestrates scheduled AI behaviors and interactions
+- **CommunicationScoringService**: Evaluates interaction quality for relationship progression
+
+### External Data Integration
+- **SearXNG Integration**: Provides real-time search aggregation for AI context
+- **Weather APIs**: Location-based weather data enhances conversational context
+- **ASR Service**: Audio-to-text conversion for voice interactions (`asr.server` config)
+
 ## Testing and Quality Assurance
 
 ### Backend Testing

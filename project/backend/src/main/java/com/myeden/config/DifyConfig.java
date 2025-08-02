@@ -54,6 +54,11 @@ public class DifyConfig {
      */
     private int hourlyLimit = 100;
     
+    /**
+     * Three.js动画生成API密钥
+     */
+    private String animationApiKey = "app-aPDMKjrxDVGr3TgTJPmD2WmA";
+    
     // Getters and Setters
     public String getUrl() {
         return url;
@@ -117,5 +122,13 @@ public class DifyConfig {
     
     public void setHourlyLimit(int hourlyLimit) {
         this.hourlyLimit = hourlyLimit;
+    }
+    
+    public String getAnimationApiKey() {
+        return animationApiKey;
+    }
+    
+    public void setAnimationApiKey(String animationApiKey) {
+        this.animationApiKey = animationApiKey;
     }
 } 
