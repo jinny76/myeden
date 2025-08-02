@@ -1600,14 +1600,42 @@ const goToPostDetail = (post) => {
   // 明细页已被移除，此函数不再需要
   console.log('明细页功能已被移除')
 }
-// 预处理 Three.js 代码，移除 import 语句
+// 预处理 Three.js 代码，支持标记提取和import移除
 const preprocessThreeJsCode = (code) => {
+  let processedCode = code.trim()
+  
+  // 优先使用标记提取代码
+  const startMarker = '// ===THREEJS_CODE_START==='
+  const endMarker = '// ===THREEJS_CODE_END==='
+  
+  const startIndex = processedCode.indexOf(startMarker)
+  const endIndex = processedCode.indexOf(endMarker)
+  
+  if (startIndex >= 0 && endIndex > startIndex) {
+    // 找到标记，提取标记之间的代码
+    processedCode = processedCode.substring(startIndex + startMarker.length, endIndex).trim()
+    console.log('使用标记提取Three.js代码')
+  } else {
+    console.log('未找到代码标记，使用原始代码处理')
+  }
+  
   // 移除 import 语句
-  let processedCode = code.replace(/import\s+.*?from\s+['"][^'"]*['"];?\s*/g, '')
+  processedCode = processedCode.replace(/import\s+.*?from\s+['"][^'"]*['"];?\s*/g, '')
   
   // 移除 ES6 模块导入语法
   processedCode = processedCode.replace(/import\s*\*\s*as\s*\w+\s*from\s*['"][^'"]*['"];?\s*/g, '')
   processedCode = processedCode.replace(/import\s*\{[^}]*\}\s*from\s*['"][^'"]*['"];?\s*/g, '')
+  
+  // 移除markdown代码块标记
+  if (processedCode.startsWith('```')) {
+    const firstNewline = processedCode.indexOf('\n')
+    if (firstNewline > 0) {
+      processedCode = processedCode.substring(firstNewline + 1)
+    }
+  }
+  if (processedCode.endsWith('```')) {
+    processedCode = processedCode.substring(0, processedCode.lastIndexOf('```'))
+  }
   
   return processedCode.trim()
 }
@@ -1669,7 +1697,7 @@ const initializeAnimation = async (postId, threeDSceneCode) => {
     
     try {
       const animationFunction = new Function(
-        'scene', 'camera', 'renderer', 'THREE', 'OrbitControls', 'GLTFLoader', 
+        'scene', 'camera', 'renderer', 'THREE', 'OrbitControls', 'GLTFLoader',
         processedCode
       )
       

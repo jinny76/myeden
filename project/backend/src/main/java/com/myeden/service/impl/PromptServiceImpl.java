@@ -11,6 +11,7 @@ import com.myeden.repository.UserRepository;
 import com.myeden.service.*;
 import com.myeden.service.DifyService.DifyChatResult;
 import com.myeden.service.ModelFileService.ModelFileInfo;
+import com.myeden.service.ModelFileService.SkyboxFileInfo;
 import com.myeden.config.RobotConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -2376,175 +2377,120 @@ public class PromptServiceImpl implements PromptService {
         try {
             log.info("开始生成Three.js动画代码，机器人: {}, 主题: {}", robot.getName(), animationTheme);
             
-            // 构建Three.js动画生成提示词
+            // 构建简化的Three.js动画生成提示词
             StringBuilder prompt = new StringBuilder();
-            prompt.append("请根据以下内容生成一段精致美观的Three.js动画代码。");
-            prompt.append("代码应该创建一个专业级的三维场景，包含丰富的视觉效果和流畅动画。");
-            prompt.append("要求：\n");
-            prompt.append("1. 不要使用import语句，所有模块已作为参数提供\n");
-            prompt.append("2. 函数签名为：function(scene, camera, renderer, THREE, OrbitControls, GLTFLoader)\n");
-            prompt.append("3. 使用提供的scene、camera、renderer参数，不要重新创建\n");
-            prompt.append("4. 必须包含完整的光照系统：环境光+主光源+补光\n");
-            prompt.append("5. 必须包含标准地面（使用PlaneGeometry，带纹理或渐变材质）\n");
-            prompt.append("6. 考虑添加天空盒子或背景渐变效果\n");
-            prompt.append("7. 使用多样化的材质：MeshStandardMaterial、MeshPhysicalMaterial等\n");
-            prompt.append("8. 适当使用半透明效果：transparent: true, opacity: 0.7等\n");
-            prompt.append("9. 添加粒子系统或特效（如适合主题）\n");
-            prompt.append("10. 返回一个对象包含animate函数：{ animate: function() { ... } }\n");
-            prompt.append("11. 在animate函数中更新动画状态，包含缓动效果\n");
-            prompt.append("12. 可以使用OrbitControls增强交互性\n");
-            prompt.append("13. 只返回函数内部的JavaScript代码\n");
-            prompt.append("14. 追求视觉美感和动画流畅性\n\n");
+            prompt.append("生成一个Three.js动画场景。\n\n");
             
-            prompt.append("精致代码示例格式：\n");
-            prompt.append("// 完整光照系统\n");
-            prompt.append("const ambientLight = new THREE.AmbientLight(0x404040, 0.6);\n");
+            prompt.append("**严格要求：**\n");
+            prompt.append("1. 函数签名：function(scene, camera, renderer, THREE, OrbitControls, GLTFLoader)\n");
+            prompt.append("2. 不要import，不要重新创建scene/camera/renderer\n");
+            prompt.append("3. 必须返回：{ animate: function() { ... } }\n");
+            prompt.append("4. 只返回可执行的JavaScript代码\n\n");
+            
+            prompt.append("**必须包含：**\n");
+            prompt.append("- 环境光：new THREE.AmbientLight(0x404040, 0.4)\n");
+            prompt.append("- 主光源：new THREE.DirectionalLight(0xffffff, 0.8)\n");
+            prompt.append("- 地面：PlaneGeometry(20,20)，rotation.x = -Math.PI/2\n");
+            prompt.append("- 至少2个几何体对象（Box、Sphere、Cylinder等）\n");
+            prompt.append("- 相机控制：new OrbitControls(camera, renderer.domElement)\n\n");
+            
+            prompt.append("**代码模板：**\n");
+            prompt.append("```javascript\n");
+            prompt.append("// 添加灯光\n");
+            prompt.append("const ambientLight = new THREE.AmbientLight(0x404040, 0.4);\n");
             prompt.append("scene.add(ambientLight);\n");
-            prompt.append("const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);\n");
+            prompt.append("const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);\n");
             prompt.append("directionalLight.position.set(5, 10, 5);\n");
-            prompt.append("directionalLight.castShadow = true;\n");
             prompt.append("scene.add(directionalLight);\n\n");
-            prompt.append("// 标准地面\n");
-            prompt.append("const groundGeometry = new THREE.PlaneGeometry(20, 20);\n");
-            prompt.append("const groundMaterial = new THREE.MeshStandardMaterial({\n");
-            prompt.append("  color: 0x808080, roughness: 0.8, metalness: 0.2\n");
-            prompt.append("});\n");
+            
+            prompt.append("// 添加地面\n");
+            prompt.append("const groundGeometry = new THREE.PlaneGeometry(50, 50);\n");
+            prompt.append("const groundMaterial = new THREE.MeshLambertMaterial({color: 0x999999});\n");
             prompt.append("const ground = new THREE.Mesh(groundGeometry, groundMaterial);\n");
             prompt.append("ground.rotation.x = -Math.PI / 2;\n");
-            prompt.append("ground.receiveShadow = true;\n");
             prompt.append("scene.add(ground);\n\n");
-            prompt.append("// 精致材质的主要对象\n");
-            prompt.append("const geometry = new THREE.SphereGeometry(1, 32, 32);\n");
-            prompt.append("const material = new THREE.MeshPhysicalMaterial({\n");
-            prompt.append("  color: 0x4FC3F7, roughness: 0.3, metalness: 0.7,\n");
-            prompt.append("  transparent: true, opacity: 0.8, transmission: 0.2\n");
-            prompt.append("});\n");
-            prompt.append("const sphere = new THREE.Mesh(geometry, material);\n");
-            prompt.append("sphere.position.y = 1;\n");
-            prompt.append("sphere.castShadow = true;\n");
-            prompt.append("scene.add(sphere);\n\n");
-            prompt.append("// 加载GLB三维模型（可选，丰富场景）\n");
-            prompt.append("const loader = new GLTFLoader();\n");
-            prompt.append("let loadedModels = []; // 存储加载的模型\n");
-            prompt.append("// 示例：加载树木模型\n");
-            prompt.append("loader.load('/api/v1/files/models/tree.glb', (gltf) => {\n");
-            prompt.append("  const treeModel = gltf.scene;\n");
-            prompt.append("  treeModel.scale.set(2, 2, 2);\n");
-            prompt.append("  treeModel.position.set(-3, 0, -2);\n");
-            prompt.append("  treeModel.castShadow = true;\n");
-            prompt.append("  treeModel.receiveShadow = true;\n");
-            prompt.append("  scene.add(treeModel);\n");
-            prompt.append("  loadedModels.push(treeModel);\n");
-            prompt.append("});\n\n");
-            prompt.append("// 示例：加载建筑模型\n");
-            prompt.append("loader.load('/api/v1/files/models/house.glb', (gltf) => {\n");
-            prompt.append("  const houseModel = gltf.scene;\n");
-            prompt.append("  houseModel.scale.set(1.5, 1.5, 1.5);\n");
-            prompt.append("  houseModel.position.set(4, 0, 1);\n");
-            prompt.append("  houseModel.rotation.y = Math.PI / 4;\n");
-            prompt.append("  houseModel.castShadow = true;\n");
-            prompt.append("  houseModel.receiveShadow = true;\n");
-            prompt.append("  scene.add(houseModel);\n");
-            prompt.append("  loadedModels.push(houseModel);\n");
-            prompt.append("});\n\n");
-            prompt.append("// 设置相机和控制器\n");
-            prompt.append("camera.position.set(5, 5, 8);\n");
-            prompt.append("const controls = new OrbitControls(camera, renderer.domElement);\n");
-            prompt.append("controls.enableDamping = true;\n");
-            prompt.append("controls.dampingFactor = 0.05;\n\n");
-            prompt.append("// 返回动画函数\n");
+            
+            prompt.append("// 添加对象（至少2个）\n");
+            prompt.append("const geometry1 = new THREE.BoxGeometry(1, 1, 1);\n");
+            prompt.append("const material1 = new THREE.MeshLambertMaterial({color: 0x00ff00});\n");
+            prompt.append("const cube = new THREE.Mesh(geometry1, material1);\n");
+            prompt.append("cube.position.set(0, 0.5, 0);\n");
+            prompt.append("scene.add(cube);\n\n");
+            
+            prompt.append("// 设置相机\n");
+            prompt.append("camera.position.set(5, 5, 5);\n");
+            prompt.append("const controls = new OrbitControls(camera, renderer.domElement);\n\n");
+            
+            prompt.append("// 天空盒子加载示例（6张独立图片）\n");
+            prompt.append("const cubeTextureLoader = new THREE.CubeTextureLoader();\n");
+            prompt.append("const skyboxTexture = cubeTextureLoader.load([\n");
+            prompt.append("  '/api/v1/files/skybox/sky/px.png', // 正X (右)\n");
+            prompt.append("  '/api/v1/files/skybox/sky/nx.png', // 负X (左)\n");
+            prompt.append("  '/api/v1/files/skybox/sky/py.png', // 正Y (上)\n");
+            prompt.append("  '/api/v1/files/skybox/sky/ny.png', // 负Y (下)\n");
+            prompt.append("  '/api/v1/files/skybox/sky/pz.png', // 正Z (前)\n");
+            prompt.append("  '/api/v1/files/skybox/sky/nz.png'  // 负Z (后)\n");
+            prompt.append("]);\n");
+            prompt.append("scene.background = skyboxTexture;\n\n");
+            
+            prompt.append("// 返回动画循环\n");
             prompt.append("return {\n");
             prompt.append("  animate: function() {\n");
-            prompt.append("    // 主要对象动画\n");
-            prompt.append("    sphere.rotation.y += 0.01;\n");
-            prompt.append("    sphere.position.y = 1 + Math.sin(Date.now() * 0.002) * 0.3;\n");
-            prompt.append("    \n");
-            prompt.append("    // 加载的模型动画（如果存在）\n");
-            prompt.append("    loadedModels.forEach((model, index) => {\n");
-            prompt.append("      if (model) {\n");
-            prompt.append("        model.rotation.y += 0.005 * (index + 1);\n");
-            prompt.append("      }\n");
-            prompt.append("    });\n");
-            prompt.append("    \n");
+            prompt.append("    cube.rotation.y += 0.01;\n");
             prompt.append("    controls.update();\n");
             prompt.append("  }\n");
-            prompt.append("};\n\n");
+            prompt.append("};\n");
+            prompt.append("```\n\n");
             
-            prompt.append("推荐材质和特效：\n");
-            prompt.append("- MeshPhysicalMaterial: 支持transmission(透射)、roughness(粗糙度)、metalness(金属度)\n");
-            prompt.append("- MeshStandardMaterial: 支持PBR渲染，适合大多数对象\n");
-            prompt.append("- 半透明玻璃效果: { transparent: true, opacity: 0.3, transmission: 0.9 }\n");
-            prompt.append("- 金属效果: { metalness: 1.0, roughness: 0.1, color: 0xC0C0C0 }\n");
-            prompt.append("- 发光效果: { emissive: 0x222222, emissiveIntensity: 0.3 }\n");
-            prompt.append("- 粒子系统: 使用Points和BufferGeometry创建星空、雪花等\n");
-            prompt.append("- 渐变背景: scene.background = new THREE.Color().setHSL(0.6, 0.0, 1.0)\n");
-            prompt.append("- 阴影系统: renderer.shadowMap.enabled = true, object.castShadow = true\n\n");
+            prompt.append("**主题要求：**\n");
+            prompt.append("主题：").append(animationTheme).append("\n");
+            prompt.append("内容：").append(postContent).append("\n\n");
             
-            // 添加可用的GLB模型文件信息
+            // 添加简化的可用资源信息
             try {
                 List<ModelFileInfo> recommendedModels = modelFileService.getRecommendedModels(animationTheme);
                 if (!recommendedModels.isEmpty()) {
-                    prompt.append("可用的3D模型文件（GLB格式）：\n");
-                    prompt.append("你可以使用GLTFLoader加载这些模型来丰富场景，模型文件URL格式为：/api/v1/files/models/文件名\n");
-                    for (ModelFileInfo model : recommendedModels) {
-                        prompt.append(String.format("- %s (%s): %s - 下载地址: %s\n", 
-                            model.getDisplayName(), 
-                            model.getCategory(), 
-                            model.getDescription(),
-                            model.getDownloadUrl()));
+                    prompt.append("**可用3D模型：**\n");
+                    for (int i = 0; i < Math.min(3, recommendedModels.size()); i++) {
+                        ModelFileInfo model = recommendedModels.get(i);
+                        prompt.append("- ").append(model.getDownloadUrl()).append(" (").append(model.getDisplayName()).append(")\n");
                     }
                     prompt.append("\n");
-                    prompt.append("GLB模型加载完整示例代码：\n");
-                    prompt.append("const loader = new GLTFLoader();\n");
-                    prompt.append("let sceneModels = []; // 存储场景中的模型\n\n");
-                    prompt.append("// 基础加载函数\n");
-                    prompt.append("function loadModel(url, scale, position, rotation = {x:0, y:0, z:0}) {\n");
-                    prompt.append("  loader.load(url, (gltf) => {\n");
-                    prompt.append("    const model = gltf.scene;\n");
-                    prompt.append("    \n");
-                    prompt.append("    // 设置缩放\n");
-                    prompt.append("    model.scale.set(scale.x, scale.y, scale.z);\n");
-                    prompt.append("    \n");
-                    prompt.append("    // 设置位置\n");
-                    prompt.append("    model.position.set(position.x, position.y, position.z);\n");
-                    prompt.append("    \n");
-                    prompt.append("    // 设置旋转\n");
-                    prompt.append("    model.rotation.set(rotation.x, rotation.y, rotation.z);\n");
-                    prompt.append("    \n");
-                    prompt.append("    // 启用阴影\n");
-                    prompt.append("    model.traverse((child) => {\n");
-                    prompt.append("      if (child.isMesh) {\n");
-                    prompt.append("        child.castShadow = true;\n");
-                    prompt.append("        child.receiveShadow = true;\n");
-                    prompt.append("      }\n");
-                    prompt.append("    });\n");
-                    prompt.append("    \n");
-                    prompt.append("    scene.add(model);\n");
-                    prompt.append("    sceneModels.push(model);\n");
-                    prompt.append("  }, undefined, (error) => {\n");
-                    prompt.append("    console.warn('模型加载失败:', url, error);\n");
-                    prompt.append("  });\n");
-                    prompt.append("}\n\n");
-                    prompt.append("// 使用示例：\n");
-                    prompt.append("// loadModel('/api/v1/files/models/tree.glb', {x:1,y:1,z:1}, {x:-2,y:0,z:3});\n");
-                    prompt.append("// loadModel('/api/v1/files/models/house.glb', {x:2,y:2,z:2}, {x:3,y:0,z:-1}, {x:0,y:Math.PI/4,z:0});\n\n");
                 }
             } catch (Exception e) {
                 log.warn("获取推荐模型文件失败: {}", e.getMessage());
             }
             
-            prompt.append("GLB模型使用建议：\n");
-            prompt.append("1. 根据动画主题选择合适的模型文件\n");
-            prompt.append("2. 注意模型的缩放比例，避免过大或过小\n");
-            prompt.append("3. 合理放置模型位置，营造层次感\n");
-            prompt.append("4. 为模型添加旋转或移动动画增加生动性\n");
-            prompt.append("5. 模型加载是异步的，要处理加载失败的情况\n");
-            prompt.append("6. 启用模型的阴影投射和接收，增强真实感\n");
-            prompt.append("7. 可以为不同模型设置不同的动画速度和方式\n\n");
+            try {
+                SkyboxFileInfo recommendedSkybox = modelFileService.getRecommendedSkybox(animationTheme);
+                if (recommendedSkybox != null) {
+                    prompt.append("**推荐天空盒子：**\n");
+                    
+                    // 检查是否为立方体贴图类型（目录形式）
+                    String skyboxPath = recommendedSkybox.getRelativePath();
+                    if (skyboxPath.startsWith("/skybox/") && !skyboxPath.contains(".")) {
+                        // 立方体贴图目录
+                        String dirName = skyboxPath.substring("/skybox/".length());
+                        prompt.append("- 立方体贴图: ").append(dirName).append(" (").append(recommendedSkybox.getDisplayName()).append(")\n");
+                        prompt.append("  使用CubeTextureLoader加载\n\n");
+                    } else {
+                        // 单个文件天空盒子
+                        prompt.append("- ").append(recommendedSkybox.getDownloadUrl()).append(" (").append(recommendedSkybox.getDisplayName()).append(")\n\n");
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("获取推荐天空盒子失败: {}", e.getMessage());
+            }
             
-            prompt.append("动画主题：").append(animationTheme).append("\n");
-            prompt.append("相关内容：").append(postContent).append("\n\n");
-            prompt.append("请根据主题和内容生成专业级的Three.js动画代码，优先使用上述推荐的GLB模型文件丰富场景，确保视觉效果精致美观：");
+            prompt.append("**重要：请严格按照以下格式返回代码**\n");
+            prompt.append("在代码前后添加特定标记，格式如下：\n\n");
+            prompt.append("// ===THREEJS_CODE_START===\n");
+            prompt.append("function(scene, camera, renderer, THREE, OrbitControls, GLTFLoader) {\n");
+            prompt.append("  // 你的代码内容\n");
+            prompt.append("  return { animate: function() { /* 动画代码 */ } };\n");
+            prompt.append("}\n");
+            prompt.append("// ===THREEJS_CODE_END===\n\n");
+            prompt.append("请按照上面的模板和格式生成完整的Three.js代码，确保包含开始和结束标记。");
 
             // 调用AI生成Three.js代码
             DifyChatResult result = difyService.callDifyApi(prompt.toString(), robot.getRobotId(), difyConfig.getAnimationApiKey());
@@ -2579,30 +2525,105 @@ public class PromptServiceImpl implements PromptService {
      */
     private String cleanAndValidateThreeJsCode(String rawCode) {
         if (rawCode == null || rawCode.trim().isEmpty()) {
+            log.warn("Three.js代码为空");
             return null;
         }
         
-        // 移除可能的markdown代码块标记
         String code = rawCode.trim();
-        if (code.startsWith("```javascript") || code.startsWith("```js")) {
-            code = code.substring(code.indexOf('\n') + 1);
-        }
-        if (code.endsWith("```")) {
-            code = code.substring(0, code.lastIndexOf("```"));
+        log.info("原始生成代码长度: {} 字符", code.length());
+        
+        // 优先使用标记提取代码
+        String startMarker = "// ===THREEJS_CODE_START===";
+        String endMarker = "// ===THREEJS_CODE_END===";
+        
+        int startIndex = code.indexOf(startMarker);
+        int endIndex = code.indexOf(endMarker);
+        
+        if (startIndex >= 0 && endIndex > startIndex) {
+            // 找到标记，提取标记之间的代码
+            code = code.substring(startIndex + startMarker.length(), endIndex).trim();
+            log.info("使用标记提取代码，提取后长度: {} 字符", code.length());
+        } else {
+            log.warn("未找到代码标记，尝试其他方式提取");
+            
+            // 移除markdown代码块标记
+            if (code.startsWith("```")) {
+                int firstNewline = code.indexOf('\n');
+                if (firstNewline > 0) {
+                    code = code.substring(firstNewline + 1);
+                }
+            }
+            if (code.endsWith("```")) {
+                code = code.substring(0, code.lastIndexOf("```"));
+            }
+            
+            // 查找函数开始位置
+            int functionStart = code.indexOf("function(");
+            if (functionStart >= 0) {
+                code = code.substring(functionStart);
+                log.info("找到函数开始位置，提取后长度: {} 字符", code.length());
+            } else {
+                // 查找第一行有效代码
+                String[] lines = code.split("\n");
+                StringBuilder cleanCode = new StringBuilder();
+                boolean foundStart = false;
+                for (String line : lines) {
+                    String trimmedLine = line.trim();
+                    if (!foundStart && (trimmedLine.startsWith("//") || trimmedLine.startsWith("const") || 
+                                      trimmedLine.startsWith("let") || trimmedLine.startsWith("var") ||
+                                      trimmedLine.contains("THREE."))) {
+                        foundStart = true;
+                    }
+                    if (foundStart) {
+                        cleanCode.append(line).append("\n");
+                    }
+                }
+                code = cleanCode.toString().trim();
+                log.info("逐行查找有效代码，提取后长度: {} 字符", code.length());
+            }
         }
         
-        // 基本验证：检查是否包含Three.js关键字
-        if (!code.contains("THREE.") && !code.contains("import") && !code.contains("Scene")) {
+        // 基本验证
+        if (!code.contains("THREE.") && !code.contains("scene") && !code.contains("camera")) {
             log.warn("生成的代码不包含Three.js关键字，可能不是有效的Three.js代码");
+            log.debug("代码内容: {}", code.substring(0, Math.min(200, code.length())));
             return null;
         }
         
-        // 检查代码长度限制（避免过长的代码）
-        if (code.length() > 10000) {
-            log.warn("生成的Three.js代码过长，截取前10000字符");
-            code = code.substring(0, 10000);
+        // 检查是否以function开头
+        if (!code.startsWith("function(")) {
+            log.warn("代码不是以function开头，尝试修复");
+            // 如果代码看起来是函数体内容，包装一下
+            if (code.contains("THREE.") || code.contains("scene")) {
+                code = "function(scene, camera, renderer, THREE, OrbitControls, GLTFLoader) {\n" + code + "\n}";
+                log.info("包装为完整函数，修复后长度: {} 字符", code.length());
+            }
         }
         
+        // 检查是否包含return语句
+        if (!code.contains("return {") && !code.contains("return{")) {
+            log.warn("代码缺少return语句，尝试添加");
+            // 查找最后一个}的位置，在之前插入return语句
+            int lastBraceIndex = code.lastIndexOf("}");
+            if (lastBraceIndex > 0) {
+                String beforeBrace = code.substring(0, lastBraceIndex);
+                String afterBrace = code.substring(lastBraceIndex);
+                code = beforeBrace + "\n  return { animate: function() { } };\n" + afterBrace;
+                log.info("添加return语句，修复后长度: {} 字符", code.length());
+            }
+        }
+        
+        // 长度限制
+        if (code.length() > 8000) {
+            log.warn("Three.js代码过长，截取前8000字符");
+            code = code.substring(0, 8000);
+            // 确保代码结构完整
+            if (!code.endsWith("}")) {
+                code += "\n}";
+            }
+        }
+        
+        log.info("最终清理后代码长度: {} 字符", code.length());
         return code.trim();
     }
     

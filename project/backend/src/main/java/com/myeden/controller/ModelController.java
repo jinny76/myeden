@@ -1,7 +1,9 @@
 package com.myeden.controller;
 
+import com.myeden.controller.EventResponse;
 import com.myeden.service.ModelFileService;
 import com.myeden.service.ModelFileService.ModelFileInfo;
+import com.myeden.service.ModelFileService.SkyboxFileInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -180,6 +182,119 @@ public class ModelController {
             return ResponseEntity.badRequest().body(new EventResponse(
                 400,
                 "获取模型统计信息失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 获取所有可用的天空盒子文件
+     * GET /api/v1/models/skyboxes
+     * 
+     * @return 天空盒子文件列表
+     */
+    @GetMapping("/skyboxes")
+    public ResponseEntity<EventResponse> getAllSkyboxes() {
+        try {
+            logger.info("获取所有天空盒子文件");
+            
+            List<SkyboxFileInfo> skyboxes = modelFileService.getAvailableSkyboxes();
+            
+            logger.info("成功获取 {} 个天空盒子文件", skyboxes.size());
+            
+            return ResponseEntity.ok(new EventResponse(
+                200,
+                "获取天空盒子文件列表成功",
+                skyboxes
+            ));
+            
+        } catch (Exception e) {
+            logger.error("获取天空盒子文件列表失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "获取天空盒子文件列表失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 随机获取一个天空盒子文件
+     * GET /api/v1/models/skyboxes/random
+     * 
+     * @return 随机的天空盒子文件
+     */
+    @GetMapping("/skyboxes/random")
+    public ResponseEntity<EventResponse> getRandomSkybox() {
+        try {
+            logger.info("获取随机天空盒子文件");
+            
+            SkyboxFileInfo skybox = modelFileService.getRandomSkybox();
+            
+            if (skybox != null) {
+                logger.info("成功获取随机天空盒子: {}", skybox.getDisplayName());
+                return ResponseEntity.ok(new EventResponse(
+                    200,
+                    "获取随机天空盒子成功",
+                    skybox
+                ));
+            } else {
+                return ResponseEntity.ok(new EventResponse(
+                    404,
+                    "没有可用的天空盒子文件",
+                    null
+                ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("获取随机天空盒子失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "获取随机天空盒子失败: " + e.getMessage(),
+                null
+            ));
+        }
+    }
+    
+    /**
+     * 根据主题获取推荐的天空盒子
+     * GET /api/v1/models/skyboxes/recommend?theme={theme}
+     * 
+     * @param theme 动画主题
+     * @return 推荐的天空盒子文件
+     */
+    @GetMapping("/skyboxes/recommend")
+    public ResponseEntity<EventResponse> getRecommendedSkybox(@RequestParam String theme) {
+        try {
+            logger.info("获取主题 [{}] 的推荐天空盒子", theme);
+            
+            SkyboxFileInfo skybox = modelFileService.getRecommendedSkybox(theme);
+            
+            if (skybox != null) {
+                logger.info("主题 [{}] 推荐天空盒子: {}", theme, skybox.getDisplayName());
+                
+                Map<String, Object> responseData = new HashMap<>();
+                responseData.put("theme", theme);
+                responseData.put("skybox", skybox);
+                
+                return ResponseEntity.ok(new EventResponse(
+                    200,
+                    "获取推荐天空盒子成功",
+                    responseData
+                ));
+            } else {
+                return ResponseEntity.ok(new EventResponse(
+                    404,
+                    "没有找到适合主题的天空盒子",
+                    null
+                ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("获取推荐天空盒子失败", e);
+            return ResponseEntity.badRequest().body(new EventResponse(
+                400,
+                "获取推荐天空盒子失败: " + e.getMessage(),
                 null
             ));
         }

@@ -35,6 +35,63 @@ public interface ModelFileService {
     List<ModelFileInfo> getRecommendedModels(String theme);
     
     /**
+     * 获取所有可用的天空盒子文件
+     * @return 天空盒子文件列表
+     */
+    List<SkyboxFileInfo> getAvailableSkyboxes();
+    
+    /**
+     * 随机获取一个天空盒子文件
+     * @return 随机的天空盒子文件信息
+     */
+    SkyboxFileInfo getRandomSkybox();
+    
+    /**
+     * 根据主题获取推荐的天空盒子
+     * @param theme 动画主题
+     * @return 推荐的天空盒子文件信息
+     */
+    SkyboxFileInfo getRecommendedSkybox(String theme);
+    
+    /**
+     * 天空盒子文件信息类
+     */
+    class SkyboxFileInfo {
+        private String filename;
+        private String relativePath;
+        private String displayName;
+        private String description;
+        private String category;
+        private long fileSize;
+        private String downloadUrl;
+        
+        public SkyboxFileInfo(String filename, String relativePath, String displayName, 
+                           String description, String category, long fileSize) {
+            this.filename = filename;
+            this.relativePath = relativePath;
+            this.displayName = displayName;
+            this.description = description;
+            this.category = category;
+            this.fileSize = fileSize;
+            this.downloadUrl = "/api/v1/files/" + relativePath;
+        }
+        
+        // Getters
+        public String getFilename() { return filename; }
+        public String getRelativePath() { return relativePath; }
+        public String getDisplayName() { return displayName; }
+        public String getDescription() { return description; }
+        public String getCategory() { return category; }
+        public long getFileSize() { return fileSize; }
+        public String getDownloadUrl() { return downloadUrl; }
+        
+        @Override
+        public String toString() {
+            return String.format("%s (%s) - %s", displayName, category, description);
+        }
+    }
+    
+    /**
      * 模型文件信息类
      */
     class ModelFileInfo {

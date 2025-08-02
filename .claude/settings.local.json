@@ -3,7 +3,8 @@
     "allow": [
       "Bash(mvn compile:*)",
       "Bash(tail:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

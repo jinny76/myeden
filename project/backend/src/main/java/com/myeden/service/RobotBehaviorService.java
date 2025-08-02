@@ -117,4 +117,21 @@ public interface RobotBehaviorService {
      * 并推送WebSocket消息通知状态变化
      */
     void refreshRobotActiveStatus();
+    
+    /**
+     * 设置当前线程的测试模式
+     * @param testMode true-开启测试模式(100%概率)，false-关闭测试模式(正常概率)
+     */
+    void setTestMode(boolean testMode);
+    
+    /**
+     * 获取当前线程的测试模式状态
+     * @return 是否为测试模式
+     */
+    boolean isTestMode();
+    
+    /**
+     * 清理当前线程的测试模式状态
+     */
+    void clearTestMode();
 } 

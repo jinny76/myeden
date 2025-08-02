@@ -300,6 +300,9 @@ public class TestController {
     public Map<String, Object> triggerRobotPost(@RequestParam(value = "robotId", required = false) String robotId) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 开启测试模式，确保100%概率触发
+            robotBehaviorService.setTestMode(true);
+            
             if (robotId != null && !robotId.trim().isEmpty()) {
                 // 触发指定机器人发帖
                 Optional<Robot> robot = robotRepository.findByRobotId(robotId);
@@ -308,15 +311,74 @@ public class TestController {
                     response.put("message", "机器人不存在: " + robotId);
                     return response;
                 }
-                robotBehaviorService.triggerRobotPost(robot.get().getRobotId());
+                boolean success = robotBehaviorService.triggerRobotPost(robot.get().getRobotId());
                 response.put("message", "已触发机器人 " + robotId + " 发帖");
+                response.put("postSuccess", success);
+            } else {
+                response.put("success", false);
+                response.put("message", "请指定机器人ID");
+                return response;
             }
             response.put("success", true);
-            logger.info("手动触发机器人发帖 - robotId: {}", robotId != null ? robotId : "all");
+            logger.info("手动触发机器人发帖 - robotId: {}", robotId);
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "触发失败: " + e.getMessage());
             logger.error("手动触发机器人发帖失败", e);
+        } finally {
+            // 清理ThreadLocal，避免内存泄漏
+            robotBehaviorService.clearTestMode();
+        }
+        response.put("timestamp", System.currentTimeMillis());
+        return response;
+    }
+    
+    /**
+     * 设置当前线程的机器人行为测试模式
+     * @param enable true-开启测试模式(100%概率)，false-关闭测试模式(正常概率)
+     * @return 操作结果
+     */
+    @Operation(summary = "设置当前线程的机器人行为测试模式")
+    @PostMapping("/set-test-mode")
+    public Map<String, Object> setRobotTestMode(@RequestParam("enable") boolean enable) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            robotBehaviorService.setTestMode(enable);
+            response.put("success", true);
+            response.put("testMode", enable);
+            response.put("message", enable ? 
+                "已开启当前线程测试模式(100%概率)" : "已关闭当前线程测试模式(正常概率)");
+            response.put("threadName", Thread.currentThread().getName());
+            logger.info("机器人行为测试模式设置[线程{}]: {}", 
+                Thread.currentThread().getName(), enable ? "开启" : "关闭");
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "设置失败: " + e.getMessage());
+            logger.error("设置机器人行为测试模式失败", e);
+        }
+        response.put("timestamp", System.currentTimeMillis());
+        return response;
+    }
+    
+    /**
+     * 获取当前线程的机器人行为测试模式状态
+     * @return 当前状态
+     */
+    @Operation(summary = "获取当前线程的机器人行为测试模式状态")
+    @GetMapping("/test-mode-status")
+    public Map<String, Object> getRobotTestModeStatus() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            boolean testMode = robotBehaviorService.isTestMode();
+            response.put("success", true);
+            response.put("testMode", testMode);
+            response.put("message", testMode ? 
+                "当前线程测试模式已开启(100%概率)" : "当前线程测试模式已关闭(正常概率)");
+            response.put("threadName", Thread.currentThread().getName());
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "获取状态失败: " + e.getMessage());
+            logger.error("获取机器人行为测试模式状态失败", e);
         }
         response.put("timestamp", System.currentTimeMillis());
         return response;

@@ -106,6 +106,9 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     private final Random random = new Random();
     private final ConcurrentHashMap<String, RobotDailyStats> dailyStats = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Object> localCache = new ConcurrentHashMap<>();
+    
+    // 使用ThreadLocal避免影响其他线程
+    private static final ThreadLocal<Boolean> testModeThreadLocal = new ThreadLocal<>();
 
     /**
      * 聊天提示词结果内部类
@@ -247,9 +250,17 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
 
         // 计算触发概率
         double probability = calculateBehaviorProbability(robot, behaviorType, context, isRobot);
-        if (random.nextDouble() > probability) {
+        
+        // 检查当前线程是否为测试模式
+        Boolean testMode = testModeThreadLocal.get();
+        boolean isTestMode = Boolean.TRUE.equals(testMode);
+        
+        // 测试模式下使用100%概率，跳过随机检查
+        if (!isTestMode && random.nextDouble() > probability) {
             logger.info("机器人{}概率未触发: {}, 概率: {}", behaviorType, robotId, probability);
             return null;
+        } else if (isTestMode) {
+            logger.info("机器人{}测试模式触发: {}, 原概率: {}", behaviorType, robotId, probability);
         }
         return robot;
     }
@@ -800,6 +811,37 @@ public class RobotBehaviorServiceImpl implements RobotBehaviorService {
     @Override
     public void stopBehaviorScheduler() {
         logger.info("停止机器人行为调度器");
+    }
+    
+    /**
+     * 设置当前线程的测试模式
+     * @param testMode true-开启测试模式(100%概率)，false-关闭测试模式(正常概率)
+     */
+    public void setTestMode(boolean testMode) {
+        if (testMode) {
+            testModeThreadLocal.set(Boolean.TRUE);
+        } else {
+            testModeThreadLocal.remove();
+        }
+        logger.info("机器人行为测试模式[线程{}]: {}", Thread.currentThread().getName(), 
+                   testMode ? "开启(100%概率)" : "关闭(正常概率)");
+    }
+    
+    /**
+     * 获取当前线程的测试模式状态
+     * @return 是否为测试模式
+     */
+    public boolean isTestMode() {
+        Boolean testMode = testModeThreadLocal.get();
+        return Boolean.TRUE.equals(testMode);
+    }
+    
+    /**
+     * 清理当前线程的测试模式状态
+     */
+    public void clearTestMode() {
+        testModeThreadLocal.remove();
+        logger.debug("清理线程{}的测试模式状态", Thread.currentThread().getName());
     }
 
     /**
