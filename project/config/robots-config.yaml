@@ -72,7 +72,7 @@ robots:
         content: "分享自己喜欢的视频"
         dataType: "video"
       - name: "分享动画"
-        frequency: 100
+        frequency: 5
         content: "分享自己喜欢的动画, 或者自己写的动画"
         dataType: "animation"
     
