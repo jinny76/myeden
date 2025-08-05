@@ -155,7 +155,12 @@
                         />
                       </svg>
                     </div>
-                    <el-avatar :src="getRobotAvatarUrl(robot)" :size="80" :title="getFamiliarityTooltip(robot.id)" />
+                    <el-avatar 
+                      :src="getRobotAvatarUrl(robot)" 
+                      :size="80" 
+                      :title="getFamiliarityTooltip(robot.id)"
+                      @error="(event) => console.log('头像加载失败:', robot.name, robot.avatar, event)"
+                    />
                     <!-- 消息红点 -->
                     <div v-if="hasUnreadMessage(robot.id)" class="message-red-dot"></div>
                     <div class="robot-status" :class="{ active: robot.active }">
@@ -291,7 +296,11 @@
       <div class="robot-detail-header">
         <div class="robot-detail-title">
           <div class="robot-avatar-wrapper">
-            <el-avatar :src="getRobotAvatarUrl(currentRobotDetail)" :size="60" />
+            <el-avatar 
+              :src="getRobotAvatarUrl(currentRobotDetail)" 
+              :size="60"
+              @error="(event) => console.log('详情头像加载失败:', currentRobotDetail?.name, currentRobotDetail?.avatar, event)"
+            />
             <div class="robot-status-badge" :class="{ active: currentRobotDetail?.active }">
               <el-icon v-if="currentRobotDetail?.active" class="status-icon"><CircleCheck /></el-icon>
               <el-icon v-else class="status-icon"><CircleClose /></el-icon>
@@ -417,6 +426,12 @@ const isLoggedIn = computed(() => userStore.isLoggedIn)
 // 过滤后的机器人列表
 const filteredRobots = computed(() => {
   let robots = worldStore.robotList
+
+  // 调试：打印机器人数据
+  if (robots.length > 0) {
+    console.log('机器人数据示例:', robots[0])
+    console.log('机器人头像字段:', robots[0]?.avatar)
+  }
 
   // 关键词过滤
   if (searchKeyword.value.trim()) {

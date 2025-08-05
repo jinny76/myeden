@@ -120,6 +120,15 @@ const routes = [
         component: () => import('@/views/ChatWindow.vue')
       },
       {
+        path: 'chatroom',
+        name: 'ChatRoom',
+        component: () => import('@/views/ChatRoom.vue'),
+        meta: {
+          title: '聊天室 - 我的伊甸园',
+          requiresAuth: true
+        }
+      },
+      {
         path: 'communication-report/:id',
         name: 'CommunicationReportDetail',
         component: () => import('@/views/CommunicationReportDetail.vue'),

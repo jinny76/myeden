@@ -94,6 +94,14 @@
           <el-icon><Compass /></el-icon>
           <span>世界</span>
         </div>
+        <div class="quick-nav-item" 
+          :class="{ active: activeMenu === '/chatroom' }" 
+          @click="navigateTo('/chatroom')"
+          v-if="isLoggedIn"
+        >
+          <el-icon><ChatSquare /></el-icon>
+          <span>聊天室</span>
+        </div>
       </div>
       
       <!-- 移动端用户菜单按钮 -->
@@ -165,7 +173,8 @@ import { ElMessageBox } from 'element-plus'
 import { message } from '@/utils/message'
 import { 
   ChatDotRound, Compass, User, Menu, Close, House, SwitchButton, 
-  UserFilled, ArrowRight, Star, Setting, Plus, View, Bell, InfoFilled 
+  UserFilled, ArrowRight, Star, Setting, Plus, View, Bell, InfoFilled,
+  ChatSquare
 } from '@element-plus/icons-vue'
 import { getUserAvatarUrl } from '@/utils/avatar'
 
