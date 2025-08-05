@@ -44,6 +44,15 @@ public interface WebSocketService {
     <T> void sendMessageToUsers(java.util.List<String> userIds, WebSocketMessage<T> message);
     
     /**
+     * 广播消息到聊天室
+     * 
+     * @param roomId 聊天室ID
+     * @param message 消息内容
+     * @param <T> 消息数据类型
+     */
+    <T> void broadcastToRoom(String roomId, WebSocketMessage<T> message);
+    
+    /**
      * 推送动态更新消息
      * 
      * @param postData 动态数据

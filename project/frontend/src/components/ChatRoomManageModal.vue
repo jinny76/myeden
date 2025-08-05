@@ -31,7 +31,7 @@
           <span class="member-count">({{ members.length }}人)</span>
         </h3>
         
-        <!-- 添加机器人 -->
+        <!-- 添加天使 -->
         <div class="add-member-section">
           <el-button 
             @click="showAddRobotModal = true" 
@@ -39,7 +39,7 @@
             :icon="Plus"
             size="small"
           >
-            添加机器人
+            添加天使
           </el-button>
         </div>
 
@@ -66,7 +66,7 @@
                     type="info" 
                     size="small"
                   >
-                    机器人
+                    天使
                   </el-tag>
                 </div>
                 <div class="member-status">
@@ -122,7 +122,7 @@
           </div>
           <div class="stat-card">
             <div class="stat-value">{{ stats.robotMessages || 0 }}</div>
-            <div class="stat-label">机器人消息</div>
+            <div class="stat-label">天使消息</div>
           </div>
           <div class="stat-card">
             <div class="stat-value">{{ formatDuration(stats.activeDuration) }}</div>
@@ -146,11 +146,12 @@
     </template>
   </el-dialog>
 
-  <!-- 添加机器人弹窗 -->
+  <!-- 添加天使弹窗 -->
   <AddRobotModal 
     v-model="showAddRobotModal"
     :room-id="chatRoom?.roomId"
     :existing-members="members"
+    @robots-added="handleRobotsAdded"
   />
 </template>
 
@@ -230,6 +231,13 @@ watch(() => props.chatRoom, (newRoom) => {
     loadStats()
   }
 }, { immediate: true })
+
+// 监听成员变化，重新加载统计信息
+watch(() => props.members, () => {
+  if (props.chatRoom?.roomId) {
+    loadStats()
+  }
+}, { deep: true })
 
 // 加载统计信息
 const loadStats = async () => {
@@ -319,6 +327,12 @@ const handleRemoveMember = async (member) => {
       ElMessage.error('移除成员失败')
     }
   }
+}
+
+// 处理机器人添加完成
+const handleRobotsAdded = () => {
+  // 触发成员添加事件，通知父组件重新加载成员列表
+  emit('member-added')
 }
 
 

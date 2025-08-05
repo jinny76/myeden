@@ -1,8 +1,12 @@
 package com.myeden.service.impl;
 
 import com.myeden.entity.GroupChatMessage;
+import com.myeden.entity.ChatRoomMember;
+import com.myeden.model.WebSocketMessage;
 import com.myeden.repository.GroupChatMessageRepository;
 import com.myeden.service.GroupChatService;
+import com.myeden.service.ChatRoomMemberService;
+import com.myeden.service.WebSocketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +37,12 @@ public class GroupChatServiceImpl implements GroupChatService {
     @Autowired
     private GroupChatMessageRepository messageRepository;
     
+    @Autowired
+    private ChatRoomMemberService memberService;
+    
+    @Autowired
+    private WebSocketService webSocketService;
+    
     @Override
     public GroupChatMessage sendGroupMessage(String roomId, String senderType, String senderId, 
                                            String content, String imageUrl, String replyToId) {
@@ -56,6 +66,22 @@ public class GroupChatServiceImpl implements GroupChatService {
             
             GroupChatMessage saved = messageRepository.save(message);
             logger.debug("群聊消息发送成功: roomId={}, senderId={}, messageId={}", roomId, senderId, saved.getId());
+            
+            // 通过WebSocket发送消息到聊天室
+            try {
+                // 创建WebSocket消息
+                WebSocketMessage<GroupChatMessage> wsMessage = WebSocketMessage.chat(saved);
+                
+                // 发送到聊天室主题
+                webSocketService.broadcastToRoom(roomId, wsMessage);
+                
+                logger.debug("WebSocket消息发送成功: roomId={}, messageId={}", roomId, saved.getId());
+                
+            } catch (Exception wsException) {
+                logger.warn("WebSocket消息发送失败: roomId={}, messageId={}", roomId, saved.getId(), wsException);
+                // WebSocket发送失败不影响消息保存
+            }
+            
             return saved;
             
         } catch (Exception e) {
@@ -70,6 +96,22 @@ public class GroupChatServiceImpl implements GroupChatService {
             GroupChatMessage message = GroupChatMessage.createSystemMessage(roomId, content);
             GroupChatMessage saved = messageRepository.save(message);
             logger.debug("系统消息发送成功: roomId={}, messageId={}", roomId, saved.getId());
+            
+            // 通过WebSocket发送系统消息到聊天室
+            try {
+                // 创建WebSocket系统消息
+                WebSocketMessage<GroupChatMessage> wsMessage = WebSocketMessage.systemMessage("系统消息", content, saved);
+                
+                // 发送到聊天室主题
+                webSocketService.broadcastToRoom(roomId, wsMessage);
+                
+                logger.debug("WebSocket系统消息发送成功: roomId={}, messageId={}", roomId, saved.getId());
+                
+            } catch (Exception wsException) {
+                logger.warn("WebSocket系统消息发送失败: roomId={}, messageId={}", roomId, saved.getId(), wsException);
+                // WebSocket发送失败不影响消息保存
+            }
+            
             return saved;
             
         } catch (Exception e) {

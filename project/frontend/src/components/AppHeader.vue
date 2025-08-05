@@ -24,6 +24,14 @@
           <el-icon><Compass /></el-icon>
           <span>探索世界</span>
         </div>
+        <div class="nav-item" 
+          :class="{ active: activeMenu === '/chatroom' }" 
+          @click="navigateTo('/chatroom')"
+          v-if="isLoggedIn"
+        >
+          <el-icon><ChatSquare /></el-icon>
+          <span>议事厅</span>
+        </div>
       </div>
       
       <!-- 用户信息区域 -->
@@ -100,7 +108,7 @@
           v-if="isLoggedIn"
         >
           <el-icon><ChatSquare /></el-icon>
-          <span>聊天室</span>
+          <span>议事厅</span>
         </div>
       </div>
       

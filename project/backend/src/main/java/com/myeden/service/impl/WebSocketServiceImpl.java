@@ -170,6 +170,41 @@ public class WebSocketServiceImpl implements WebSocketService {
     }
     
     /**
+     * 广播消息到聊天室
+     */
+    @Override
+    public <T> void broadcastToRoom(String roomId, WebSocketMessage<T> message) {
+        try {
+            // 生成消息ID
+            if (message.getMessageId() == null) {
+                message.setMessageId(UUID.randomUUID().toString());
+            }
+            
+            // 检查消息去重
+            if (isDuplicateMessage(message.getMessageId())) {
+                log.debug("消息已存在，跳过发送: {}", message.getMessageId());
+                return;
+            }
+            
+            // 记录消息
+            recordMessage(message.getMessageId());
+            
+            // 转换为JSON
+            String messageJson = objectMapper.writeValueAsString(message);
+            
+            // 发送到聊天室主题
+            messagingTemplate.convertAndSend("/topic/chatroom/" + roomId, messageJson);
+            
+            log.info("广播消息到聊天室成功: roomId={}, type={}, messageId={}", 
+                    roomId, message.getType(), message.getMessageId());
+        } catch (JsonProcessingException e) {
+            log.error("消息序列化失败", e);
+        } catch (Exception e) {
+            log.error("广播消息到聊天室失败: roomId={}", roomId, e);
+        }
+    }
+    
+    /**
      * 推送动态更新消息
      */
     @Override

@@ -231,8 +231,6 @@ export const useChatRoomStore = defineStore('chatroom', () => {
 
       if (response.code === 200 && response.data) {
         const newMessage = response.data
-        // 更新本地消息列表
-        messages.value.push(newMessage)
         return newMessage
       } else {
         throw new Error(response.message || '发送消息失败')

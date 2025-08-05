@@ -1,7 +1,7 @@
 <template>
   <el-dialog 
     v-model="visible" 
-    title="添加机器人" 
+    title="添加天使" 
     width="600px"
     :before-close="handleClose"
     class="add-robot-modal"
@@ -11,14 +11,14 @@
       <div class="search-section">
         <el-input
           v-model="searchKeyword"
-          placeholder="搜索机器人..."
+          placeholder="搜索天使..."
           :prefix-icon="Search"
           clearable
           @input="handleSearch"
         />
       </div>
 
-      <!-- 机器人列表 -->
+      <!-- 天使列表 -->
       <div class="robots-section">
         <div v-if="loading" class="loading-container">
           <el-icon class="is-loading"><Loading /></el-icon>
@@ -26,15 +26,15 @@
         </div>
         
         <div v-else-if="filteredRobots.length === 0" class="empty-container">
-          <el-empty description="没有找到可添加的机器人" />
+          <el-empty description="没有找到可添加的天使" />
         </div>
         
         <div v-else class="robots-list">
           <div 
             v-for="robot in filteredRobots" 
-            :key="robot.robotId"
+            :key="robot.robotId || robot.id"
             class="robot-card"
-            :class="{ 'selected': selectedRobots.includes(robot.robotId) }"
+            :class="{ 'selected': selectedRobots.includes(robot.robotId || robot.id) }"
           >
             <div class="robot-info" @click="toggleRobotSelection(robot)">
               <el-avatar 
@@ -45,7 +45,7 @@
               <div class="robot-details">
                 <div class="robot-name">{{ robot.nickname || robot.name }}</div>
                 <div class="robot-description">
-                  {{ robot.personality || robot.description || '这个机器人很神秘...' }}
+                  {{ robot.personality || robot.description || '这个天使很神秘...' }}
                 </div>
                 <div class="robot-stats">
                   <el-tag size="small" type="info">
@@ -81,7 +81,7 @@
 
       <!-- 选中统计 -->
       <div v-if="selectedRobots.length > 0" class="selection-summary">
-        已选择 {{ selectedRobots.length }} 个机器人
+        已选择 {{ selectedRobots.length }} 个天使
       </div>
     </div>
 
@@ -94,7 +94,7 @@
           :disabled="selectedRobots.length === 0"
           :loading="adding"
         >
-          添加机器人 ({{ selectedRobots.length }})
+          添加天使 ({{ selectedRobots.length }})
         </el-button>
       </div>
     </template>
@@ -124,7 +124,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-  'update:modelValue'
+  'update:modelValue',
+  'robots-added'
 ])
 
 const chatroomStore = useChatRoomStore()
@@ -174,18 +175,18 @@ watch(visible, (newVisible) => {
   }
 })
 
-// 加载可用机器人
+// 加载可用天使
 const loadAvailableRobots = async () => {
   try {
     loading.value = true
     
-    // 获取所有机器人列表
+    // 获取所有天使列表
     await robotStore.fetchRobotList()
     availableRobots.value = robotStore.robots
     
   } catch (error) {
-    console.error('加载机器人列表失败:', error)
-    ElMessage.error('加载机器人列表失败')
+    console.error('加载天使列表失败:', error)
+    ElMessage.error('加载天使列表失败')
   } finally {
     loading.value = false
   }
@@ -195,7 +196,7 @@ const getAvatar = (avatar) => {
   return "/api/v1/files" + avatar.replaceAll('/uploads/', '/')
 }
 
-// 切换机器人选择状态
+// 切换天使选择状态
 const toggleRobotSelection = (robot) => {
   const robotId = robot.robotId || robot.id
   const index = selectedRobots.value.indexOf(robotId)
@@ -211,16 +212,16 @@ const handleSearch = () => {
   // 搜索逻辑在计算属性中处理
 }
 
-// 添加选中的机器人
+// 添加选中的天使
 const addSelectedRobots = async () => {
   try {
     adding.value = true
     
-    // 批量添加机器人
+    // 批量添加天使
     for (const robotId of selectedRobots.value) {
       const robot = availableRobots.value.find(r => (r.robotId || r.id) === robotId)
       if (robot) {
-        // 只通过API添加机器人，不触发额外的事件
+        // 只通过API添加天使，不触发额外的事件
         await chatroomStore.addRobotToRoom(props.roomId, {
           robotId: robot.id || robot.robotId,
           robotNickname: robot.nickname || robot.name,
@@ -229,12 +230,14 @@ const addSelectedRobots = async () => {
       }
     }
     
-    ElMessage.success(`成功添加 ${selectedRobots.value.length} 个机器人`)
+    ElMessage.success(`成功添加 ${selectedRobots.value.length} 个天使`)
+    // 触发事件通知父组件
+    emit('robots-added')
     visible.value = false
     
   } catch (error) {
-    console.error('添加机器人失败:', error)
-    ElMessage.error('添加机器人失败')
+    console.error('添加天使失败:', error)
+    ElMessage.error('添加天使失败')
   } finally {
     adding.value = false
   }
@@ -245,7 +248,7 @@ const handleClose = () => {
   visible.value = false
 }
 
-// 获取默认机器人头像
+// 获取默认天使头像
 const getDefaultRobotAvatar = () => {
   return '/default-robot-avatar.png'
 }

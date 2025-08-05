@@ -20,8 +20,7 @@
     </div>
 
     <div class="chat-messages" ref="messagesContainer">
-      <div v-for="message in messages" :key="message.id" class="chat-message"
-        :class="message.senderType.toLowerCase()">
+      <div v-for="message in messages" :key="message.id" class="chat-message" :class="message.senderType.toLowerCase()">
         <el-avatar :src="message.senderAvatar || getDefaultAvatar(message.senderType)" />
         <div class="message-content">
           {{ message.content }}
@@ -41,21 +40,20 @@
         加载中...
       </div>
     </div>
-  </div>
-
-  <div class="chat-input">
-    <el-input v-model="newMessage" @keyup.enter="sendMessage" placeholder="输入消息..." ref="inputRef" />
-    <button v-if="newMessage.trim()" @click="sendMessage" class="send-btn" title="发送消息">
-      <el-icon>
-        <Position />
-      </el-icon>
-    </button>
-    <!-- 添加机器人按钮 -->
-    <span class="add-robot-icon" @click="showManageModal = true" title="添加机器人">
-      <el-icon>
-        <User />
-      </el-icon>
-    </span>
+    <div class="chat-input">
+      <el-input v-model="newMessage" @keyup.enter="sendMessage" placeholder="输入消息..." ref="inputRef" />
+      <button v-if="newMessage.trim()" @click="sendMessage" class="send-btn" title="发送消息">
+        <el-icon>
+          <Position />
+        </el-icon>
+      </button>
+      <!-- 添加机器人按钮 -->
+      <span class="add-robot-icon" @click="showManageModal = true" title="添加机器人">
+        <el-icon>
+          <User />
+        </el-icon>
+      </span>
+    </div>
   </div>
 
   <!-- 聊天室管理弹窗 -->
@@ -160,12 +158,12 @@ watch(messages, () => {
 const loadMessages = async (page = 0) => {
   try {
     loading.value = true
-    
+
     // 确保机器人store已加载数据
     if (robotStore.robots.length === 0) {
       await robotStore.fetchRobotList()
     }
-    
+
     const response = await chatroomStore.getChatHistory(chatRoom.value.roomId, page, 20)
 
     if (page === 0) {
@@ -263,12 +261,12 @@ const getDefaultAvatar = (senderType) => {
 // 根据发送者类型获取头像
 const getSenderAvatar = (message) => {
   if (!message) return null
-  
+
   // 如果消息已经有头像，直接返回
   if (message.senderAvatar) {
     return message.senderAvatar
   }
-  
+
   // 根据发送者类型获取头像
   if (message.senderType === 'USER') {
     // 从用户store获取头像
@@ -288,14 +286,14 @@ const getSenderAvatar = (message) => {
     if (robot && robot.avatar) {
       return `/api/v1/files${robot.avatar.replaceAll('/uploads/', '/')}`
     }
-    
+
     // 如果从store中找不到，尝试从members中查找
     const member = members.value.find(m => m.memberId === message.senderId && m.memberType === 'ROBOT')
     if (member && member.robot && member.robot.avatar) {
       return `/api/v1/files${member.robot.avatar.replaceAll('/uploads/', '/')}`
     }
   }
-  
+
   return null
 }
 
@@ -313,12 +311,13 @@ const scrollToBottom = () => {
 
 // 设置WebSocket监听器
 const setupWebSocketListeners = () => {
-  // 监听群聊消息
+  // 监听聊天室消息
   const chatSubscriptionId = wsStore.subscribe('/topic/chatroom/' + chatRoom.value.roomId, (data) => {
-    if (data.roomId === chatRoom.value.roomId) {
+    // 检查是否是聊天室消息
+    if (data.data && data.data.roomId === chatRoom.value.roomId) {
       // 为新消息设置头像
-      data.senderAvatar = getSenderAvatar(data)
-      messages.value.push(data)
+      data.data.senderAvatar = getSenderAvatar(data.data)
+      messages.value.push(data.data)
     }
   })
   
@@ -340,8 +339,8 @@ const handleRoomUpdated = (updatedRoom) => {
 }
 
 const handleMemberAdded = (member) => {
-  members.value.push(member)
-  ElMessage.success(`${member.memberNickname} 加入了聊天室`)
+  // 重新加载成员列表以确保数据同步
+  loadMembers()
 }
 
 const handleMemberRemoved = (memberId) => {
@@ -362,8 +361,9 @@ const handleMemberRemoved = (memberId) => {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - 80px);
-  height: calc(100dvh - 80px);
+  min-height: calc(100dvh - 144px);
+  /* 减去header高度(64px)和margin-top(80px) */
+  height: calc(100dvh - 144px);
   color: #e0e0e0;
 }
 
@@ -398,6 +398,8 @@ const handleMemberRemoved = (memberId) => {
   background: #181c20;
   scrollbar-width: thin;
   scrollbar-color: #444 #23272e;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .chat-message {
@@ -465,6 +467,8 @@ const handleMemberRemoved = (memberId) => {
   border-top: 1px solid #23272e;
   border-radius: 0 0 16px 16px;
   gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .el-input {
@@ -542,45 +546,71 @@ const handleMemberRemoved = (memberId) => {
 @media (max-width: 600px) {
   .chat-window {
     border-radius: 0;
-    min-height: 100dvh;
-    height: 100dvh;
+    min-height: calc(100dvh - 64px);
+    /* 减去header高度 */
+    height: calc(100dvh - 64px);
     max-width: 100vw;
     margin: 0;
   }
-  .chat-header, .chat-input {
+
+  .chat-header,
+  .chat-input {
     border-radius: 0;
   }
+
   .chat-header {
     height: 60px;
     padding: 0 12px;
     position: fixed;
-    top: 60px;
+    top: 64px;
+    /* 调整top位置，考虑header高度 */
     left: 0;
     right: 0;
     z-index: 1000;
   }
+
   .chat-messages {
     padding-top: 135px;
     margin-top: 0;
   }
+
   .chat-message {
     gap: 6px;
     margin-bottom: 10px;
   }
+
   .el-avatar {
     width: 32px !important;
     height: 32px !important;
     min-width: 32px !important;
     min-height: 32px !important;
   }
+
   .message-content {
     max-width: 90%;
     font-size: 0.98rem;
     padding: 8px 12px;
   }
+
   .chat-input {
     margin-bottom: 8px;
     padding-bottom: 8px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .chat-window {
+    min-height: calc(100dvh - 60px);
+    /* 480px以下header高度为60px */
+    height: calc(100dvh - 60px);
+  }
+
+  .chat-header {
+    top: 60px;
+    /* 调整top位置 */
   }
 }
 </style>

@@ -196,9 +196,6 @@ public class ChatRoomController {
             ChatRoomMember member = memberService.addMemberToChatRoom(
                 roomId, "ROBOT", robotId, robotNickname, robotAvatar);
             
-            // 发送系统消息
-            groupChatService.sendSystemMessage(roomId, robotNickname + " 加入了聊天室");
-            
             return ResponseEntity.ok(EventResponse.success(member, "机器人添加成功"));
             
         } catch (Exception e) {
