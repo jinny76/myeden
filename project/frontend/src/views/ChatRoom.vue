@@ -96,6 +96,8 @@ const loading = ref(false)
 const sending = ref(false)
 const hasMore = ref(true)
 const messagesContainer = ref(null)
+const heartbeatTimer = ref(null)
+const onlineCount = ref(0)
 
 // 计算属性
 const memberCount = computed(() => members.value.length)
@@ -116,6 +118,9 @@ onMounted(async () => {
     // 创建或获取聊天室
     chatRoom.value = await chatroomStore.createOrGetChatRoom()
 
+    // 标记用户进入聊天室（触发高频模式）
+    await enterChatRoom()
+
     // 加载成员列表
     await loadMembers()
 
@@ -124,6 +129,9 @@ onMounted(async () => {
 
     // 监听WebSocket消息
     setupWebSocketListeners()
+
+    // 启动心跳机制
+    startHeartbeat()
 
     // 滚动到底部
     nextTick(() => {
@@ -137,7 +145,13 @@ onMounted(async () => {
 })
 
 // 清理
-onUnmounted(() => {
+onUnmounted(async () => {
+  // 清理心跳定时器
+  stopHeartbeat()
+  
+  // 标记用户离开聊天室（可能触发低频模式）
+  await leaveChatRoom()
+  
   // 清理WebSocket监听器
   if (chatRoom.value?.chatSubscriptionId) {
     wsStore.unsubscribe(chatRoom.value.chatSubscriptionId)
@@ -263,7 +277,7 @@ const getSenderAvatar = (message) => {
   if (!message) return null
 
   // 如果消息已经有头像，直接返回
-  if (message.senderAvatar) {
+  if (message.senderAvatar && message.senderAvatar.indexOf('/api/v1/files') > -1) {
     return message.senderAvatar
   }
 
@@ -316,8 +330,10 @@ const setupWebSocketListeners = () => {
     // 检查是否是聊天室消息
     if (data.data && data.data.roomId === chatRoom.value.roomId) {
       // 为新消息设置头像
-      data.data.senderAvatar = getSenderAvatar(data.data)
-      messages.value.push(data.data)
+      const newMessage = { ...data.data }
+      newMessage.senderAvatar = getSenderAvatar(newMessage)
+      
+      messages.value.push(newMessage)
     }
   })
   
@@ -348,6 +364,64 @@ const handleMemberRemoved = (memberId) => {
   if (member) {
     members.value = members.value.filter(m => m.memberId !== memberId)
     ElMessage.success(`${member.memberNickname} 离开了聊天室`)
+  }
+}
+
+// 用户进入聊天室（触发高频模式）
+const enterChatRoom = async () => {
+  try {
+    const roomId = chatRoom.value?.roomId
+    if (!roomId) return
+    
+    const response = await chatroomStore.enterChatRoom(roomId)
+    if (response.success) {
+      onlineCount.value = response.data.onlineCount
+      console.log(`进入聊天室成功，在线用户数: ${onlineCount.value}`)
+    }
+  } catch (error) {
+    console.error('进入聊天室失败:', error)
+  }
+}
+
+// 用户离开聊天室（可能触发低频模式）
+const leaveChatRoom = async () => {
+  try {
+    const roomId = chatRoom.value?.roomId
+    if (!roomId) return
+    
+    const response = await chatroomStore.leaveChatRoom(roomId)
+    if (response.success) {
+      onlineCount.value = response.data.onlineCount
+      console.log(`离开聊天室成功，在线用户数: ${onlineCount.value}`)
+    }
+  } catch (error) {
+    console.error('离开聊天室失败:', error)
+  }
+}
+
+// 启动心跳机制
+const startHeartbeat = () => {
+  // 每30秒发送一次心跳
+  heartbeatTimer.value = setInterval(async () => {
+    try {
+      const roomId = chatRoom.value?.roomId
+      if (!roomId) return
+      
+      const response = await chatroomStore.sendHeartbeat(roomId)
+      if (response.success) {
+        onlineCount.value = response.data.onlineCount
+      }
+    } catch (error) {
+      console.error('心跳发送失败:', error)
+    }
+  }, 30000) // 30秒间隔
+}
+
+// 停止心跳机制
+const stopHeartbeat = () => {
+  if (heartbeatTimer.value) {
+    clearInterval(heartbeatTimer.value)
+    heartbeatTimer.value = null
   }
 }
 </script>

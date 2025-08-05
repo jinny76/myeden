@@ -2,6 +2,7 @@ package com.myeden.service.impl;
 
 import com.myeden.entity.GroupChatMessage;
 import com.myeden.entity.ChatRoomMember;
+import com.myeden.entity.Robot;
 import com.myeden.model.WebSocketMessage;
 import com.myeden.repository.GroupChatMessageRepository;
 import com.myeden.service.GroupChatService;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -91,6 +93,54 @@ public class GroupChatServiceImpl implements GroupChatService {
     }
     
     @Override
+    public GroupChatMessage sendRobotGroupMessage(String roomId, Robot robot, String content, 
+                                                String imageUrl, String replyToId) {
+        try {
+            GroupChatMessage message = new GroupChatMessage(roomId, "ROBOT", robot.getRobotId(), content);
+            
+            // 立即设置机器人信息
+            message.setSenderNickname(robot.getNickname());
+            message.setSenderAvatar(robot.getAvatar());
+            
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                message.setImageUrl(imageUrl);
+                message.setMessageType("image");
+            }
+            if (replyToId != null && !replyToId.isEmpty()) {
+                message.setReplyToId(replyToId);
+                // 获取原消息的内容摘要
+                Optional<GroupChatMessage> originalMessage = messageRepository.findById(replyToId);
+                if (originalMessage.isPresent()) {
+                    GroupChatMessage orig = originalMessage.get();
+                    message.setReplyToContent(orig.getContent().length() > 50 ? 
+                                            orig.getContent().substring(0, 50) + "..." : orig.getContent());
+                    message.setReplyToSenderNickname(orig.getSenderNickname());
+                }
+            }
+            
+            GroupChatMessage saved = messageRepository.save(message);
+            logger.debug("机器人群聊消息发送成功: robotId={}, roomId={}, messageId={}", robot.getRobotId(), roomId, saved.getId());
+            
+            // 通过WebSocket发送消息到聊天室
+            try {
+                WebSocketMessage<GroupChatMessage> wsMessage = WebSocketMessage.chat(saved);
+                webSocketService.broadcastToRoom(roomId, wsMessage);
+                logger.debug("WebSocket消息发送成功: roomId={}, messageId={}", roomId, saved.getId());
+                
+            } catch (Exception wsException) {
+                logger.warn("WebSocket消息发送失败: roomId={}, messageId={}", roomId, saved.getId(), wsException);
+                // WebSocket发送失败不影响消息保存
+            }
+            
+            return saved;
+            
+        } catch (Exception e) {
+            logger.error("发送机器人群聊消息失败: robotId={}, roomId={}", robot.getRobotId(), roomId, e);
+            throw new RuntimeException("发送机器人消息失败: " + e.getMessage());
+        }
+    }
+    
+    @Override
     public GroupChatMessage sendSystemMessage(String roomId, String content) {
         try {
             GroupChatMessage message = GroupChatMessage.createSystemMessage(roomId, content);
@@ -134,10 +184,18 @@ public class GroupChatServiceImpl implements GroupChatService {
     public List<GroupChatMessage> getLatestMessages(String roomId, int limit) {
         try {
             Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "sentAt"));
-            List<GroupChatMessage> messages = messageRepository.findByRoomIdAndIsDeletedFalseOrderBySentAtDesc(roomId, pageable).getContent();
+            List<GroupChatMessage> originalMessages = messageRepository.findByRoomIdAndIsDeletedFalseOrderBySentAtDesc(roomId, pageable).getContent();
             
-            // 返回时按时间正序排列
-            messages.sort((a, b) -> a.getSentAt().compareTo(b.getSentAt()));
+            // 创建新的可变列表并按时间正序排列
+            List<GroupChatMessage> messages = new ArrayList<>(originalMessages);
+            messages.sort((a, b) -> {
+                LocalDateTime timeA = a.getSentAt();
+                LocalDateTime timeB = b.getSentAt();
+                if (timeA == null && timeB == null) return 0;
+                if (timeA == null) return -1;
+                if (timeB == null) return 1;
+                return timeA.compareTo(timeB);
+            });
             
             logger.debug("获取最新消息成功: roomId={}, limit={}, count={}", roomId, limit, messages.size());
             return messages;
@@ -265,13 +323,45 @@ public class GroupChatServiceImpl implements GroupChatService {
     @Override
     public List<GroupChatMessage> getChatContext(String roomId, int contextSize) {
         try {
+            logger.debug("开始获取聊天上下文: roomId={}, contextSize={}", roomId, contextSize);
+            
+            // 先检查房间内总消息数量
+            long totalCount = messageRepository.countByRoomIdAndIsDeletedFalse(roomId);
+            logger.debug("房间总消息数量: roomId={}, totalCount={}", roomId, totalCount);
+            
+            if (totalCount == 0) {
+                logger.debug("房间内没有消息: roomId={}", roomId);
+                return List.of();
+            }
+            
+            // 使用分页查询获取最新消息
             Pageable pageable = PageRequest.of(0, contextSize, Sort.by(Sort.Direction.DESC, "sentAt"));
-            List<GroupChatMessage> messages = messageRepository.findByRoomIdAndIsDeletedFalseOrderBySentAtDesc(roomId, pageable).getContent();
+            Page<GroupChatMessage> page = messageRepository.findByRoomIdAndIsDeletedFalseOrderBySentAtDesc(roomId, pageable);
+            List<GroupChatMessage> originalMessages = page.getContent();
             
-            // 返回时按时间正序排列，作为上下文
-            messages.sort((a, b) -> a.getSentAt().compareTo(b.getSentAt()));
+            logger.debug("查询结果: roomId={}, 页面消息数={}, 总页数={}, 总元素数={}", 
+                       roomId, originalMessages.size(), page.getTotalPages(), page.getTotalElements());
             
-            logger.debug("获取聊天上下文成功: roomId={}, contextSize={}, count={}", roomId, contextSize, messages.size());
+            // 创建新的可变列表并排序（处理null时间）
+            List<GroupChatMessage> messages = new ArrayList<>(originalMessages);
+            messages.sort((a, b) -> {
+                LocalDateTime timeA = a.getSentAt();
+                LocalDateTime timeB = b.getSentAt();
+                if (timeA == null && timeB == null) return 0;
+                if (timeA == null) return -1;
+                if (timeB == null) return 1;
+                return timeA.compareTo(timeB);
+            });
+            
+            // 输出每条消息的详细信息
+            for (int i = 0; i < messages.size(); i++) {
+                GroupChatMessage msg = messages.get(i);
+                logger.debug("上下文消息[{}]: 发送者={}, 类型={}, 时间={}, 内容={}", 
+                           i, msg.getSenderNickname(), msg.getSenderType(), 
+                           msg.getSentAt(), msg.getContent());
+            }
+            
+            logger.debug("获取聊天上下文成功: roomId={}, contextSize={}, 实际获取数量={}", roomId, contextSize, messages.size());
             return messages;
             
         } catch (Exception e) {

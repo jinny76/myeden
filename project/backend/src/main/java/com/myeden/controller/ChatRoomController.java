@@ -49,6 +49,9 @@ public class ChatRoomController {
     @Autowired
     private UserService userService;
     
+    @Autowired
+    private OnlineUserService onlineUserService;
+    
     /**
      * 创建或获取用户的聊天室
      */
@@ -372,6 +375,105 @@ public class ChatRoomController {
         } catch (Exception e) {
             logger.error("切换聊天室状态失败", e);
             return ResponseEntity.badRequest().body(EventResponse.error("状态切换失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 用户进入聊天室页面（触发高频模式）
+     */
+    @PostMapping("/{roomId}/enter")
+    public ResponseEntity<EventResponse> enterChatRoom(@PathVariable String roomId) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userId = authentication.getName();
+            
+            // 标记用户进入聊天室
+            chatRoomService.markUserEnterRoom(roomId, userId);
+            
+            // 更新心跳
+            onlineUserService.updateHeartbeat(roomId, userId);
+            
+            int onlineCount = chatRoomService.getOnlineUserCount(roomId);
+            logger.info("用户进入聊天室: roomId={}, userId={}, onlineCount={}", roomId, userId, onlineCount);
+            
+            return ResponseEntity.ok(EventResponse.success(Map.of(
+                "onlineCount", onlineCount,
+                "status", "entered"
+            ), "进入聊天室成功"));
+            
+        } catch (Exception e) {
+            logger.error("用户进入聊天室失败: roomId={}", roomId, e);
+            return ResponseEntity.badRequest().body(EventResponse.error("进入聊天室失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 用户离开聊天室页面（可能触发低频模式）
+     */
+    @PostMapping("/{roomId}/leave")
+    public ResponseEntity<EventResponse> leaveChatRoom(@PathVariable String roomId) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userId = authentication.getName();
+            
+            // 标记用户离开聊天室
+            chatRoomService.markUserLeaveRoom(roomId, userId);
+            
+            int onlineCount = chatRoomService.getOnlineUserCount(roomId);
+            logger.info("用户离开聊天室: roomId={}, userId={}, onlineCount={}", roomId, userId, onlineCount);
+            
+            return ResponseEntity.ok(EventResponse.success(Map.of(
+                "onlineCount", onlineCount,
+                "status", "left"
+            ), "离开聊天室成功"));
+            
+        } catch (Exception e) {
+            logger.error("用户离开聊天室失败: roomId={}", roomId, e);
+            return ResponseEntity.badRequest().body(EventResponse.error("离开聊天室失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 发送心跳保持在线状态
+     */
+    @PostMapping("/{roomId}/heartbeat")
+    public ResponseEntity<EventResponse> sendHeartbeat(@PathVariable String roomId) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userId = authentication.getName();
+            
+            // 更新心跳时间
+            onlineUserService.updateHeartbeat(roomId, userId);
+            
+            int onlineCount = chatRoomService.getOnlineUserCount(roomId);
+            
+            return ResponseEntity.ok(EventResponse.success(Map.of(
+                "onlineCount", onlineCount,
+                "timestamp", System.currentTimeMillis()
+            ), "心跳更新成功"));
+            
+        } catch (Exception e) {
+            logger.error("心跳更新失败: roomId={}", roomId, e);
+            return ResponseEntity.badRequest().body(EventResponse.error("心跳更新失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 获取聊天室在线用户数
+     */
+    @GetMapping("/{roomId}/online-count")
+    public ResponseEntity<EventResponse> getOnlineUserCount(@PathVariable String roomId) {
+        try {
+            int onlineCount = chatRoomService.getOnlineUserCount(roomId);
+            
+            return ResponseEntity.ok(EventResponse.success(Map.of(
+                "onlineCount", onlineCount,
+                "roomId", roomId
+            ), "获取在线用户数成功"));
+            
+        } catch (Exception e) {
+            logger.error("获取在线用户数失败: roomId={}", roomId, e);
+            return ResponseEntity.badRequest().body(EventResponse.error("获取在线用户数失败: " + e.getMessage()));
         }
     }
 }

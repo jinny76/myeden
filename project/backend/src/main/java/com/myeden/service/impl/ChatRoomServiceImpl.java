@@ -6,6 +6,7 @@ import com.myeden.repository.ChatRoomMemberRepository;
 import com.myeden.repository.GroupChatMessageRepository;
 import com.myeden.service.ChatRoomService;
 import com.myeden.service.ChatRoomMemberService;
+import com.myeden.service.OnlineUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,9 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     
     @Autowired
     private ChatRoomMemberService memberService;
+    
+    @Autowired
+    private OnlineUserService onlineUserService;
     
     // 活跃度阈值配置
     private static final int HIGH_ACTIVITY_MESSAGE_THRESHOLD = 20; // 1小时内超过20条消息为高活跃
@@ -358,6 +362,60 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         } catch (Exception e) {
             logger.error("清理无活动聊天室失败", e);
             return 0;
+        }
+    }
+    
+    @Override
+    public void markUserEnterRoom(String roomId, String userId) {
+        try {
+            logger.info("用户进入聊天室: roomId={}, userId={}", roomId, userId);
+            onlineUserService.userOnline(roomId, userId);
+            
+        } catch (Exception e) {
+            logger.error("标记用户进入聊天室失败: roomId={}, userId={}", roomId, userId, e);
+        }
+    }
+    
+    @Override
+    public void markUserLeaveRoom(String roomId, String userId) {
+        try {
+            logger.info("用户离开聊天室: roomId={}, userId={}", roomId, userId);
+            onlineUserService.userOffline(roomId, userId);
+            
+        } catch (Exception e) {
+            logger.error("标记用户离开聊天室失败: roomId={}, userId={}", roomId, userId, e);
+        }
+    }
+    
+    @Override
+    public int getOnlineUserCount(String roomId) {
+        try {
+            return onlineUserService.getOnlineUserCount(roomId);
+        } catch (Exception e) {
+            logger.error("获取在线用户数失败: roomId={}", roomId, e);
+            return 0;
+        }
+    }
+    
+    @Override
+    public void switchToHighFrequencyMode(String roomId) {
+        try {
+            logger.info("请求切换到高频模式: roomId={}", roomId);
+            // 实际的切换逻辑现在在OnlineUserService中处理
+            // 这里只是为了保持接口兼容性
+        } catch (Exception e) {
+            logger.error("切换到高频模式失败: roomId={}", roomId, e);
+        }
+    }
+    
+    @Override
+    public void switchToLowFrequencyMode(String roomId) {
+        try {
+            logger.info("请求切换到低频模式: roomId={}", roomId);
+            // 实际的切换逻辑现在在OnlineUserService中处理
+            // 这里只是为了保持接口兼容性
+        } catch (Exception e) {
+            logger.error("切换到低频模式失败: roomId={}", roomId, e);
         }
     }
 }

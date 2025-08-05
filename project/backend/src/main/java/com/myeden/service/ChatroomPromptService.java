@@ -141,4 +141,14 @@ public interface ChatroomPromptService {
      * @return 回复风格建议
      */
     String analyzeMessageSentimentAndGetStyle(String message, Robot robot);
+    
+    /**
+     * 构建包含聊天室成员信息的提示词
+     * 
+     * @param robot 当前发言的机器人
+     * @param roomId 聊天室ID
+     * @param chatContext 聊天上下文
+     * @return 包含成员信息的提示词
+     */
+    String buildChatPromptWithMemberInfo(Robot robot, String roomId, String chatContext);
 }

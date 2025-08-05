@@ -7,11 +7,13 @@ import com.myeden.entity.Robot;
 import com.myeden.repository.RobotRepository;
 import com.myeden.service.*;
 import com.myeden.service.impl.DifyServiceImpl;
+import com.myeden.service.impl.OnlineUserServiceImpl.FrequencyChangeEvent;
 import com.myeden.service.DifyService.DifyChatResult;
 import com.myeden.model.WebSocketMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -65,10 +67,10 @@ public class RobotChatServiceImpl implements RobotChatService {
     private final Random random = new Random();
     
     // 发言频率配置（秒）
-    private static final int HIGH_FREQUENCY_MIN = 10;
-    private static final int HIGH_FREQUENCY_MAX = 30;
-    private static final int LOW_FREQUENCY_MIN = 60;
-    private static final int LOW_FREQUENCY_MAX = 300;
+    private static final int HIGH_FREQUENCY_MIN = 5;   // 高频模式：5-15秒
+    private static final int HIGH_FREQUENCY_MAX = 15;
+    private static final int LOW_FREQUENCY_MIN = 1200; // 低频模式：20-30分钟
+    private static final int LOW_FREQUENCY_MAX = 1800;
     
     @Override
     public Future<?> startRoomChatScheduler(String roomId) {
@@ -134,6 +136,15 @@ public class RobotChatServiceImpl implements RobotChatService {
             
             // 获取聊天上下文
             List<GroupChatMessage> contextMessages = groupChatService.getChatContext(roomId, 10);
+            logger.debug("获取到聊天上下文: roomId={}, 消息数量={}", roomId, contextMessages != null ? contextMessages.size() : 0);
+            
+            if (contextMessages != null && !contextMessages.isEmpty()) {
+                for (GroupChatMessage msg : contextMessages) {
+                    logger.debug("上下文消息: 发送者={}, 类型={}, 内容={}", 
+                               msg.getSenderNickname(), msg.getSenderType(), 
+                               msg.getContent() != null ? msg.getContent().substring(0, Math.min(50, msg.getContent().length())) : "null");
+                }
+            }
             
             // 生成消息内容
             String processedContent = generateRobotChatMessage(speaker, roomId, contextMessages);
@@ -162,9 +173,9 @@ public class RobotChatServiceImpl implements RobotChatService {
                 }
             }
             
-            // 发送消息
-            GroupChatMessage message = sendRobotMessage(roomId, speaker, processedContent, null, null);
-            if (message != null) {
+            // 发送消息（支持多条消息延迟发送）
+            boolean success = sendMultipleRobotMessages(roomId, speaker, processedContent);
+            if (success) {
                 // 更新聊天室活跃时间
                 chatRoomService.updateLastActiveTime(roomId);
                 chatRoomService.updateLastMessageTime(roomId);
@@ -223,8 +234,8 @@ public class RobotChatServiceImpl implements RobotChatService {
             // 使用新的提示词服务构建聊天上下文
             String chatContext = chatroomPromptService.buildChatContextString(contextMessages, 1000);
             
-            // 构建基础聊天提示词
-            String fullPrompt = chatroomPromptService.buildBasicChatPrompt(robot, chatContext);
+            // 构建包含成员信息的聊天提示词
+            String fullPrompt = chatroomPromptService.buildChatPromptWithMemberInfo(robot, roomId, chatContext);
             
             // 调用AI生成内容
             DifyChatResult result = difyService.callDifyApi(fullPrompt, robot.getRobotId(), robot.getAppKey());
@@ -250,29 +261,100 @@ public class RobotChatServiceImpl implements RobotChatService {
     public GroupChatMessage sendRobotMessage(String roomId, Robot robot, String content, 
                                            String imageUrl, String replyToId) {
         try {
-            // 发送群聊消息
-            GroupChatMessage message = groupChatService.sendGroupMessage(
-                roomId, "ROBOT", robot.getRobotId(), content, imageUrl, replyToId);
+            logger.debug("开始发送机器人消息: robotId={}, roomId={}, content={}", 
+                       robot.getRobotId(), roomId, content);
+            
+            // 使用新的机器人消息发送方法（会自动设置robot信息）
+            GroupChatMessage message = groupChatService.sendRobotGroupMessage(
+                roomId, robot, content, imageUrl, replyToId);
             
             if (message != null) {
-                // 设置发送者信息
-                message.setSenderNickname(robot.getNickname());
-                message.setSenderAvatar(robot.getAvatar());
-                
-                // 通过WebSocket推送消息
-                List<ChatRoomMember> roomMembers = memberService.getChatRoomMembers(roomId);
-                List<String> memberIds = roomMembers.stream().map(ChatRoomMember::getMemberId).collect(Collectors.toList());
-                WebSocketMessage<GroupChatMessage> wsMessage = WebSocketMessage.chat(message);
-                webSocketService.sendMessageToUsers(memberIds, wsMessage);
-                
-                logger.debug("机器人消息发送成功: robotId={}, roomId={}", robot.getRobotId(), roomId);
+                logger.debug("机器人消息发送成功: messageId={}, roomId={}, senderId={}, senderNickname={}, content={}", 
+                           message.getId(), message.getRoomId(), message.getSenderId(), 
+                           message.getSenderNickname(), message.getContent());
+            } else {
+                logger.warn("消息保存失败: robotId={}, roomId={}, content={}", 
+                          robot.getRobotId(), roomId, content);
             }
             
             return message;
             
         } catch (Exception e) {
-            logger.error("机器人发送消息失败: robotId={}, roomId={}", robot.getRobotId(), roomId, e);
+            logger.error("机器人发送消息失败: robotId={}, roomId={}, content={}", 
+                       robot.getRobotId(), roomId, content, e);
             return null;
+        }
+    }
+    
+    /**
+     * 发送多条机器人消息（支持延迟发送模拟连续打字效果）
+     * 
+     * @param roomId 房间ID
+     * @param robot 机器人对象
+     * @param content 消息内容（可能包含|||分隔符）
+     * @return 是否发送成功
+     */
+    private boolean sendMultipleRobotMessages(String roomId, Robot robot, String content) {
+        try {
+            // 检查是否包含多条消息分隔符
+            if (!content.contains("|||")) {
+                // 单条消息，直接发送
+                GroupChatMessage message = sendRobotMessage(roomId, robot, content, null, null);
+                return message != null;
+            }
+            
+            // 多条消息，分割并延迟发送
+            String[] messages = content.split("\\|\\|\\|");
+            if (messages.length == 0) {
+                return false;
+            }
+            
+            // 发送第一条消息（立即发送）
+            String firstMessage = messages[0].trim();
+            if (!firstMessage.isEmpty()) {
+                GroupChatMessage msg = sendRobotMessage(roomId, robot, firstMessage, null, null);
+                if (msg == null) {
+                    return false;
+                }
+            }
+            
+            // 如果有更多消息，异步延迟发送
+            if (messages.length > 1) {
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        Random random = new Random();
+                        
+                        for (int i = 1; i < messages.length; i++) {
+                            String message = messages[i].trim();
+                            if (message.isEmpty()) {
+                                continue;
+                            }
+                            
+                            // 延迟1-3秒
+                            int delaySeconds = 1000 + random.nextInt(2000); // 1-3秒
+                            Thread.sleep(delaySeconds);
+                            
+                            // 发送消息
+                            sendRobotMessage(roomId, robot, message, null, null);
+                            
+                            logger.debug("延迟发送机器人消息: robotId={}, roomId={}, message={}, delay={}ms", 
+                                       robot.getRobotId(), roomId, message, delaySeconds);
+                        }
+                        
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        logger.warn("机器人延迟发送消息被中断: robotId={}, roomId={}", robot.getRobotId(), roomId);
+                    } catch (Exception e) {
+                        logger.error("机器人延迟发送消息失败: robotId={}, roomId={}", robot.getRobotId(), roomId, e);
+                    }
+                });
+            }
+            
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("发送多条机器人消息失败: robotId={}, roomId={}", robot.getRobotId(), roomId, e);
+            return false;
         }
     }
     
@@ -490,12 +572,23 @@ public class RobotChatServiceImpl implements RobotChatService {
             Optional<ChatRoom> roomOpt = chatRoomService.getChatRoomById(roomId);
             if (roomOpt.isPresent()) {
                 ChatRoom room = roomOpt.get();
-                if ("active".equals(room.getStatus())) {
-                    // 高频模式：10-30秒
-                    return HIGH_FREQUENCY_MIN + random.nextInt(HIGH_FREQUENCY_MAX - HIGH_FREQUENCY_MIN);
+                String status = room.getStatus();
+                
+                if ("high_frequency".equals(status)) {
+                    // 高频模式：5-15秒（用户在线时）
+                    int delay = HIGH_FREQUENCY_MIN + random.nextInt(HIGH_FREQUENCY_MAX - HIGH_FREQUENCY_MIN);
+                    logger.debug("高频模式延迟: roomId={}, delay={}秒", roomId, delay);
+                    return delay;
+                } else if ("low_frequency".equals(status)) {
+                    // 低频模式：20-30分钟（用户离线时）
+                    int delay = LOW_FREQUENCY_MIN + random.nextInt(LOW_FREQUENCY_MAX - LOW_FREQUENCY_MIN);
+                    logger.debug("低频模式延迟: roomId={}, delay={}秒({}分钟)", roomId, delay, delay / 60);
+                    return delay;
                 } else {
-                    // 低频模式：1-5分钟
-                    return LOW_FREQUENCY_MIN + random.nextInt(LOW_FREQUENCY_MAX - LOW_FREQUENCY_MIN);
+                    // 默认中等频率：1-3分钟
+                    int delay = 60 + random.nextInt(120);
+                    logger.debug("默认模式延迟: roomId={}, delay={}秒", roomId, delay);
+                    return delay;
                 }
             }
         } catch (Exception e) {
@@ -684,5 +777,24 @@ public class RobotChatServiceImpl implements RobotChatService {
         
         // 30%概率直接回复用户消息
         return random.nextDouble() < 0.3;
+    }
+    
+    /**
+     * 监听频率变更事件，调整机器人发言频率
+     */
+    @EventListener
+    public void handleFrequencyChangeEvent(FrequencyChangeEvent event) {
+        try {
+            String roomId = event.getRoomId();
+            String frequency = event.getFrequency();
+            
+            logger.info("收到频率变更事件: roomId={}, frequency={}", roomId, frequency);
+            
+            // 调整机器人发言频率
+            adjustChatFrequency(roomId);
+            
+        } catch (Exception e) {
+            logger.error("处理频率变更事件失败: roomId={}", event.getRoomId(), e);
+        }
     }
 }

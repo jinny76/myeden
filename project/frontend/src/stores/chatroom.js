@@ -12,7 +12,11 @@ import {
   removeMember as removeMemberApi,
   sendMessage as sendMessageApi,
   getChatHistory as getChatHistoryApi,
-  getChatRoomStats as getChatRoomStatsApi
+  getChatRoomStats as getChatRoomStatsApi,
+  enterChatRoom as enterChatRoomApi,
+  leaveChatRoom as leaveChatRoomApi,
+  sendHeartbeat as sendHeartbeatApi,
+  getOnlineUserCount as getOnlineUserCountApi
 } from '@/api/chatroom'
 
 /**
@@ -330,6 +334,61 @@ export const useChatRoomStore = defineStore('chatroom', () => {
     error.value = null
   }
 
+  /**
+   * 用户进入聊天室（触发高频模式）
+   */
+  const enterChatRoom = async (roomId) => {
+    try {
+      loading.value = true
+      const response = await enterChatRoomApi(roomId)
+      return response
+    } catch (error) {
+      console.error('进入聊天室失败:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * 用户离开聊天室（可能触发低频模式）
+   */
+  const leaveChatRoom = async (roomId) => {
+    try {
+      const response = await leaveChatRoomApi(roomId)
+      return response
+    } catch (error) {
+      console.error('离开聊天室失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 发送心跳保持在线状态
+   */
+  const sendHeartbeat = async (roomId) => {
+    try {
+      const response = await sendHeartbeatApi(roomId)
+      return response
+    } catch (error) {
+      console.error('发送心跳失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 获取在线用户数
+   */
+  const getOnlineUserCount = async (roomId) => {
+    try {
+      const response = await getOnlineUserCountApi(roomId)
+      return response
+    } catch (error) {
+      console.error('获取在线用户数失败:', error)
+      throw error
+    }
+  }
+
   return {
     // 状态
     currentChatRoom,
@@ -353,6 +412,12 @@ export const useChatRoomStore = defineStore('chatroom', () => {
     addMessage,
     updateMemberStatus,
     clearChatRoomData,
-    clearError
+    clearError,
+    
+    // 在线状态管理方法
+    enterChatRoom,
+    leaveChatRoom,
+    sendHeartbeat,
+    getOnlineUserCount
   }
 })

@@ -32,6 +32,19 @@ public interface GroupChatService {
                                       String content, String imageUrl, String replyToId);
     
     /**
+     * 发送机器人群聊消息（包含机器人详细信息）
+     * 
+     * @param roomId 房间ID
+     * @param robot 机器人对象
+     * @param content 消息内容
+     * @param imageUrl 图片URL（可选）
+     * @param replyToId 回复消息ID（可选）
+     * @return 发送的消息对象
+     */
+    GroupChatMessage sendRobotGroupMessage(String roomId, com.myeden.entity.Robot robot, 
+                                         String content, String imageUrl, String replyToId);
+    
+    /**
      * 发送系统消息
      * 
      * @param roomId 房间ID

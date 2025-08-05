@@ -89,6 +89,44 @@ public interface ChatRoomService {
     void autoAdjustChatRoomStatus();
     
     /**
+     * 标记用户进入聊天室（触发高频模式）
+     * 
+     * @param roomId 房间ID
+     * @param userId 用户ID
+     */
+    void markUserEnterRoom(String roomId, String userId);
+    
+    /**
+     * 标记用户离开聊天室（可能触发低频模式）
+     * 
+     * @param roomId 房间ID
+     * @param userId 用户ID
+     */
+    void markUserLeaveRoom(String roomId, String userId);
+    
+    /**
+     * 获取聊天室当前在线用户数
+     * 
+     * @param roomId 房间ID
+     * @return 在线用户数
+     */
+    int getOnlineUserCount(String roomId);
+    
+    /**
+     * 切换聊天室为高频模式
+     * 
+     * @param roomId 房间ID
+     */
+    void switchToHighFrequencyMode(String roomId);
+    
+    /**
+     * 切换聊天室为低频模式
+     * 
+     * @param roomId 房间ID
+     */
+    void switchToLowFrequencyMode(String roomId);
+    
+    /**
      * 更新聊天室的最后活跃时间
      * 
      * @param roomId 房间ID

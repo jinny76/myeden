@@ -122,4 +122,44 @@ export const getChatHistory = async (roomId, page = 0, size = 20) => {
 export const getChatRoomStats = async (roomId) => {
   const response = await api.get(`/chatroom/${roomId}/stats`)
   return response
+}
+
+/**
+ * 用户进入聊天室（触发高频模式）
+ * @param {string} roomId - 聊天室ID
+ * @returns {Promise<Object>} 响应信息
+ */
+export const enterChatRoom = async (roomId) => {
+  const response = await api.post(`/chatroom/${roomId}/enter`)
+  return response
+}
+
+/**
+ * 用户离开聊天室（可能触发低频模式）
+ * @param {string} roomId - 聊天室ID
+ * @returns {Promise<Object>} 响应信息
+ */
+export const leaveChatRoom = async (roomId) => {
+  const response = await api.post(`/chatroom/${roomId}/leave`)
+  return response
+}
+
+/**
+ * 发送心跳保持在线状态
+ * @param {string} roomId - 聊天室ID
+ * @returns {Promise<Object>} 响应信息
+ */
+export const sendHeartbeat = async (roomId) => {
+  const response = await api.post(`/chatroom/${roomId}/heartbeat`)
+  return response
+}
+
+/**
+ * 获取聊天室在线用户数
+ * @param {string} roomId - 聊天室ID
+ * @returns {Promise<Object>} 在线用户数信息
+ */
+export const getOnlineUserCount = async (roomId) => {
+  const response = await api.get(`/chatroom/${roomId}/online-count`)
+  return response
 } 
