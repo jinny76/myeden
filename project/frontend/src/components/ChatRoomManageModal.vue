@@ -151,7 +151,6 @@
     v-model="showAddRobotModal"
     :room-id="chatRoom?.roomId"
     :existing-members="members"
-    @robot-added="handleRobotAdded"
   />
 </template>
 
@@ -322,11 +321,7 @@ const handleRemoveMember = async (member) => {
   }
 }
 
-// 处理机器人添加
-const handleRobotAdded = (robot) => {
-  emit('member-added', robot)
-  showAddRobotModal.value = false
-}
+
 
 // 关闭弹窗
 const handleClose = () => {

@@ -166,7 +166,7 @@ export const useChatRoomStore = defineStore('chatroom', () => {
                 avatar: member.memberAvatar
               }
             }
-            processedMember.avatar = "/api/v1/files" + processedMember.robot.avatar
+            processedMember.avatar = "/api/v1/files" + processedMember.robot.avatar.replaceAll('/uploads/', '/')
           }
           
           return processedMember
@@ -190,32 +190,9 @@ export const useChatRoomStore = defineStore('chatroom', () => {
       const response = await addRobotToRoomApi(roomId, robotData)
 
       if (response.code === 200 && response.data) {
-        // 获取机器人信息
-        const robotStore = useRobotStore()
-        
-        // 确保机器人列表已加载
-        if (robotStore.robots.length === 0) {
-          await robotStore.fetchRobotList()
-        }
-        
-        // 处理新成员数据
-        const newMember = { ...response.data }
-        
-        // 查找对应的机器人信息
-        const robot = robotStore.robots.find(r => r.id === newMember.memberId || r.robotId === newMember.memberId)
-        if (robot) {
-          newMember.robot = robot
-        } else {
-          // 如果找不到机器人信息，使用成员的基本信息
-          newMember.robot = {
-            id: newMember.memberId,
-            name: newMember.memberNickname,
-            avatar: newMember.memberAvatar
-          }
-        }
-        
-        members.value.push(newMember)
-        return newMember
+        // 重新加载成员列表以确保数据同步
+        await getChatRoomMembers(roomId)
+        return response.data
       } else {
         throw new Error(response.message || '添加机器人失败')
       }
@@ -231,7 +208,7 @@ export const useChatRoomStore = defineStore('chatroom', () => {
     try {
       const response = await removeMemberApi(roomId, memberId)
 
-      if (response.code === 200 && response.data) {
+      if (response.code === 200) {
         // 更新本地成员列表
         members.value = members.value.filter(member => member.memberId !== memberId)
         return true

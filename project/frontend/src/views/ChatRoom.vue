@@ -75,6 +75,7 @@ import AppHeader from '@/components/AppHeader.vue'
 import ChatRoomManageModal from '@/components/ChatRoomManageModal.vue'
 import { useChatRoomStore } from '@/stores/chatroom'
 import { useUserStore } from '@/stores/user'
+import { useRobotStore } from '@/stores/robot'
 import { useWebSocketStore } from '@/stores/websocket'
 import { formatTime } from '@/utils/time'
 
@@ -82,6 +83,7 @@ const route = useRoute()
 const router = useRouter()
 const chatroomStore = useChatRoomStore()
 const userStore = useUserStore()
+const robotStore = useRobotStore()
 const wsStore = useWebSocketStore()
 
 // 响应式数据
@@ -158,6 +160,12 @@ watch(messages, () => {
 const loadMessages = async (page = 0) => {
   try {
     loading.value = true
+    
+    // 确保机器人store已加载数据
+    if (robotStore.robots.length === 0) {
+      await robotStore.fetchRobotList()
+    }
+    
     const response = await chatroomStore.getChatHistory(chatRoom.value.roomId, page, 20)
 
     if (page === 0) {
@@ -165,6 +173,11 @@ const loadMessages = async (page = 0) => {
     } else {
       messages.value.unshift(...response.content.reverse())
     }
+
+    // 根据发送者类型设置头像
+    messages.value.forEach(message => {
+      message.senderAvatar = getSenderAvatar(message)
+    });
 
     hasMore.value = !response.last
 
@@ -247,6 +260,45 @@ const getDefaultAvatar = (senderType) => {
   return senderType === 'ROBOT' ? '/default-robot-avatar.png' : '/default-user-avatar.png'
 }
 
+// 根据发送者类型获取头像
+const getSenderAvatar = (message) => {
+  if (!message) return null
+  
+  // 如果消息已经有头像，直接返回
+  if (message.senderAvatar) {
+    return message.senderAvatar
+  }
+  
+  // 根据发送者类型获取头像
+  if (message.senderType === 'USER') {
+    // 从用户store获取头像
+    if (message.senderId === userStore.userId) {
+      // 当前用户
+      return userStore.avatar ? `/api/v1/files${userStore.avatar.replaceAll('/uploads/', '/')}` : null
+    } else {
+      // 其他用户，可以从members中查找
+      const member = members.value.find(m => m.memberId === message.senderId && m.memberType === 'USER')
+      if (member && member.user && member.user.avatar) {
+        return `/api/v1/files${member.user.avatar.replaceAll('/uploads/', '/')}`
+      }
+    }
+  } else if (message.senderType === 'ROBOT') {
+    // 从机器人store获取头像
+    const robot = robotStore.robots.find(r => r.id === message.senderId || r.robotId === message.senderId)
+    if (robot && robot.avatar) {
+      return `/api/v1/files${robot.avatar.replaceAll('/uploads/', '/')}`
+    }
+    
+    // 如果从store中找不到，尝试从members中查找
+    const member = members.value.find(m => m.memberId === message.senderId && m.memberType === 'ROBOT')
+    if (member && member.robot && member.robot.avatar) {
+      return `/api/v1/files${member.robot.avatar.replaceAll('/uploads/', '/')}`
+    }
+  }
+  
+  return null
+}
+
 // 返回世界页面
 const goToWorld = () => {
   router.push('/world')
@@ -264,6 +316,8 @@ const setupWebSocketListeners = () => {
   // 监听群聊消息
   const chatSubscriptionId = wsStore.subscribe('/topic/chatroom/' + chatRoom.value.roomId, (data) => {
     if (data.roomId === chatRoom.value.roomId) {
+      // 为新消息设置头像
+      data.senderAvatar = getSenderAvatar(data)
       messages.value.push(data)
     }
   })

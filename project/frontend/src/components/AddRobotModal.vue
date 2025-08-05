@@ -2,7 +2,7 @@
   <el-dialog 
     v-model="visible" 
     title="添加机器人" 
-    width="500px"
+    width="600px"
     :before-close="handleClose"
     class="add-robot-modal"
   >
@@ -35,11 +35,10 @@
             :key="robot.robotId"
             class="robot-card"
             :class="{ 'selected': selectedRobots.includes(robot.robotId) }"
-            @click="toggleRobotSelection(robot)"
           >
-            <div class="robot-info">
+            <div class="robot-info" @click="toggleRobotSelection(robot)">
               <el-avatar 
-                :src="robot.avatar || getDefaultRobotAvatar()" 
+                :src="getAvatar(robot.avatar) || getDefaultRobotAvatar()" 
                 :size="50"
                 class="robot-avatar"
               />
@@ -70,9 +69,9 @@
               </div>
             </div>
             
-            <div class="robot-actions">
+            <div class="robot-actions" @click.stop>
               <el-checkbox 
-                :model-value="selectedRobots.includes(robot.robotId)"
+                :model-value="selectedRobots.includes(robot.robotId || robot.id)"
                 @change="toggleRobotSelection(robot)"
               />
             </div>
@@ -125,8 +124,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-  'update:modelValue',
-  'robot-added'
+  'update:modelValue'
 ])
 
 const chatroomStore = useChatRoomStore()
@@ -153,7 +151,7 @@ const existingRobotIds = computed(() =>
 
 const filteredRobots = computed(() => {
   let robots = availableRobots.value.filter(
-    robot => !existingRobotIds.value.includes(robot.robotId)
+    robot => !existingRobotIds.value.includes(robot.robotId || robot.id)
   )
   
   if (searchKeyword.value.trim()) {
@@ -193,13 +191,18 @@ const loadAvailableRobots = async () => {
   }
 }
 
+const getAvatar = (avatar) => {
+  return "/api/v1/files" + avatar.replaceAll('/uploads/', '/')
+}
+
 // 切换机器人选择状态
 const toggleRobotSelection = (robot) => {
-  const index = selectedRobots.value.indexOf(robot.robotId)
+  const robotId = robot.robotId || robot.id
+  const index = selectedRobots.value.indexOf(robotId)
   if (index > -1) {
     selectedRobots.value.splice(index, 1)
   } else {
-    selectedRobots.value.push(robot.robotId)
+    selectedRobots.value.push(robotId)
   }
 }
 
@@ -215,22 +218,13 @@ const addSelectedRobots = async () => {
     
     // 批量添加机器人
     for (const robotId of selectedRobots.value) {
-      const robot = availableRobots.value.find(r => r.robotId === robotId)
+      const robot = availableRobots.value.find(r => (r.robotId || r.id) === robotId)
       if (robot) {
+        // 只通过API添加机器人，不触发额外的事件
         await chatroomStore.addRobotToRoom(props.roomId, {
-          robotId: robot.id,
+          robotId: robot.id || robot.robotId,
           robotNickname: robot.nickname || robot.name,
           robotAvatar: robot.avatar
-        })
-        
-        // 触发添加事件
-        emit('robot-added', {
-          memberId: robot.robotId,
-          memberType: 'ROBOT',
-          memberNickname: robot.nickname || robot.name,
-          memberAvatar: robot.avatar,
-          isOnline: robot.isActive || false,
-          role: 'member'
         })
       }
     }
