@@ -5,7 +5,8 @@
       "Bash(tail:*)",
       "Bash(wc:*)",
       "Bash(ls:*)",
-      "WebFetch(domain:developer.work.weixin.qq.com)"
+      "WebFetch(domain:developer.work.weixin.qq.com)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }
