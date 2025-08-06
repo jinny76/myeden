@@ -10,6 +10,9 @@ import com.myeden.service.WeChatMessageService;
 import com.myeden.service.WeChatSendService;
 import com.myeden.service.WeChatAsyncProcessService;
 import com.myeden.service.WeChatMediaService;
+import com.myeden.service.ChartGenerationService;
+import com.myeden.dto.chart.ChartRequest;
+import com.myeden.dto.chart.ChartResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +23,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
+import java.util.Map;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -44,6 +55,7 @@ public class WeChatController {
     private final WeChatSendService weChatSendService;
     private final WeChatAsyncProcessService weChatAsyncProcessService;
     private final WeChatMediaService weChatMediaService;
+    private final ChartGenerationService chartGenerationService;
     
     @Autowired
     public WeChatController(WeChatWorkProperties weChatProperties,
@@ -51,13 +63,15 @@ public class WeChatController {
                            WeChatMessageService weChatMessageService,
                            WeChatSendService weChatSendService,
                            WeChatAsyncProcessService weChatAsyncProcessService,
-                           WeChatMediaService weChatMediaService) {
+                           WeChatMediaService weChatMediaService,
+                           ChartGenerationService chartGenerationService) {
         this.weChatProperties = weChatProperties;
         this.weChatCryptoService = weChatCryptoService;
         this.weChatMessageService = weChatMessageService;
         this.weChatSendService = weChatSendService;
         this.weChatAsyncProcessService = weChatAsyncProcessService;
         this.weChatMediaService = weChatMediaService;
+        this.chartGenerationService = chartGenerationService;
     }
     
     /**
@@ -821,6 +835,347 @@ public class WeChatController {
             logger.error("上传媒体文件时出现异常", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Failed to upload media: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 生成图表并发送到微信
+     */
+    @Operation(summary = "生成图表并发送到微信", description = "根据参数生成图表，然后发送给指定微信用户")
+    @ApiResponse(responseCode = "200", description = "图表生成并发送成功")
+    @PostMapping("/generate-and-send-chart")
+    public ResponseEntity<?> generateAndSendChart(@RequestBody GenerateAndSendChartRequest request) {
+        try {
+            logger.info("收到生成图表并发送微信请求: toUser={}, engine={}, chartType={}", 
+                       request.getToUser(), request.getEngine(), request.getChartType());
+            
+            if (!weChatProperties.isEnabled()) {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body("WeChat service disabled");
+            }
+            
+            // 验证必需参数
+            if (request.getToUser() == null || request.getToUser().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("toUser cannot be empty");
+            }
+            
+            if (request.getEngine() == null || request.getEngine().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("engine cannot be empty");
+            }
+            
+            if (request.getChartType() == null || request.getChartType().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("chartType cannot be empty");
+            }
+            
+            if (request.getData() == null || request.getData().isEmpty()) {
+                return ResponseEntity.badRequest().body("data cannot be empty");
+            }
+            
+            if (request.getChartConfig() == null || request.getChartConfig().isEmpty()) {
+                return ResponseEntity.badRequest().body("chartConfig cannot be empty");
+            }
+            
+            // 构建图表请求
+            ChartRequest chartRequest = new ChartRequest();
+            chartRequest.setEngine(request.getEngine());
+            chartRequest.setChartType(request.getChartType());
+            chartRequest.setData(request.getData());
+            chartRequest.setChartConfig(request.getChartConfig());
+            
+            // 验证图表配置
+            if (!chartGenerationService.validateChartConfig(chartRequest)) {
+                return ResponseEntity.badRequest().body("图表配置验证失败");
+            }
+            
+            // 生成图表
+            ChartResponse chartResponse = chartGenerationService.generateChart(chartRequest);
+            
+            if (!chartResponse.isSuccess()) {
+                logger.error("图表生成失败: {}", chartResponse.getError());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("图表生成失败: " + chartResponse.getError());
+            }
+            
+            logger.info("图表生成成功: {}", chartResponse.getOutputPath());
+            
+            // 将生成的图片文件上传到微信并发送
+            File chartFile = new File(chartResponse.getOutputPath());
+            if (!chartFile.exists()) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("生成的图表文件不存在");
+            }
+            
+            // 创建MultipartFile对象
+            MultipartFile multipartFile = createMultipartFileFromFile(chartFile);
+            
+            // 上传并发送图片
+            WeChatMediaService.WeChatMediaUploadAndSendResult result = 
+                weChatMediaService.uploadImageAndSend(multipartFile, request.getToUser());
+            
+            // 构建响应
+            GenerateAndSendChartResponse response = new GenerateAndSendChartResponse();
+            response.setChartGenerated(true);
+            response.setChartPath(chartResponse.getOutputPath());
+            response.setUploadSuccess(result.isUploadSuccess());
+            response.setSendSuccess(result.isSendSuccess());
+            response.setMediaId(result.getMediaId());
+            response.setMsgId(result.getMsgId());
+            response.setErrorMsg(result.getErrorMsg());
+            response.setSuccess(result.isSuccess());
+            response.setProcessingTime(chartResponse.getProcessingTime());
+            
+            // 可选：删除临时文件
+            try {
+                Files.deleteIfExists(chartFile.toPath());
+                logger.debug("删除临时图表文件: {}", chartFile.getPath());
+            } catch (IOException e) {
+                logger.warn("删除临时图表文件失败: {}", chartFile.getPath(), e);
+            }
+            
+            if (response.isSuccess()) {
+                logger.info("图表生成并发送成功: mediaId={}, msgId={}", 
+                           response.getMediaId(), response.getMsgId());
+                return ResponseEntity.ok(response);
+            } else {
+                logger.error("图表生成成功但发送失败: {}", response.getErrorMsg());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+        } catch (Exception e) {
+            logger.error("生成图表并发送到微信时出现异常", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to generate and send chart: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 将File转换为MultipartFile
+     */
+    private MultipartFile createMultipartFileFromFile(File file) throws IOException {
+        byte[] fileBytes = Files.readAllBytes(file.toPath());
+        String filename = file.getName();
+        String contentType = getContentTypeFromFileName(filename);
+        
+        return new CustomMultipartFile(filename, contentType, fileBytes);
+    }
+    
+    /**
+     * 自定义MultipartFile实现
+     */
+    private static class CustomMultipartFile implements MultipartFile {
+        private final String name;
+        private final String originalFilename;
+        private final String contentType;
+        private final byte[] content;
+        
+        public CustomMultipartFile(String originalFilename, String contentType, byte[] content) {
+            this.name = "file";
+            this.originalFilename = originalFilename;
+            this.contentType = contentType;
+            this.content = content;
+        }
+        
+        @Override
+        public String getName() {
+            return this.name;
+        }
+        
+        @Override
+        public String getOriginalFilename() {
+            return this.originalFilename;
+        }
+        
+        @Override
+        public String getContentType() {
+            return this.contentType;
+        }
+        
+        @Override
+        public boolean isEmpty() {
+            return this.content.length == 0;
+        }
+        
+        @Override
+        public long getSize() {
+            return this.content.length;
+        }
+        
+        @Override
+        public byte[] getBytes() throws IOException {
+            return this.content;
+        }
+        
+        @Override
+        public java.io.InputStream getInputStream() throws IOException {
+            return new ByteArrayInputStream(this.content);
+        }
+        
+        @Override
+        public void transferTo(File dest) throws IOException, IllegalStateException {
+            Files.write(dest.toPath(), this.content);
+        }
+        
+        @Override
+        public void transferTo(Path dest) throws IOException, IllegalStateException {
+            Files.write(dest, this.content);
+        }
+    }
+    
+    /**
+     * 根据文件名获取Content-Type
+     */
+    private String getContentTypeFromFileName(String filename) {
+        String extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+        switch (extension) {
+            case "png":
+                return "image/png";
+            case "jpg":
+            case "jpeg":
+                return "image/jpeg";
+            case "gif":
+                return "image/gif";
+            case "svg":
+                return "image/svg+xml";
+            default:
+                return "application/octet-stream";
+        }
+    }
+    
+    /**
+     * 生成图表并发送微信请求
+     */
+    public static class GenerateAndSendChartRequest {
+        private String toUser;
+        private String engine;
+        private String chartType;
+        private Map<String, Object> data;
+        private Map<String, Object> chartConfig;
+        
+        public String getToUser() {
+            return toUser;
+        }
+        
+        public void setToUser(String toUser) {
+            this.toUser = toUser;
+        }
+        
+        public String getEngine() {
+            return engine;
+        }
+        
+        public void setEngine(String engine) {
+            this.engine = engine;
+        }
+        
+        public String getChartType() {
+            return chartType;
+        }
+        
+        public void setChartType(String chartType) {
+            this.chartType = chartType;
+        }
+        
+        public Map<String, Object> getData() {
+            return data;
+        }
+        
+        public void setData(Map<String, Object> data) {
+            this.data = data;
+        }
+        
+        public Map<String, Object> getChartConfig() {
+            return chartConfig;
+        }
+        
+        public void setChartConfig(Map<String, Object> chartConfig) {
+            this.chartConfig = chartConfig;
+        }
+    }
+    
+    /**
+     * 生成图表并发送微信响应
+     */
+    public static class GenerateAndSendChartResponse {
+        private boolean chartGenerated;
+        private String chartPath;
+        private boolean uploadSuccess;
+        private boolean sendSuccess;
+        private String mediaId;
+        private String msgId;
+        private String errorMsg;
+        private boolean success;
+        private Long processingTime;
+        
+        public boolean isChartGenerated() {
+            return chartGenerated;
+        }
+        
+        public void setChartGenerated(boolean chartGenerated) {
+            this.chartGenerated = chartGenerated;
+        }
+        
+        public String getChartPath() {
+            return chartPath;
+        }
+        
+        public void setChartPath(String chartPath) {
+            this.chartPath = chartPath;
+        }
+        
+        public boolean isUploadSuccess() {
+            return uploadSuccess;
+        }
+        
+        public void setUploadSuccess(boolean uploadSuccess) {
+            this.uploadSuccess = uploadSuccess;
+        }
+        
+        public boolean isSendSuccess() {
+            return sendSuccess;
+        }
+        
+        public void setSendSuccess(boolean sendSuccess) {
+            this.sendSuccess = sendSuccess;
+        }
+        
+        public String getMediaId() {
+            return mediaId;
+        }
+        
+        public void setMediaId(String mediaId) {
+            this.mediaId = mediaId;
+        }
+        
+        public String getMsgId() {
+            return msgId;
+        }
+        
+        public void setMsgId(String msgId) {
+            this.msgId = msgId;
+        }
+        
+        public String getErrorMsg() {
+            return errorMsg;
+        }
+        
+        public void setErrorMsg(String errorMsg) {
+            this.errorMsg = errorMsg;
+        }
+        
+        public boolean isSuccess() {
+            return success;
+        }
+        
+        public void setSuccess(boolean success) {
+            this.success = success;
+        }
+        
+        public Long getProcessingTime() {
+            return processingTime;
+        }
+        
+        public void setProcessingTime(Long processingTime) {
+            this.processingTime = processingTime;
         }
     }
 }
