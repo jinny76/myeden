@@ -224,3 +224,51 @@ springdoc:
 
 ffmpeg:
   path: ../../ffmpeg/bin/ffmpeg.exe
+
+# 图表生成服务配置
+chart:
+  # Python配置
+  python:
+    # Python可执行文件路径 (可以是python, python3, 或绝对路径)
+    executable: python
+    script:
+      # Python脚本路径 (相对于项目根目录)
+      path: J:\\projects\\myeden-dev\\project\\pytools\\src\\cli.py
+
+  # API配置 (当call.mode=api时使用)
+  api:
+    # Python API服务器URL
+    url: http://localhost:5000
+    # 连接超时时间 (毫秒)
+    connect-timeout: 5000
+    # 读取超时时间 (毫秒)
+    read-timeout: 30000
+
+  # 调用方式: cli(命令行) 或 api(HTTP API)
+  call:
+    mode: cli
+
+  # 输出配置
+  output:
+    # 图表输出目录 (相对于项目根目录)
+    dir: output/charts
+    # 文件清理配置
+    cleanup:
+      # 是否启用自动清理
+      enabled: true
+      # 文件保留时间 (小时)
+      retention-hours: 24
+      # 清理间隔 (小时)
+      interval-hours: 6
+
+  # 执行配置
+  timeout:
+    # 命令超时时间 (秒)
+    seconds: 60
+
+  # 缓存配置
+  cache:
+    # 是否启用缓存
+    enabled: false
+    # 缓存过期时间 (分钟)
+    expiration-minutes: 30

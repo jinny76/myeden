@@ -6,7 +6,9 @@
       "Bash(wc:*)",
       "Bash(ls:*)",
       "WebFetch(domain:developer.work.weixin.qq.com)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(python:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }
