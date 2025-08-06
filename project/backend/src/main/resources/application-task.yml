@@ -1,0 +1,59 @@
+# 定时任务配置
+task:
+  # 线程池配置
+  pool:
+    # 核心线程数
+    core-size: 5
+    # 最大线程数  
+    max-size: 10
+    # 线程空闲时间(秒)
+    keep-alive: 60
+    # 队列容量
+    queue-capacity: 100
+    # 线程名前缀
+    thread-name-prefix: "task-"
+  
+  # 天气预报推送任务
+  weather:
+    # 是否启用天气预报推送
+    enabled: true
+    # Cron表达式: 每天早上7点15分推送
+    cron: "0 15 7 * * ?"
+    # 推送的城市列表
+    cities:
+      - "北京"
+      - "上海"
+      - "广州"
+      - "深圳"    
+    # 接收天气预报的微信用户列表
+    users:
+      - "JinYiDong"
+      - "HanXiaoLong"
+    # 天气预报消息模板
+    message-template: |
+      🌤️ 早安！今日天气预报：
+      
+      📍 城市：{city}
+      🌡️ 温度：{temperature}
+      🌧️ 天气：{description}
+      
+      祝您今天心情如阳光般灿烂！☀️
+    
+    # 消息合并模式：single(每个城市单独发送) 或 combined(多个城市合并发送)
+    send-mode: "combined"
+    
+    # 合并消息模板
+    combined-template: |
+      🌤️ 早安！今日多城市天气预报：
+      
+      {weather-list}
+      
+      祝您今天心情如阳光般灿烂！☀️
+      
+  # 其他定时任务配置可以在这里添加
+  # news:
+  #   enabled: true  
+  #   cron: "0 0 9 * * ?"
+  # reminder:
+  #   enabled: true
+  #   cron: "0 30 18 * * ?"

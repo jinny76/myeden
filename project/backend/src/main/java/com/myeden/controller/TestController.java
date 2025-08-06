@@ -70,6 +70,12 @@ public class TestController {
     @Autowired
     private RobotBehaviorService robotBehaviorService;
 
+    @Autowired
+    private com.myeden.service.impl.ScheduledTaskService scheduledTaskService;
+
+    @Autowired
+    private com.myeden.service.WeatherNotificationService weatherNotificationService;
+
     /**
      * 公开测试接口
      * @return 测试响应
@@ -379,6 +385,168 @@ public class TestController {
             response.put("success", false);
             response.put("message", "获取状态失败: " + e.getMessage());
             logger.error("获取机器人行为测试模式状态失败", e);
+        }
+        response.put("timestamp", System.currentTimeMillis());
+        return response;
+    }
+    
+    /**
+     * 手动触发天气预报推送任务
+     * @return 操作结果
+     */
+    @Operation(summary = "手动触发天气预报推送任务")
+    @PostMapping("/trigger-weather-task")
+    public Map<String, Object> triggerWeatherTask() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            logger.info("手动触发天气预报推送任务");
+            
+            int successCount = scheduledTaskService.triggerWeatherNotificationTask();
+            
+            response.put("success", true);
+            response.put("message", "天气预报推送任务已执行");
+            response.put("successCount", successCount);
+            response.put("details", successCount > 0 ? 
+                "成功推送 " + successCount + " 条天气消息" : "没有成功推送任何消息");
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "触发天气预报推送任务失败: " + e.getMessage());
+            response.put("successCount", 0);
+            logger.error("手动触发天气预报推送任务失败", e);
+        }
+        response.put("timestamp", System.currentTimeMillis());
+        return response;
+    }
+    
+    /**
+     * 获取定时任务状态
+     * @return 任务状态信息
+     */
+    @Operation(summary = "获取定时任务状态")
+    @GetMapping("/task-status")
+    public Map<String, Object> getTaskStatus() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            com.myeden.service.impl.ScheduledTaskService.TaskStatus status = scheduledTaskService.getTaskStatus();
+            
+            response.put("success", true);
+            response.put("message", "获取任务状态成功");
+            response.put("weatherTask", Map.of(
+                "enabled", status.isWeatherTaskEnabled(),
+                "cron", status.getWeatherCron(),
+                "citiesCount", status.getWeatherCitiesCount(),
+                "usersCount", status.getWeatherUsersCount()
+            ));
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "获取任务状态失败: " + e.getMessage());
+            logger.error("获取任务状态失败", e);
+        }
+        response.put("timestamp", System.currentTimeMillis());
+        return response;
+    }
+    
+    /**
+     * 启用或禁用天气推送任务
+     * @param enabled true-启用，false-禁用
+     * @return 操作结果
+     */
+    @Operation(summary = "启用或禁用天气推送任务")
+    @PostMapping("/set-weather-task-enabled")
+    public Map<String, Object> setWeatherTaskEnabled(@RequestParam("enabled") boolean enabled) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            weatherNotificationService.setWeatherTaskEnabled(enabled);
+            
+            response.put("success", true);
+            response.put("message", "天气推送任务状态已更新");
+            response.put("enabled", enabled);
+            response.put("details", enabled ? "天气推送任务已启用" : "天气推送任务已禁用");
+            
+            logger.info("天气推送任务状态已更新: {}", enabled ? "启用" : "禁用");
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "更新天气推送任务状态失败: " + e.getMessage());
+            logger.error("更新天气推送任务状态失败", e);
+        }
+        response.put("timestamp", System.currentTimeMillis());
+        return response;
+    }
+    
+    /**
+     * 推送指定城市天气给所有用户
+     * @param city 城市名称
+     * @return 操作结果
+     */
+    @Operation(summary = "推送指定城市天气给所有用户")
+    @PostMapping("/push-city-weather")
+    public Map<String, Object> pushCityWeather(@RequestParam("city") String city) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (city == null || city.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "城市名称不能为空");
+                return response;
+            }
+            
+            int successCount = weatherNotificationService.pushCityWeatherToAllUsers(city.trim());
+            
+            response.put("success", true);
+            response.put("message", "城市天气推送已执行");
+            response.put("city", city);
+            response.put("successCount", successCount);
+            response.put("details", successCount > 0 ? 
+                "成功推送 " + city + " 的天气信息给 " + successCount + " 个用户" : 
+                "没有成功推送任何消息");
+            
+            logger.info("推送城市 {} 的天气信息，成功推送 {} 条消息", city, successCount);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "推送城市天气失败: " + e.getMessage());
+            response.put("successCount", 0);
+            logger.error("推送城市天气失败", e);
+        }
+        response.put("timestamp", System.currentTimeMillis());
+        return response;
+    }
+    
+    /**
+     * 推送所有城市天气给指定用户
+     * @param user 用户ID
+     * @return 操作结果
+     */
+    @Operation(summary = "推送所有城市天气给指定用户")
+    @PostMapping("/push-weather-to-user")
+    public Map<String, Object> pushWeatherToUser(@RequestParam("user") String user) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (user == null || user.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "用户ID不能为空");
+                return response;
+            }
+            
+            int successCount = weatherNotificationService.pushAllCityWeatherToUser(user.trim());
+            
+            response.put("success", true);
+            response.put("message", "用户天气推送已执行");
+            response.put("user", user);
+            response.put("successCount", successCount);
+            response.put("details", successCount > 0 ? 
+                "成功推送 " + successCount + " 条天气信息给用户 " + user : 
+                "没有成功推送任何消息");
+            
+            logger.info("推送天气信息给用户 {}，成功推送 {} 条消息", user, successCount);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "推送用户天气失败: " + e.getMessage());
+            response.put("successCount", 0);
+            logger.error("推送用户天气失败", e);
         }
         response.put("timestamp", System.currentTimeMillis());
         return response;

@@ -9,6 +9,8 @@ server:
 spring:
   application:
     name: my-eden-backend
+  profiles:
+    include: task
   
   # MongoDB配置 - 性能优化版本
   data:
