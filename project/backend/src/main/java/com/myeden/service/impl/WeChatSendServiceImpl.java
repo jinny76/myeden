@@ -158,6 +158,102 @@ public class WeChatSendServiceImpl implements WeChatSendService {
         return sendTextMessage("@all", content);
     }
     
+    @Override
+    public WeChatSendMessageResponse sendImageMessage(String toUser, String mediaId) {
+        if (!weChatProperties.isEnabled()) {
+            logger.warn("企业微信功能未启用");
+            return createErrorResponse(-1, "企业微信功能未启用");
+        }
+        
+        WeChatSendMessageRequest request = new WeChatSendMessageRequest();
+        request.setToUser(toUser);
+        request.setMsgType("image");
+        request.setAgentId(weChatProperties.getAgentId());
+        request.setImage(new WeChatSendMessageRequest.ImageContent(mediaId));
+        
+        return sendMessage(request);
+    }
+    
+    @Override
+    public WeChatSendMessageResponse sendVoiceMessage(String toUser, String mediaId) {
+        if (!weChatProperties.isEnabled()) {
+            logger.warn("企业微信功能未启用");
+            return createErrorResponse(-1, "企业微信功能未启用");
+        }
+        
+        WeChatSendMessageRequest request = new WeChatSendMessageRequest();
+        request.setToUser(toUser);
+        request.setMsgType("voice");
+        request.setAgentId(weChatProperties.getAgentId());
+        request.setVoice(new WeChatSendMessageRequest.VoiceContent(mediaId));
+        
+        return sendMessage(request);
+    }
+    
+    @Override
+    public WeChatSendMessageResponse sendVideoMessage(String toUser, String mediaId, String title, String description) {
+        if (!weChatProperties.isEnabled()) {
+            logger.warn("企业微信功能未启用");
+            return createErrorResponse(-1, "企业微信功能未启用");
+        }
+        
+        WeChatSendMessageRequest request = new WeChatSendMessageRequest();
+        request.setToUser(toUser);
+        request.setMsgType("video");
+        request.setAgentId(weChatProperties.getAgentId());
+        request.setVideo(new WeChatSendMessageRequest.VideoContent(mediaId, title, description));
+        
+        return sendMessage(request);
+    }
+    
+    @Override
+    public WeChatSendMessageResponse sendFileMessage(String toUser, String mediaId) {
+        if (!weChatProperties.isEnabled()) {
+            logger.warn("企业微信功能未启用");
+            return createErrorResponse(-1, "企业微信功能未启用");
+        }
+        
+        WeChatSendMessageRequest request = new WeChatSendMessageRequest();
+        request.setToUser(toUser);
+        request.setMsgType("file");
+        request.setAgentId(weChatProperties.getAgentId());
+        request.setFile(new WeChatSendMessageRequest.FileContent(mediaId));
+        
+        return sendMessage(request);
+    }
+    
+    @Override
+    public WeChatSendMessageResponse sendNewsMessage(String toUser, WeChatSendMessageRequest.NewsContent.Article[] articles) {
+        if (!weChatProperties.isEnabled()) {
+            logger.warn("企业微信功能未启用");
+            return createErrorResponse(-1, "企业微信功能未启用");
+        }
+        
+        WeChatSendMessageRequest request = new WeChatSendMessageRequest();
+        request.setToUser(toUser);
+        request.setMsgType("news");
+        request.setAgentId(weChatProperties.getAgentId());
+        request.setNews(new WeChatSendMessageRequest.NewsContent(articles));
+        
+        return sendMessage(request);
+    }
+    
+    @Override
+    public WeChatSendMessageResponse sendMarkdownMessage(String toUser, String content) {
+        if (!weChatProperties.isEnabled()) {
+            logger.warn("企业微信功能未启用");
+            return createErrorResponse(-1, "企业微信功能未启用");
+        }
+        
+        WeChatSendMessageRequest request = new WeChatSendMessageRequest();
+        request.setToUser(toUser);
+        request.setMsgType("markdown");
+        request.setAgentId(weChatProperties.getAgentId());
+        request.setMarkdown(new WeChatSendMessageRequest.MarkdownContent(content));
+        
+        return sendMessage(request);
+    }
+    
     /**
      * 使用新的Access Token重试发送消息
      */
