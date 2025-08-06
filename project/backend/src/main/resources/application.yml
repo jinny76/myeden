@@ -144,6 +144,16 @@ robot:
     max-concurrent-actions: 5
     cooldown-period: 300000  # 5分钟冷却期
 
+# 企业微信消息接收配置
+wechat:
+  work:
+    token: ${WECHAT_TOKEN}  # 企业微信回调Token
+    encoding-aes-key: ${WECHAT_ENCODING_AES_KEY}  # 企业微信消息加密密钥
+    corp-id: ${WECHAT_CORP_ID}  # 企业ID
+    agent-id: ${WECHAT_AGENT_ID}  # 应用ID
+    secret: ${WECHAT_SECRET}  # 应用密钥
+    enabled: ${WECHAT_ENABLED}  # 是否启用微信消息接收
+
 # 熟悉度积分配置
 familiarity:
   points:
