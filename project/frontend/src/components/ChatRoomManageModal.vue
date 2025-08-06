@@ -2,7 +2,7 @@
   <el-dialog 
     v-model="visible" 
     title="聊天室管理" 
-    width="600px"
+    :width="dialogWidth"
     :before-close="handleClose"
     class="chatroom-manage-modal"
   >
@@ -33,14 +33,13 @@
         
         <!-- 添加天使 -->
         <div class="add-member-section">
-          <el-button 
+          <button 
             @click="showAddRobotModal = true" 
-            type="primary" 
-            :icon="Plus"
-            size="small"
+            class="action-btn add-robot-btn"
           >
-            添加天使
-          </el-button>
+            <el-icon><Plus /></el-icon>
+            <span>添加天使</span>
+          </button>
         </div>
 
         <!-- 成员列表 -->
@@ -134,14 +133,17 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
-        <el-button 
-          type="primary" 
+        <button @click="handleClose" class="action-btn cancel-btn">
+          <span>取消</span>
+        </button>
+        <button 
           @click="saveChanges"
-          :loading="saving"
+          :disabled="saving"
+          class="action-btn save-btn"
         >
-          保存
-        </el-button>
+          <el-icon v-if="saving" class="is-loading"><Loading /></el-icon>
+          <span>{{ saving ? '保存中...' : '保存' }}</span>
+        </button>
       </div>
     </template>
   </el-dialog>
@@ -159,7 +161,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
-  Plus, CircleCheck, More, Close, Microphone, Delete 
+  Plus, CircleCheck, More, Close, Microphone, Delete, Loading
 } from '@element-plus/icons-vue'
 import AddRobotModal from './AddRobotModal.vue'
 import { useChatRoomStore } from '@/stores/chatroom'
@@ -187,6 +189,18 @@ const emit = defineEmits([
 ])
 
 const chatroomStore = useChatRoomStore()
+
+// 动态计算对话框宽度
+const dialogWidth = computed(() => {
+  const width = window.innerWidth
+  if (width <= 480) {
+    return '98vw'
+  } else if (width <= 768) {
+    return '95vw'
+  } else {
+    return '600px'
+  }
+})
 
 // 获取成员头像
 const getMemberAvatar = (member) => {  
@@ -223,6 +237,18 @@ const stats = ref({
   activeDuration: 0
 })
 
+// 加载统计信息
+const loadStats = async () => {
+  if (!props.chatRoom?.roomId) return
+  
+  try {
+    const statsData = await chatroomStore.getChatRoomStats(props.chatRoom.roomId)
+    stats.value = statsData
+  } catch (error) {
+    console.error('加载统计信息失败:', error)
+  }
+}
+
 // 监听chatRoom变化，更新表单
 watch(() => props.chatRoom, (newRoom) => {
   if (newRoom) {
@@ -239,17 +265,12 @@ watch(() => props.members, () => {
   }
 }, { deep: true })
 
-// 加载统计信息
-const loadStats = async () => {
-  if (!props.chatRoom?.roomId) return
-  
-  try {
-    const statsData = await chatroomStore.getChatRoomStats(props.chatRoom.roomId)
-    stats.value = statsData
-  } catch (error) {
-    console.error('加载统计信息失败:', error)
-  }
-}
+// 监听窗口大小变化
+onMounted(() => {
+  window.addEventListener('resize', () => {
+    // 触发响应式更新
+  })
+})
 
 // 保存更改
 const saveChanges = async () => {
@@ -542,8 +563,7 @@ const formatDuration = (minutes) => {
 /* 响应式设计 */
 @media (max-width: 768px) {
   .chatroom-manage-modal :deep(.el-dialog) {
-    width: 90vw;
-    margin: 5vh auto;
+    margin: 2vh auto;
   }
   
   .stats-grid {
@@ -559,5 +579,125 @@ const formatDuration = (minutes) => {
   .member-actions {
     align-self: flex-end;
   }
+}
+
+@media (max-width: 480px) {
+  .chatroom-manage-modal :deep(.el-dialog) {
+    margin: 1vh auto;
+  }
+  
+  .manage-content {
+    gap: 1.5rem;
+  }
+  
+  .section {
+    gap: 0.75rem;
+  }
+  
+  .members-list {
+    max-height: 250px;
+  }
+  
+  .member-card {
+    padding: 0.75rem;
+  }
+  
+  .member-info {
+    gap: 0.5rem;
+  }
+  
+  .member-name {
+    font-size: 0.9rem;
+  }
+  
+  .member-status {
+    font-size: 0.75rem;
+  }
+  
+  .section-title {
+    font-size: 1rem;
+  }
+}
+
+/* 按钮样式 */
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid rgba(64, 158, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(64, 158, 255, 0.1);
+  color: #409eff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+  white-space: nowrap;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: rgba(64, 158, 255, 0.2);
+  border-color: #409eff;
+  transform: translateY(-1px);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 添加天使按钮 */
+.add-robot-btn {
+  border-color: rgba(34, 211, 107, 0.3);
+  background: rgba(34, 211, 107, 0.1);
+  color: #22d36b;
+}
+
+.add-robot-btn:hover:not(:disabled) {
+  background: rgba(34, 211, 107, 0.2);
+  border-color: #22d36b;
+}
+
+/* 取消按钮 */
+.cancel-btn {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* 保存按钮 */
+.save-btn {
+  border-color: rgba(64, 158, 255, 0.3);
+  background: rgba(64, 158, 255, 0.1);
+  color: #409eff;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: rgba(64, 158, 255, 0.2);
+  border-color: #409eff;
+}
+
+/* 添加按钮 */
+.add-btn {
+  border-color: rgba(34, 211, 107, 0.3);
+  background: rgba(34, 211, 107, 0.1);
+  color: #22d36b;
+}
+
+.add-btn:hover:not(:disabled) {
+  background: rgba(34, 211, 107, 0.2);
+  border-color: #22d36b;
 }
 </style>

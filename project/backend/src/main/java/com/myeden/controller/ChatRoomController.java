@@ -275,7 +275,7 @@ public class ChatRoomController {
             }
             
             GroupChatMessage message = groupChatService.sendGroupMessage(
-                roomId, "USER", userId, content, imageUrl, replyToId);
+                roomId, userService.getUserById(userId).get(), "USER", userId, content, imageUrl, replyToId);
             
             // 触发机器人回复
             robotChatService.handleUserMessage(roomId, message);

@@ -3,6 +3,7 @@ package com.myeden.service.impl;
 import com.myeden.entity.GroupChatMessage;
 import com.myeden.entity.ChatRoomMember;
 import com.myeden.entity.Robot;
+import com.myeden.entity.User;
 import com.myeden.model.WebSocketMessage;
 import com.myeden.repository.GroupChatMessageRepository;
 import com.myeden.service.GroupChatService;
@@ -46,10 +47,13 @@ public class GroupChatServiceImpl implements GroupChatService {
     private WebSocketService webSocketService;
     
     @Override
-    public GroupChatMessage sendGroupMessage(String roomId, String senderType, String senderId, 
-                                           String content, String imageUrl, String replyToId) {
+    public GroupChatMessage sendGroupMessage(String roomId, User user, String senderType, String senderId,
+                                             String content, String imageUrl, String replyToId) {
         try {
             GroupChatMessage message = new GroupChatMessage(roomId, senderType, senderId, content);
+            message.setSenderNickname(user.getNickname());
+            message.setSenderAvatar(user.getAvatar());
+
             if (imageUrl != null && !imageUrl.isEmpty()) {
                 message.setImageUrl(imageUrl);
                 message.setMessageType("image");
@@ -93,7 +97,7 @@ public class GroupChatServiceImpl implements GroupChatService {
     }
     
     @Override
-    public GroupChatMessage sendRobotGroupMessage(String roomId, Robot robot, String content, 
+    public GroupChatMessage sendRobotGroupMessage(String roomId, Robot robot, String content,
                                                 String imageUrl, String replyToId) {
         try {
             GroupChatMessage message = new GroupChatMessage(roomId, "ROBOT", robot.getRobotId(), content);

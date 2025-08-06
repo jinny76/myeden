@@ -9,14 +9,6 @@
         </el-button>
         <span style="margin-left: 10px;">{{ chatRoom?.roomName || '我的聊天室' }}</span>
       </div>
-      <div class="header-actions">
-        <el-button @click="showManageModal = true" type="primary" size="small">
-          <el-icon>
-            <Setting />
-          </el-icon>
-          管理
-        </el-button>
-      </div>
     </div>
 
     <div class="chat-messages" ref="messagesContainer">
@@ -25,11 +17,6 @@
         <div class="message-content">
           {{ message.content }}
         </div>
-      </div>
-
-      <!-- 加载更多 -->
-      <div v-if="hasMore && !loading" class="load-more">
-        <el-button @click="loadMoreMessages" text>加载更多消息</el-button>
       </div>
 
       <!-- 加载中 -->
@@ -47,8 +34,8 @@
           <Position />
         </el-icon>
       </button>
-      <!-- 添加机器人按钮 -->
-      <span class="add-robot-icon" @click="showManageModal = true" title="添加机器人">
+      <!-- 添加天使按钮 -->
+      <span class="add-robot-icon" @click="showManageModal = true" title="添加天使">
         <el-icon>
           <User />
         </el-icon>
@@ -173,7 +160,7 @@ const loadMessages = async (page = 0) => {
   try {
     loading.value = true
 
-    // 确保机器人store已加载数据
+    // 确保天使store已加载数据
     if (robotStore.robots.length === 0) {
       await robotStore.fetchRobotList()
     }
@@ -295,7 +282,7 @@ const getSenderAvatar = (message) => {
       }
     }
   } else if (message.senderType === 'ROBOT') {
-    // 从机器人store获取头像
+    // 从天使store获取头像
     const robot = robotStore.robots.find(r => r.id === message.senderId || r.robotId === message.senderId)
     if (robot && robot.avatar) {
       return `/api/v1/files${robot.avatar.replaceAll('/uploads/', '/')}`
@@ -625,6 +612,8 @@ const stopHeartbeat = () => {
     height: calc(100dvh - 64px);
     max-width: 100vw;
     margin: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .chat-header,
@@ -646,6 +635,10 @@ const stopHeartbeat = () => {
   .chat-messages {
     padding-top: 135px;
     margin-top: 0;
+    height: calc(100dvh - 64px - 60px - 80px);
+    /* 减去header高度(64px) - 聊天室header高度(60px) - 输入框高度(80px) */
+    overflow-y: auto;
+    flex: 1;
   }
 
   .chat-message {
@@ -667,10 +660,16 @@ const stopHeartbeat = () => {
   }
 
   .chat-input {
-    margin-bottom: 8px;
-    padding-bottom: 8px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin-bottom: 0;
+    padding: 12px;
     width: 100%;
     box-sizing: border-box;
+    background: #23272e;
+    border-top: 1px solid #23272e;
   }
 }
 
@@ -680,11 +679,20 @@ const stopHeartbeat = () => {
     min-height: calc(100dvh - 60px);
     /* 480px以下header高度为60px */
     height: calc(100dvh - 60px);
+    display: flex;
+    flex-direction: column;
   }
 
   .chat-header {
     top: 60px;
     /* 调整top位置 */
+  }
+
+  .chat-messages {
+    height: calc(100dvh - 60px - 60px - 80px);
+    /* 减去header高度(60px) - 聊天室header高度(60px) - 输入框高度(80px) */
+    overflow-y: auto;
+    flex: 1;
   }
 }
 </style>

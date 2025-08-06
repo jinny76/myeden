@@ -74,6 +74,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/world/**").permitAll()
                 .requestMatchers("/api/v1/robots").permitAll()
                 .requestMatchers("/api/v1/robots/{robotId}").permitAll()
+                .requestMatchers("/api/v1/wechat/callback").permitAll()
                 // 机器人接口权限配置
                 .requestMatchers("/api/v1/robots/create").authenticated()
                 .requestMatchers("/api/v1/robots/my-robots").authenticated()

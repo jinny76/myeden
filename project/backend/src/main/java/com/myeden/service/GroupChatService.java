@@ -1,6 +1,7 @@
 package com.myeden.service;
 
 import com.myeden.entity.GroupChatMessage;
+import com.myeden.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
@@ -28,7 +29,7 @@ public interface GroupChatService {
      * @param replyToId 回复消息ID（可选）
      * @return 发送的消息对象
      */
-    GroupChatMessage sendGroupMessage(String roomId, String senderType, String senderId, 
+    GroupChatMessage sendGroupMessage(String roomId, User user, String senderType, String senderId,
                                       String content, String imageUrl, String replyToId);
     
     /**

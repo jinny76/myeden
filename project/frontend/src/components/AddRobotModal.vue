@@ -2,7 +2,7 @@
   <el-dialog 
     v-model="visible" 
     title="添加天使" 
-    width="600px"
+    :width="dialogWidth"
     :before-close="handleClose"
     class="add-robot-modal"
   >
@@ -87,15 +87,17 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
-        <el-button 
-          type="primary" 
+        <button @click="handleClose" class="action-btn cancel-btn">
+          <span>取消</span>
+        </button>
+        <button 
           @click="addSelectedRobots"
-          :disabled="selectedRobots.length === 0"
-          :loading="adding"
+          :disabled="selectedRobots.length === 0 || adding"
+          class="action-btn add-btn"
         >
-          添加天使 ({{ selectedRobots.length }})
-        </el-button>
+          <el-icon v-if="adding" class="is-loading"><Loading /></el-icon>
+          <span>{{ adding ? '添加中...' : `添加天使 (${selectedRobots.length})` }}</span>
+        </button>
       </div>
     </template>
   </el-dialog>
@@ -130,6 +132,18 @@ const emit = defineEmits([
 
 const chatroomStore = useChatRoomStore()
 const robotStore = useRobotStore()
+
+// 动态计算对话框宽度
+const dialogWidth = computed(() => {
+  const width = window.innerWidth
+  if (width <= 480) {
+    return '98vw'
+  } else if (width <= 768) {
+    return '95vw'
+  } else {
+    return '600px'
+  }
+})
 
 // 响应式数据
 const visible = computed({
@@ -173,6 +187,13 @@ watch(visible, (newVisible) => {
     selectedRobots.value = []
     searchKeyword.value = ''
   }
+})
+
+// 监听窗口大小变化
+onMounted(() => {
+  window.addEventListener('resize', () => {
+    // 触发响应式更新
+  })
 })
 
 // 加载可用天使
@@ -419,8 +440,7 @@ const getDefaultRobotAvatar = () => {
 /* 响应式设计 */
 @media (max-width: 768px) {
   .add-robot-modal :deep(.el-dialog) {
-    width: 90vw;
-    margin: 5vh auto;
+    margin: 2vh auto;
   }
   
   .robot-card {
@@ -439,5 +459,113 @@ const getDefaultRobotAvatar = () => {
     overflow: visible;
     text-overflow: initial;
   }
+  
+  .robots-section {
+    min-height: 250px;
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .add-robot-modal :deep(.el-dialog) {
+    margin: 1vh auto;
+  }
+  
+  .modal-content {
+    gap: 1rem;
+  }
+  
+  .robots-section {
+    min-height: 200px;
+    max-height: 250px;
+  }
+  
+  .robot-card {
+    padding: 0.75rem;
+  }
+  
+  .robot-info {
+    gap: 0.75rem;
+  }
+  
+  .robot-name {
+    font-size: 0.9rem;
+  }
+  
+  .robot-description {
+    font-size: 0.85rem;
+  }
+  
+  .robot-stats {
+    gap: 0.25rem;
+  }
+  
+  .robot-stats .el-tag {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.375rem;
+  }
+  
+  .selection-summary {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* 按钮样式 */
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid rgba(64, 158, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(64, 158, 255, 0.1);
+  color: #409eff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+  white-space: nowrap;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: rgba(64, 158, 255, 0.2);
+  border-color: #409eff;
+  transform: translateY(-1px);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 取消按钮 */
+.cancel-btn {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* 添加按钮 */
+.add-btn {
+  border-color: rgba(34, 211, 107, 0.3);
+  background: rgba(34, 211, 107, 0.1);
+  color: #22d36b;
+}
+
+.add-btn:hover:not(:disabled) {
+  background: rgba(34, 211, 107, 0.2);
+  border-color: #22d36b;
 }
 </style>

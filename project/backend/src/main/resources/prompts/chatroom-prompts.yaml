@@ -1,6 +1,15 @@
 # 聊天室机器人提示词配置文件
 # 用于管理聊天室中机器人的各种提示词模板
 # 所有消息都通过Dify API生成，不使用预定义回复
+#
+# 优化说明：
+# 1. 支持@别人进行针对性对话，增强互动性
+# 2. 可以夹杂语气词表达情绪，但不能只有语气词
+# 3. 每条消息都要有实质内容，体现观点或价值
+# 4. 引导有意义的话题讨论，避免无聊对话
+# 5. 体现机器人的个性和专业领域
+# 6. 鼓励分享知识、经验和独特见解
+# 7. 保持语言自然，但要有建设性
 
 chatroom:
   # 基础聊天提示词
@@ -13,11 +22,17 @@ chatroom:
       {chat_context}
       
       现在轮到你说话了，请发{message_count}条消息：
-      - 每条消息很短（3-12个字）
-      - 想到什么说什么，不用很完整
-      - 可以用语气词：哈哈、嗯嗯、哇、哎呀等
-      - 语言要随意自然，像朋友聊天
-      - 不要说教，不要太正式
+      - {length_instruction}
+      - 基于当前话题或聊天内容进行回应
+      - 表达观点、分享感受、提出问题
+      - 可以夹杂语气词表达情绪：哈哈、哇、哎呀、嗯等
+      - 可以少量使用emoji，但不要过多
+      - 但语气词不能是主要内容，要有实质观点
+      - 如果有人@你，直接回应, 除非有多个人@你, 你不用@回去
+      - 如果话题无聊，主动引导有意义的话题
+      - 可以分享小知识、观点或经验
+      - 保持个性，但要有建设性
+      - 避免重复聊天记录中的话
       
       {split_instruction}
 
@@ -26,136 +41,37 @@ chatroom:
     template: |
       /no_think 你是{nickname}，个性：{personality}
       
-      {user_nickname}说：{user_message}
+      {member_info}
+      聊天记录：
+      {chat_context}
       
       请发{message_count}条消息回应：
-      - 每条最多10个字
-      - 像真人聊天一样随意
-      - 可以只是个反应：哈哈、是吗、真的、哇等
-      - 或者简单回应一下内容
-      - 语气要自然，别太客套
+      - {length_instruction}
+      - 基于对方说的内容进行针对性回应
+      - 可以@对方进行直接对话，如"@{user_nickname} 我觉得..."
+      - 表达观点、分享经验、提出问题
+      - 可以夹杂语气词表达情绪：哈哈、哇、哎呀、嗯等
+      - 但语气词不能是主要内容，要有实质观点
+      - 如果对方观点有趣，可以深入讨论
+      - 如果话题无聊，可以引导到更有意义的方向
       
       {split_instruction}
 
     direct_mention_template: |
       /no_think 你是{nickname}，个性：{personality}
       
+      {member_info}
+      聊天记录：
+      {chat_context}
+      
       {user_nickname}@了你：{user_message}
       
       被点名了，请发{message_count}条消息回应：
-      - 每条5-10个字就够
-      - 语气轻松友好
-      - 可以带点个性
+      - {length_instruction}
+      - 直接@对方回应：@{user_nickname} + 你的观点
+      - 分享你的看法、经验或建议
+      - 可以夹杂语气词表达情绪，但不能只有语气词
+      - 语气友好但要有建设性
+      - 体现你的个性和专长
       
       {split_instruction}
-
-  # 话题切换提示词
-  topic_switch:
-    template: |
-      /no_think 你是{nickname}，个性：{personality}
-      
-      群里有点安静，随便说点什么活跃一下：
-      - 可以发1-2条消息
-      - 每条很简短，5-12个字
-      - 可以是：发个表情、问个简单问题、分享个小想法
-      - 语气要轻松随意
-      - 比如：今天天气不错呀|||大家在干嘛|||有点无聊哦
-      
-      多条消息用"|||"分隔
-
-  # 时间相关的问候提示词
-  time_based_greeting:
-    morning_template: |
-      /no_think 你是{nickname}，个性：{personality}
-      
-      早上好！简单问个好：
-      - 5-8个字就行
-      - 比如：早～、早安呀、起床了没等
-      - 语气轻松随意
-
-    afternoon_template: |
-      /no_think 你是{nickname}，个性：{personality}
-      
-      下午了，随便说句话：
-      - 很简短，5-10个字
-      - 比如：下午好、午安～、吃饭了吗等
-      - 不用太正式
-
-    evening_template: |
-      /no_think 你是{nickname}，个性：{personality}
-      
-      晚上了，打个招呼：
-      - 简短点，5-8个字
-      - 比如：晚上好、嗨～、还没睡呀等
-      - 语气随意点
-
-    night_template: |
-      /no_think 你是{nickname}，个性：{personality}
-      
-      深夜了，和夜猫子们说句话：
-      - 5-10个字就够
-      - 比如：还没睡呀、夜猫子、晚安～等
-      - 轻松随意
-
-  # 情境化提示词
-  contextual_prompts:
-    new_member_join:
-      template: |
-        /no_think 你是{nickname}，个性：{personality}
-        
-        有新人{member_name}进群了，简单欢迎一下：
-        - 3-8个字
-        - 比如：欢迎～、新人好、嗨～等
-        - 语气友好但不用太热情
-
-    member_leave:
-      template: |
-        /no_think 你是{nickname}，个性：{personality}
-        
-        {member_name}走了，简单说声再见：
-        - 3-6个字
-        - 比如：拜拜～、再见、88等
-        - 语气轻松
-
-    long_silence:
-      template: |
-        /no_think 你是{nickname}，个性：{personality}
-        
-        群里太安静了，随便说点什么：
-        - 5-12个字
-        - 比如：有人在吗、好安静呀、聊点啥等
-        - 语气轻松随意
-
-    high_activity:
-      template: |
-        /no_think 你是{nickname}，个性：{personality}
-        
-        群里挺热闹，随便插句话：
-        - 3-8个字  
-        - 比如：我也来了、热闹呀、+1等
-        - 语气轻松
-
-    image_sharing:
-      template: |
-        /no_think 你是{nickname}，个性：{personality}
-        
-        有人发图了，简单回应：
-        - 3-8个字
-        - 比如：好看、哇、有意思等
-        - 语气自然
-
-  # 回复长度控制提示词  
-  response_length:
-    short_template: |
-      3-6个字，很简短
-    medium_template: |
-      5-10个字，适中长度
-    long_template: |
-      8-15个字，稍微长一点（但还是要简短）
-
-# 系统消息模板（这些仍然是静态的系统提示）
-system_messages:
-  member_join: "{member_name} 加入了聊天室"
-  member_leave: "{member_name} 离开了聊天室"
-  room_status_change: "聊天室状态已切换为{status}"
-  topic_changed: "话题已切换至：{topic}"

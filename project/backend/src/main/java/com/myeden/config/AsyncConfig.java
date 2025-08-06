@@ -187,6 +187,29 @@ public class AsyncConfig {
     }
 
     /**
+     * 微信消息处理执行器
+     * 专门用于处理微信消息的异步处理和回复
+     */
+    @Bean("weChatAsyncExecutor")
+    public Executor weChatAsyncExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        
+        // 微信消息处理使用中等大小的线程池
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(100);
+        executor.setKeepAliveSeconds(60);
+        executor.setThreadNamePrefix("myeden-wechat-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+        
+        executor.initialize();
+        logger.info("微信消息处理执行器配置完成");
+        return executor;
+    }
+
+    /**
      * 获取线程池统计信息
      * 用于监控线程池使用情况
      */

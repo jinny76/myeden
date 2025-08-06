@@ -757,9 +757,29 @@ public class RobotChatServiceImpl implements RobotChatService {
             String replyPrompt = chatroomPromptService.buildReplyToUserPrompt(robot, userMessage, chatContext);
             
             DifyChatResult result = difyService.callDifyApi(replyPrompt, robot.getRobotId(), robot.getAppKey());
-            String generatedContent = result != null && result.success ? result.answer : "我现在有点忙，稍后再回复您吧~";
-            return processGeneratedContent(generatedContent);
-            
+            String processedContent = result != null && result.success ? result.answer : "我现在有点忙，稍后再回复您吧~";
+
+            if (processedContent.contains("</think>")) {
+                processedContent = processedContent.substring(processedContent.indexOf("</think>\n") + "</think>\n".length());
+            }
+            if (processedContent.contains("<think>") && !processedContent.contains("</think>")) {
+                String content = processedContent;
+                int thinkIdx = content.indexOf("<think>");
+                content = content.substring(thinkIdx + "<think>".length()).trim();
+                int lastColon = content.lastIndexOf(':');
+                if (lastColon != -1 && lastColon < content.length() - 1) {
+                    processedContent = content.substring(lastColon + 1).trim();
+                } else {
+                    int lastComma = content.lastIndexOf(',');
+                    if (lastComma != -1 && lastComma < content.length() - 1) {
+                        processedContent = content.substring(lastComma + 1).trim();
+                    } else {
+                        processedContent = content.trim();
+                    }
+                }
+            }
+
+            return processGeneratedContent(processedContent);
         } catch (Exception e) {
             logger.error("生成机器人回复消息失败: robotId={}", robot.getRobotId(), e);
             return chatroomPromptService.getFallbackResponse(robot);

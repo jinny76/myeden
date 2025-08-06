@@ -99,6 +99,9 @@ public class ChatroomPromptServiceImpl implements ChatroomPromptService {
             // 随机决定发送1-2条消息（回复比较简短）
             int messageCount = 1 + random.nextInt(2); // 1 或 2
             
+            // 随机决定消息长度
+            String lengthInstruction = getRandomLengthInstruction();
+            
             // 判断是否是直接提及
             String template;
             if (userMessage.getContent().contains(robot.getNickname()) || 
@@ -112,10 +115,12 @@ public class ChatroomPromptServiceImpl implements ChatroomPromptService {
             variables.put("nickname", robot.getNickname());
             variables.put("personality", getPersonalityDescription(robot));
             variables.put("chat_context", chatContext != null ? chatContext : "");
+            variables.put("member_info", buildChatRoomMemberInfo(userMessage.getRoomId()));
             variables.put("user_nickname", userMessage.getSenderNickname() != null ? 
                          userMessage.getSenderNickname() : "用户");
             variables.put("user_message", userMessage.getContent());
             variables.put("message_count", String.valueOf(messageCount));
+            variables.put("length_instruction", lengthInstruction);
             variables.put("split_instruction", getSplitInstruction(messageCount));
             
             return processTemplate(template, variables);
@@ -123,25 +128,6 @@ public class ChatroomPromptServiceImpl implements ChatroomPromptService {
         } catch (Exception e) {
             logger.error("构建回复用户提示词失败", e);
             return getDefaultReplyPrompt(robot, userMessage);
-        }
-    }
-    
-    @Override
-    public String buildTopicSwitchPrompt(Robot robot, LocalDateTime currentTime) {
-        try {
-            Map<String, Object> chatroomConfig = getMapFromConfig("chatroom");
-            Map<String, Object> topicConfig = getMapFromConfig(chatroomConfig, "topic_switch");
-            String template = (String) topicConfig.get("template");
-            
-            Map<String, String> variables = new HashMap<>();
-            variables.put("nickname", robot.getNickname());
-            variables.put("personality", getPersonalityDescription(robot));
-            
-            return processTemplate(template, variables);
-            
-        } catch (Exception e) {
-            logger.error("构建话题切换提示词失败", e);
-            return getDefaultTopicSwitchPrompt(robot);
         }
     }
     
@@ -167,47 +153,6 @@ public class ChatroomPromptServiceImpl implements ChatroomPromptService {
             "这个话题很有意思！"
         };
         return defaults[random.nextInt(defaults.length)];
-    }
-    
-    @Override
-    public String getTimeBasedGreeting(Robot robot, LocalDateTime currentTime) {
-        try {
-            Map<String, Object> chatroomConfig = getMapFromConfig("chatroom");
-            Map<String, Object> greetingConfig = getMapFromConfig(chatroomConfig, "time_based_greetings");
-            
-            String timeSlot = getTimeSlot(currentTime.toLocalTime());
-            List<String> greetings = (List<String>) greetingConfig.get(timeSlot);
-            
-            if (greetings != null && !greetings.isEmpty()) {
-                return greetings.get(random.nextInt(greetings.size()));
-            }
-            
-        } catch (Exception e) {
-            logger.error("获取时间问候语失败", e);
-        }
-        
-        return "大家好！我是" + robot.getNickname() + "，很高兴和大家聊天~";
-    }
-    
-    @Override
-    public String getContextualResponse(Robot robot, String contextType, Map<String, String> parameters) {
-        try {
-            Map<String, Object> chatroomConfig = getMapFromConfig("chatroom");
-            Map<String, Object> contextualConfig = getMapFromConfig(chatroomConfig, "contextual_responses");
-            Map<String, Object> typeConfig = getMapFromConfig(contextualConfig, contextType);
-            
-            String template = (String) typeConfig.get("template");
-            if (template != null) {
-                Map<String, String> variables = new HashMap<>(parameters);
-                variables.put("nickname", robot.getNickname());
-                return processTemplate(template, variables);
-            }
-            
-        } catch (Exception e) {
-            logger.error("获取情境化回复失败: contextType={}", contextType, e);
-        }
-        
-        return getFallbackResponse(robot);
     }
     
     @Override
@@ -250,54 +195,6 @@ public class ChatroomPromptServiceImpl implements ChatroomPromptService {
     }
     
     @Override
-    public String getPersonalityTemplate(Robot robot, String templateType) {
-        try {
-            Map<String, Object> chatroomConfig = getMapFromConfig("chatroom");
-            Map<String, Object> personalityConfig = getMapFromConfig(chatroomConfig, "personality_templates");
-            
-            String personalityType = determinePersonalityType(robot);
-            Map<String, Object> typeConfig = getMapFromConfig(personalityConfig, personalityType);
-            
-            String template = (String) typeConfig.get(templateType);
-            if (template != null) {
-                Map<String, String> variables = new HashMap<>();
-                variables.put("nickname", robot.getNickname());
-                return processTemplate(template, variables);
-            }
-            
-        } catch (Exception e) {
-            logger.error("获取个性模板失败: templateType={}", templateType, e);
-        }
-        
-        return getFallbackResponse(robot);
-    }
-    
-    @Override
-    public String getTopicSuggestion(String topicType, Robot robot) {
-        try {
-            Map<String, Object> chatroomConfig = getMapFromConfig("chatroom");
-            Map<String, Object> topicConfig = getMapFromConfig(chatroomConfig, "topic_switch");
-            Map<String, Object> suggestions = getMapFromConfig(topicConfig, "topic_suggestions");
-            
-            List<String> topicList = (List<String>) suggestions.get(topicType);
-            if (topicList != null && !topicList.isEmpty()) {
-                String suggestion = topicList.get(random.nextInt(topicList.size()));
-                
-                Map<String, String> variables = new HashMap<>();
-                variables.put("nickname", robot.getNickname());
-                variables.put("hobby", getRandomHobby());
-                
-                return processTemplate(suggestion, variables);
-            }
-            
-        } catch (Exception e) {
-            logger.error("获取话题建议失败: topicType={}", topicType, e);
-        }
-        
-        return "大家想聊什么呢？";
-    }
-    
-    @Override
     public String processTemplate(String template, Map<String, String> variables) {
         if (template == null || variables == null) {
             return template;
@@ -320,80 +217,6 @@ public class ChatroomPromptServiceImpl implements ChatroomPromptService {
         return result;
     }
     
-    @Override
-    public String getSystemMessage(String messageType, Map<String, String> parameters) {
-        try {
-            Map<String, Object> systemConfig = getMapFromConfig("system_messages");
-            String template = (String) systemConfig.get(messageType);
-            
-            if (template != null) {
-                return processTemplate(template, parameters);
-            }
-            
-        } catch (Exception e) {
-            logger.error("获取系统消息失败: messageType={}", messageType, e);
-        }
-        
-        return "系统消息";
-    }
-    
-    @Override
-    public String getErrorHandlingResponse(String errorType) {
-        try {
-            Map<String, Object> errorConfig = getMapFromConfig("error_handling");
-            List<String> responses = (List<String>) errorConfig.get(errorType);
-            
-            if (responses != null && !responses.isEmpty()) {
-                return responses.get(random.nextInt(responses.size()));
-            }
-            
-        } catch (Exception e) {
-            logger.error("获取错误处理回复失败: errorType={}", errorType, e);
-        }
-        
-        return "让我想想...";
-    }
-    
-    @Override
-    public boolean shouldSwitchTopic(List<GroupChatMessage> messages, int silenceDuration) {
-        // 如果沉默时间超过10分钟，建议切换话题
-        if (silenceDuration > 10) {
-            return true;
-        }
-        
-        // 如果最近5条消息都很短且单调，建议切换话题
-        if (messages != null && messages.size() >= 5) {
-            int shortMessageCount = 0;
-            for (int i = messages.size() - 1; i >= messages.size() - 5; i--) {
-                GroupChatMessage message = messages.get(i);
-                if (message.getContent() != null && message.getContent().length() < 10) {
-                    shortMessageCount++;
-                }
-            }
-            return shortMessageCount >= 4;
-        }
-        
-        return false;
-    }
-    
-    @Override
-    public String analyzeMessageSentimentAndGetStyle(String message, Robot robot) {
-        // 简单的情感分析
-        String lowerMessage = message.toLowerCase();
-        
-        if (lowerMessage.contains("开心") || lowerMessage.contains("高兴") || 
-            lowerMessage.contains("哈哈") || lowerMessage.contains("😊")) {
-            return "excited";
-        } else if (lowerMessage.contains("难过") || lowerMessage.contains("伤心") || 
-                  lowerMessage.contains("😢")) {
-            return "sympathetic";
-        } else if (lowerMessage.contains("？") || lowerMessage.contains("?")) {
-            return "helpful";
-        } else {
-            return "friendly";
-        }
-    }
-    
     // 辅助方法
     
     private Map<String, Object> getMapFromConfig(String key) {
@@ -411,36 +234,6 @@ public class ChatroomPromptServiceImpl implements ChatroomPromptService {
         return "友好、活泼、乐于助人";
     }
     
-    private String getTimeSlot(LocalTime time) {
-        if (time.isAfter(LocalTime.of(6, 0)) && time.isBefore(LocalTime.of(12, 0))) {
-            return "morning";
-        } else if (time.isAfter(LocalTime.of(12, 0)) && time.isBefore(LocalTime.of(18, 0))) {
-            return "afternoon";
-        } else if (time.isAfter(LocalTime.of(18, 0)) && time.isBefore(LocalTime.of(22, 0))) {
-            return "evening";
-        } else {
-            return "night";
-        }
-    }
-    
-    private String determinePersonalityType(Robot robot) {
-        String personality = robot.getPersonality();
-        if (personality == null) {
-            return "friendly";
-        }
-        
-        personality = personality.toLowerCase();
-        if (personality.contains("专业") || personality.contains("严谨")) {
-            return "professional";
-        } else if (personality.contains("幽默") || personality.contains("搞笑")) {
-            return "humorous";
-        } else if (personality.contains("知识") || personality.contains("学术")) {
-            return "intellectual";
-        } else {
-            return "friendly";
-        }
-    }
-    
     @Override
     public String buildChatPromptWithMemberInfo(Robot robot, String roomId, String chatContext) {
         try {
@@ -454,12 +247,16 @@ public class ChatroomPromptServiceImpl implements ChatroomPromptService {
             // 随机决定发送1-3条消息
             int messageCount = 1 + random.nextInt(3); // 1, 2, 或 3
             
+            // 随机决定消息长度 - 短、中、长各占三分之一
+            String lengthInstruction = getRandomLengthInstruction();
+            
             Map<String, String> variables = new HashMap<>();
             variables.put("nickname", robot.getNickname());
             variables.put("personality", getPersonalityDescription(robot));
             variables.put("chat_context", chatContext != null ? chatContext : "这是一个新的对话开始。");
             variables.put("member_info", memberInfo);
             variables.put("message_count", String.valueOf(messageCount));
+            variables.put("length_instruction", lengthInstruction);
             variables.put("split_instruction", getSplitInstruction(messageCount));
             
             // 如果模板不包含成员信息占位符，则在上下文前加入成员信息
@@ -543,6 +340,23 @@ public class ChatroomPromptServiceImpl implements ChatroomPromptService {
         }
     }
     
+    /**
+     * 随机获取消息长度指令
+     * 短、中、长回答各占三分之一几率
+     */
+    private String getRandomLengthInstruction() {
+        int choice = random.nextInt(3); // 0, 1, 2
+        switch (choice) {
+            case 0: // 短回答
+                return "每条消息3-8个字，简洁有力";
+            case 1: // 中回答
+                return "每条消息8-20个字，要有内容";
+            case 2: // 长回答
+            default:
+                return "每条消息15-35个字，表达完整观点";
+        }
+    }
+    
     private String getRandomHobby() {
         String[] hobbies = {"读书", "电影", "音乐", "运动", "旅行", "摄影", "绘画", "编程"};
         return hobbies[random.nextInt(hobbies.length)];
@@ -562,13 +376,6 @@ public class ChatroomPromptServiceImpl implements ChatroomPromptService {
             robot.getNickname(),
             userMessage.getSenderNickname(),
             userMessage.getContent()
-        );
-    }
-    
-    private String getDefaultTopicSwitchPrompt(Robot robot) {
-        return String.format(
-            "你是%s，请主动提出一个有趣的话题来活跃聊天室的气氛。",
-            robot.getNickname()
         );
     }
     
