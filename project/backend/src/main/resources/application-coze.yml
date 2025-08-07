@@ -1,0 +1,79 @@
+# Coze API配置
+coze:
+  api:
+    # API基础URL
+    base-url: https://api.coze.cn
+    # API密钥
+    key: ${COZE_API_KEY:pat_NsB1iCSVoUrmCMvdPA3lwvrDeseyMhWn2675pHP584NJovl3QtiHDcLb2FPILZrl}
+    # 是否启用
+    enabled: ${COZE_ENABLED:true}
+    
+    # 超时配置
+    timeout:
+      # 连接超时(毫秒)
+      connect: 10000
+      # 读取超时(毫秒) 
+      read: 30000
+      # 写入超时(毫秒)
+      write: 10000
+    
+    # 重试配置
+    retry:
+      # 最大重试次数
+      max-attempts: 3
+      # 重试间隔(毫秒)
+      delay: 1000
+      # 退避倍数
+      backoff-multiplier: 2.0
+    
+    # 速率限制配置
+    rate-limit:
+      # 每分钟最大请求数
+      requests-per-minute: 60
+      # 每日最大请求数
+      requests-per-day: 1000
+    
+    # 默认配置
+    defaults:
+      # 默认机器人ID
+      bot-id: ${COZE_DEFAULT_BOT_ID:7525775173111889955}
+      # 默认用户ID
+      user-id: ${COZE_DEFAULT_USER_ID:jinni}
+      # 对话模式：blocking(阻塞) 或 auto(自动)
+      chat-mode: blocking
+      # 是否启用网络搜索
+      auto-save-history: true
+      # 最大Token数
+      max-tokens: 2048
+    
+    # 文件上传配置
+    file:
+      # 支持的文件类型
+      supported-types:
+        - "txt"
+        - "md" 
+        - "pdf"
+        - "doc"
+        - "docx"
+        - "xls"
+        - "xlsx"
+        - "ppt"
+        - "pptx"
+        - "jpg"
+        - "jpeg"
+        - "png"
+        - "gif"
+        - "webp"
+      # 最大文件大小(字节)
+      max-size: 52428800  # 50MB
+      # 上传超时(秒)
+      upload-timeout: 60
+    
+    # 监控配置
+    monitoring:
+      # 是否启用指标收集
+      metrics-enabled: true
+      # 日志级别
+      log-level: INFO
+      # 是否记录请求响应详情
+      log-request-response: false
