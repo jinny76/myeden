@@ -1,35 +1,48 @@
 package com.myeden.service.impl;
 
+import com.myeden.dto.coze.CozeChatRequest;
+import com.myeden.dto.coze.CozeChatResponse;
+import com.myeden.dto.coze.CozeMessage;
+import com.myeden.dto.coze.CozeMessageDetailResponse;
+import com.myeden.entity.UserConversation;
+import com.myeden.service.CozeService;
+import com.myeden.service.UserConversationService;
+import com.myeden.service.WeChatAsyncProcessService;
+import com.myeden.service.WeChatConversationService;
+import com.myeden.service.WeChatSendService;
 import com.myeden.dto.wechat.WeChatMessage;
 import com.myeden.dto.wechat.WeChatSendMessageResponse;
-import com.myeden.service.DifyService;
-import com.myeden.service.DifyService.DifyChatResult;
-import com.myeden.service.WeChatAsyncProcessService;
-import com.myeden.service.WeChatSendService;
-import com.myeden.service.WeChatConversationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+import java.util.List;
+import com.myeden.dto.coze.CozeChatDetailResponse;
+
 /**
- * 企业微信异步消息处理服务实现类
+ * 微信异步处理服务实现类
  */
 @Service
 public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(WeChatAsyncProcessServiceImpl.class);
-    
-    private final DifyService difyService;
+
+    private final CozeService cozeService;
     private final WeChatSendService weChatSendService;
     private final WeChatConversationService conversationService;
-    
+    private final UserConversationService userConversationService;
+
     @Autowired
-    public WeChatAsyncProcessServiceImpl(DifyService difyService, WeChatSendService weChatSendService, WeChatConversationService conversationService) {
-        this.difyService = difyService;
+    public WeChatAsyncProcessServiceImpl(CozeService cozeService, WeChatSendService weChatSendService, 
+                                       WeChatConversationService conversationService, 
+                                       UserConversationService userConversationService) {
+        this.cozeService = cozeService;
         this.weChatSendService = weChatSendService;
         this.conversationService = conversationService;
+        this.userConversationService = userConversationService;
     }
     
     @Override
@@ -172,46 +185,137 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
     }
     
     /**
-     * 使用AI生成回复内容
+     * 使用Coze AI生成回复内容
      */
     private String generateAIReply(String userMessage, String userId) {
         try {
-            // 获取对话上下文
-            String conversationContext = conversationService.buildConversationContext(userId);
+            // 获取或创建用户的对话关系
+            String botId = cozeService.getDefaultBotId();
+            UserConversation userConversation = userConversationService.getOrCreateConversation(userId, botId);
             
-            // 构建包含上下文的AI对话提示词
-            String prompt = String.format(
-                "/no_think 你是翠鸟小新新。像微信聊天一样回复，要简短自然，别太正式，别说太多废话。\n\n" +
-                "%s" +
-                "用户: %s\n\n" +
-                "像平时微信聊天一样简短回复：",
-                conversationContext, userMessage
-            );
+            // 构建Coze聊天请求
+            CozeChatRequest request = new CozeChatRequest();
+            request.setBotId(botId);
+            request.setUserId(userId);
+            request.setConversationId(userConversation.getConversationId());
+            request.setStream(false);
             
-            logger.info("调用Dify API生成AI回复，用户ID: {}", userId);
+            // 构建消息
+            CozeMessage userMsg = new CozeMessage("user", "question", userMessage, "text");
+            request.setAdditionalMessages(Arrays.asList(userMsg));
             
-            // 调用Dify API生成回复
-            DifyChatResult result = difyService.callDifyApi(prompt, userId, null);
+            logger.info("调用Coze API生成AI回复，用户ID: {}, 会话ID: {}", userId, userConversation.getConversationId());
             
-            if (result != null && result.success && result.answer != null) {
-                String reply = result.answer.trim();
+            // 调用Coze API生成回复
+            CozeChatResponse chatResponse = cozeService.chat(request);
+            
+            if (chatResponse != null && chatResponse.isSuccess() && chatResponse.getChatId() != null) {
+                logger.info("聊天请求发起成功 - 对话ID: {}, ChatID: {}", 
+                           chatResponse.getConversationId(), chatResponse.getChatId());
                 
-                // 过滤和处理回复内容
-                if (reply.length() > 300) {
-                    reply = reply.substring(0, 297) + "...";
+                // 等待对话完成处理
+                logger.info("开始等待对话完成处理 - ChatID: {}", chatResponse.getChatId());
+                
+                CozeMessageDetailResponse messageDetail = waitForChatCompletion(
+                        chatResponse.getChatId(), 
+                        userConversation.getConversationId(), 
+                        30000  // 30秒超时（微信场景可以稍短一些）
+                );
+                
+                if (messageDetail != null && messageDetail.isSuccess() && messageDetail.getData() != null) {
+                    // 获取最后一个answer类型的回复
+                    String reply = extractLastAnswerContent(messageDetail.getData());
+                    
+                    if (reply != null && !reply.trim().isEmpty()) {
+                        // 过滤和处理回复内容
+                        if (reply.length() > 300) {
+                            reply = reply.substring(0, 297) + "...";
+                        }
+                        
+                        logger.info("Coze AI生成回复成功: {}", reply);
+                        return reply;
+                    }
                 }
-                
-                logger.info("AI生成回复成功: {}", reply);
-                return reply;
-            } else {
-                logger.warn("AI生成回复失败: {}", result);
-                return getDefaultReply();
             }
             
+            logger.warn("Coze AI生成回复失败或为空");
+            return getDefaultReply();
+            
         } catch (Exception e) {
-            logger.error("生成AI回复时出现异常", e);
+            logger.error("生成Coze AI回复时出现异常", e);
             return getDefaultReply();
         }
+    }
+    
+    /**
+     * 等待对话完成的辅助方法
+     * 参考CozeController的waitForChatCompletion逻辑
+     */
+    private CozeMessageDetailResponse waitForChatCompletion(String chatId, String conversationId, long timeoutMs) {
+        long startTime = System.currentTimeMillis();
+        long pollInterval = 2000; // 2秒轮询间隔
+        
+        logger.info("开始等待对话完成 - chatId: {}, 超时: {}ms", chatId, timeoutMs);
+        
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            try {
+                CozeChatDetailResponse detail = cozeService.getChatDetail(chatId, conversationId);
+                
+                if (detail != null && detail.isSuccess() && detail.getData() != null) {
+                    String status = detail.getData().getStatus();
+                    logger.debug("对话状态检查 - chatId: {}, status: {}", chatId, status);
+                    
+                    if ("completed".equals(status) || "failed".equals(status)) {
+                        logger.info("对话已结束 - chatId: {}, 最终状态: {}", chatId, status);
+                        break;
+                    }
+                    
+                    if ("requires_action".equals(status)) {
+                        logger.warn("对话需要用户操作 - chatId: {}", chatId);
+                        break;
+                    }
+                }
+                
+                // 等待下一次轮询
+                Thread.sleep(pollInterval);
+                
+            } catch (InterruptedException e) {
+                logger.warn("等待对话完成时被中断", e);
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                logger.error("轮询对话状态时发生异常", e);
+                // 继续轮询，不中断
+            }
+        }
+        
+        logger.warn("等待对话完成超时 - chatId: {}", chatId);
+        // 超时后返回最后一次的状态
+        try {
+            return cozeService.getMessageDetails(conversationId, chatId);
+        } catch (Exception e) {
+            logger.error("超时后获取对话详情失败", e);
+            return CozeMessageDetailResponse.error(408, "等待对话完成超时");
+        }
+    }
+    
+    /**
+     * 从消息详情中提取最后一个answer类型的回复内容
+     */
+    private String extractLastAnswerContent(List<CozeMessageDetailResponse.ChatV3MessageDetail> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return null;
+        }
+        
+        // 查找最后一个answer类型的消息
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            CozeMessageDetailResponse.ChatV3MessageDetail message = messages.get(i);
+            if ("answer".equals(message.getType()) && "assistant".equals(message.getRole())) {
+                return message.getContent();
+            }
+        }
+        
+        return null;
     }
     
     /**

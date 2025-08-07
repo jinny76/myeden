@@ -4,6 +4,7 @@ import com.myeden.dto.coze.*;
 import com.myeden.service.CozeService;
 import com.myeden.service.impl.CozeServiceImpl;
 import com.myeden.controller.EventResponse;
+import com.myeden.entity.UserConversation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -22,6 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import com.myeden.dto.coze.CozeChatResponse;
+import com.myeden.dto.coze.CozeMessageDetailResponse;
+import com.myeden.dto.coze.CozeMessage;
+import com.myeden.service.UserConversationService;
+import java.util.Arrays;
 
 /**
  * Coze API控制器
@@ -38,6 +43,9 @@ public class CozeController {
     
     @Autowired
     private CozeServiceImpl cozeServiceImpl;
+
+    @Autowired
+    private UserConversationService userConversationService;
 
     /**
      * 创建对话
@@ -471,6 +479,90 @@ public class CozeController {
     public ResponseEntity<CozeChatResponse> testCozeApi() {
         CozeChatResponse response = cozeServiceImpl.testChatWithConversationId();
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 测试微信集成的Coze功能
+     * 模拟微信用户发送消息并获取回复
+     */
+    @Operation(summary = "测试微信集成的Coze功能", description = "模拟微信用户发送消息并获取回复")
+    @ApiResponse(responseCode = "200", description = "测试成功")
+    @PostMapping("/test-wechat-integration")
+    public ResponseEntity<?> testWeChatIntegration(
+            @Parameter(description = "用户ID", required = true)
+            @RequestParam String userId,
+            @Parameter(description = "消息内容", required = true)
+            @RequestParam String message) {
+        try {
+            logger.info("测试微信集成的Coze功能 - 用户ID: {}, 消息: {}", userId, message);
+
+            // 获取或创建用户的对话关系
+            String botId = cozeService.getDefaultBotId();
+            UserConversation userConversation = userConversationService.getOrCreateConversation(userId, botId);
+            
+            // 构建Coze聊天请求
+            CozeChatRequest request = new CozeChatRequest();
+            request.setBotId(botId);
+            request.setUserId(userId);
+            request.setConversationId(userConversation.getConversationId());
+            request.setStream(false);
+            
+            // 构建消息
+            CozeMessage userMsg = new CozeMessage("user", "question", message, "text");
+            request.setAdditionalMessages(Arrays.asList(userMsg));
+            
+            // 调用Coze API生成回复
+            CozeChatResponse chatResponse = cozeService.chat(request);
+            
+            if (chatResponse != null && chatResponse.isSuccess() && chatResponse.getChatId() != null) {
+                // 等待对话完成并获取消息详情
+                CozeMessageDetailResponse messageDetail = cozeService.getMessageDetails(
+                    userConversation.getConversationId(), chatResponse.getChatId());
+                
+                // 构建响应结果
+                Map<String, Object> result = new HashMap<>();
+                result.put("user_id", userId);
+                result.put("message", message);
+                result.put("conversation_id", userConversation.getConversationId());
+                result.put("chat_id", chatResponse.getChatId());
+                result.put("message_details", messageDetail);
+                
+                // 提取回复内容
+                String reply = extractLastAnswerContent(messageDetail.getData());
+                result.put("reply", reply);
+                
+                logger.info("微信集成测试成功 - 用户ID: {}, 回复: {}", userId, reply);
+                return ResponseEntity.ok(EventResponse.success(result, "微信集成测试成功"));
+            } else {
+                logger.error("微信集成测试失败 - 用户ID: {}", userId);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(EventResponse.error("微信集成测试失败"));
+            }
+
+        } catch (Exception e) {
+            logger.error("微信集成测试时发生异常", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(EventResponse.error("微信集成测试异常: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 从消息详情中提取最后一个answer类型的回复内容
+     */
+    private String extractLastAnswerContent(List<CozeMessageDetailResponse.ChatV3MessageDetail> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return null;
+        }
+        
+        // 查找最后一个answer类型的消息
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            CozeMessageDetailResponse.ChatV3MessageDetail message = messages.get(i);
+            if ("answer".equals(message.getType()) && "assistant".equals(message.getRole())) {
+                return message.getContent();
+            }
+        }
+        
+        return null;
     }
 
     /**
