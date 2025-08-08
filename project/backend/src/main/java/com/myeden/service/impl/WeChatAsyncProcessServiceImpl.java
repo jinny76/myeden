@@ -38,8 +38,8 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
     private final UserMessageMonitorService userMessageMonitorService;
 
     @Autowired
-    public WeChatAsyncProcessServiceImpl(CozeService cozeService, WeChatSendService weChatSendService, 
-                                       WeChatConversationService conversationService, 
+    public WeChatAsyncProcessServiceImpl(CozeService cozeService, WeChatSendService weChatSendService,
+                                       WeChatConversationService conversationService,
                                        UserConversationService userConversationService,
                                        UserMessageMonitorService userMessageMonitorService) {
         this.cozeService = cozeService;
@@ -48,24 +48,24 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
         this.userConversationService = userConversationService;
         this.userMessageMonitorService = userMessageMonitorService;
     }
-    
+
     @Override
     @Async("weChatAsyncExecutor")
     public void processMessageAsync(WeChatMessage message) {
         try {
             logger.info("开始异步处理微信消息: {}", message);
-            
+
             if (message == null) {
                 logger.warn("收到空的微信消息，跳过处理");
                 return;
             }
-            
+
             String msgType = message.getMsgType();
             if (msgType == null) {
                 logger.warn("微信消息类型为空，跳过处理");
                 return;
             }
-            
+
             switch (msgType.toLowerCase()) {
                 case "text":
                     processTextMessageAsync(message);
@@ -83,12 +83,12 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                     logger.warn("收到未知消息类型: {}，跳过处理", msgType);
                     break;
             }
-            
+
         } catch (Exception e) {
             logger.error("异步处理微信消息时出现异常", e);
         }
     }
-    
+
     @Override
     @Async("weChatAsyncExecutor")
     public void processTextMessageAsync(WeChatMessage message) {
@@ -98,16 +98,16 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                 logger.warn("收到空的文本消息内容，跳过处理");
                 return;
             }
-            
+
             String fromUser = message.getFromUserName();
             logger.info("异步处理文本消息: 发送者={}, 内容={}", fromUser, receivedContent);
-            
+
             // 保存用户消息到数据库
             conversationService.saveUserMessage(fromUser, receivedContent, message.getMsgId());
-            
+
             // 调用Dify API生成智能回复（包含上下文）
             String processedContent = generateAIReply(receivedContent, fromUser);
-            
+
             if (processedContent != null && !processedContent.trim().isEmpty()) {
                 // 异步发送回复消息
                 if (processedContent.contains("</think>")) {
@@ -134,12 +134,12 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
             } else {
                 logger.warn("AI未能生成有效回复，跳过发送消息");
             }
-            
+
         } catch (Exception e) {
             logger.error("异步处理文本消息时出现异常", e);
         }
     }
-    
+
     @Override
     @Async("weChatAsyncExecutor")
     public void processEventMessageAsync(WeChatMessage message) {
@@ -149,45 +149,49 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                 logger.warn("事件消息中事件类型为空，跳过处理");
                 return;
             }
-            
+
             String fromUser = message.getFromUserName();
             logger.info("异步处理事件消息: 事件类型={}, 发送者={}", event, fromUser);
-            
+
             String replyContent = null;
-            
+
             switch (event.toLowerCase()) {
                 case "subscribe":
                     // 用户关注事件
-                    replyContent = "欢迎关注我的伊甸园！\n" +
-                                  "我是你的AI助手，可以和我聊天互动。\n" +
+                    replyContent = "我是小新新，可以和我聊天互动。\n" +
                                   "发送任何消息给我，我会智能回复哦~";
                     break;
-                    
+
                 case "unsubscribe":
                     // 用户取消关注事件
                     logger.info("用户{}取消关注", fromUser);
                     return;
-                    
+
                 case "click":
                     // 菜单点击事件
                     String eventKey = message.getEventKey();
-                    replyContent = handleMenuClickEvent(eventKey);
+                    //replyContent = handleMenuClickEvent(eventKey);
                     break;
-                    
+
+                case "location":
+                    // 地理位置事件
+                    replyContent = handleLocationEvent(message);
+                    break;
+
                 default:
                     logger.info("收到其他事件: {}，不需要回复", event);
                     return;
             }
-            
+
             if (replyContent != null && !replyContent.trim().isEmpty()) {
                 sendReplyAsync(fromUser, replyContent);
             }
-            
+
         } catch (Exception e) {
             logger.error("异步处理事件消息时出现异常", e);
         }
     }
-    
+
     /**
      * 使用Coze AI生成回复内容
      */
@@ -196,68 +200,68 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
             // 获取或创建用户的对话关系
             String botId = cozeService.getDefaultBotId();
             UserConversation userConversation = userConversationService.getOrCreateConversation(userId, botId);
-            
+
             // 构建Coze聊天请求
             CozeChatRequest request = new CozeChatRequest();
             request.setBotId(botId);
             request.setUserId(userId);
             request.setConversationId(userConversation.getConversationId());
             request.setStream(false);
-            
+
             // 构建消息
             CozeMessage userMsg = new CozeMessage("user", "question", userMessage, "text");
             request.setAdditionalMessages(Arrays.asList(userMsg));
-            
+
             logger.info("调用Coze API生成AI回复，用户ID: {}, 会话ID: {}", userId, userConversation.getConversationId());
-            
+
             // 调用Coze API生成回复
             CozeChatResponse chatResponse = cozeService.chat(request);
-            
+
             if (chatResponse != null && chatResponse.isSuccess() && chatResponse.getChatId() != null) {
-                logger.info("聊天请求发起成功 - 对话ID: {}, ChatID: {}", 
+                logger.info("聊天请求发起成功 - 对话ID: {}, ChatID: {}",
                            chatResponse.getConversationId(), chatResponse.getChatId());
-                
+
                 // 等待对话完成处理
                 logger.info("开始等待对话完成处理 - ChatID: {}", chatResponse.getChatId());
-                
+
                 CozeMessageDetailResponse messageDetail = waitForChatCompletion(
-                        chatResponse.getChatId(), 
-                        userConversation.getConversationId(), 
+                        chatResponse.getChatId(),
+                        userConversation.getConversationId(),
                         60000  // 30秒超时（微信场景可以稍短一些）
                 );
-                
+
                 if (messageDetail != null && messageDetail.isSuccess() && messageDetail.getData() != null) {
                     // 获取最后一个answer类型的回复
                     String reply = extractLastAnswerContent(messageDetail.getData());
-                    
+
                     // 记录最后一条消息ID，用于后续监控新消息
                     String lastMessageId = extractLastMessageId(messageDetail.getData());
                     if (lastMessageId != null) {
                         userConversationService.updateLastMessageId(userId, lastMessageId);
                         logger.debug("记录最后消息ID - 用户ID: {}, 消息ID: {}", userId, lastMessageId);
                     }
-                    
+
                     if (reply != null && !reply.trim().isEmpty()) {
                         // 过滤和处理回复内容
                         /*if (reply.length() > 300) {
                             reply = reply.substring(0, 297) + "...";
                         }*/
-                        
+
                         logger.info("Coze AI生成回复成功: {}", reply);
                         return reply;
                     }
                 }
             }
-            
+
             logger.warn("Coze AI生成回复失败或为空");
             return getDefaultReply();
-            
+
         } catch (Exception e) {
             logger.error("生成Coze AI回复时出现异常", e);
             return getDefaultReply();
         }
     }
-    
+
     /**
      * 等待对话完成的辅助方法
      * 参考CozeController的waitForChatCompletion逻辑
@@ -265,31 +269,31 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
     private CozeMessageDetailResponse waitForChatCompletion(String chatId, String conversationId, long timeoutMs) {
         long startTime = System.currentTimeMillis();
         long pollInterval = 2000; // 2秒轮询间隔
-        
+
         logger.info("开始等待对话完成 - chatId: {}, 超时: {}ms", chatId, timeoutMs);
-        
+
         while (System.currentTimeMillis() - startTime < timeoutMs) {
             try {
                 CozeChatDetailResponse detail = cozeService.getChatDetail(chatId, conversationId);
-                
+
                 if (detail != null && detail.isSuccess() && detail.getData() != null) {
                     String status = detail.getData().getStatus();
                     logger.debug("对话状态检查 - chatId: {}, status: {}", chatId, status);
-                    
+
                     if ("completed".equals(status) || "failed".equals(status)) {
                         logger.info("对话已结束 - chatId: {}, 最终状态: {}", chatId, status);
                         break;
                     }
-                    
+
                     if ("requires_action".equals(status)) {
                         logger.warn("对话需要用户操作 - chatId: {}", chatId);
                         break;
                     }
                 }
-                
+
                 // 等待下一次轮询
                 Thread.sleep(pollInterval);
-                
+
             } catch (InterruptedException e) {
                 logger.warn("等待对话完成时被中断", e);
                 Thread.currentThread().interrupt();
@@ -299,7 +303,7 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                 // 继续轮询，不中断
             }
         }
-        
+
         logger.warn("等待对话完成超时 - chatId: {}", chatId);
         // 超时后返回最后一次的状态
         try {
@@ -309,7 +313,7 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
             return CozeMessageDetailResponse.error(408, "等待对话完成超时");
         }
     }
-    
+
     /**
      * 从消息详情中提取最后一个answer类型的回复内容
      */
@@ -317,7 +321,7 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
         if (messages == null || messages.isEmpty()) {
             return null;
         }
-        
+
         // 查找最后一个answer类型的消息
         for (int i = messages.size() - 1; i >= 0; i--) {
             CozeMessageDetailResponse.ChatV3MessageDetail message = messages.get(i);
@@ -325,10 +329,10 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                 return message.getContent();
             }
         }
-        
+
         return null;
     }
-    
+
     /**
      * 从消息详情中提取最后一条answer类型消息的ID
      */
@@ -336,7 +340,7 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
         if (messages == null || messages.isEmpty()) {
             return null;
         }
-        
+
         // 查找最后一条answer类型的消息ID，从后往前遍历
         for (int i = messages.size() - 1; i >= 0; i--) {
             CozeMessageDetailResponse.ChatV3MessageDetail message = messages.get(i);
@@ -348,11 +352,11 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                 }
             }
         }
-        
+
         logger.warn("未找到有效的answer类型消息ID");
         return null;
     }
-    
+
     /**
      * 异步发送回复消息
      */
@@ -360,15 +364,15 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
     public void sendReplyAsync(String toUser, String content) {
         try {
             logger.info("异步发送回复消息: toUser={}, content={}", toUser, content);
-            
+
             WeChatSendMessageResponse response = weChatSendService.sendTextMessage(toUser, content);
-            
+
             if (response.isSuccess()) {
                 logger.info("回复消息发送成功: msgId={}", response.getMsgId());
-                
+
                 // 保存AI回复消息到数据库
                 conversationService.saveAssistantMessage(toUser, content);
-                
+
                 // 启动用户消息监控，监听Coze主动推送的新消息
                 /*try {
                     userMessageMonitorService.startMonitoring(toUser);
@@ -376,23 +380,62 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                 } catch (Exception e) {
                     logger.error("启动用户消息监控失败 - 用户: {}", toUser, e);
                 }*/
-                
+
             } else {
                 logger.error("回复消息发送失败: {}", response);
             }
-            
+
         } catch (Exception e) {
             logger.error("异步发送回复消息时出现异常", e);
         }
     }
-    
+
+    /**
+     * 处理地理位置事件
+     */
+    private String handleLocationEvent(WeChatMessage message) {
+        try {
+            String latitude = message.getLatitude();
+            String longitude = message.getLongitude();
+            String precision = message.getPrecision();
+            String fromUser = message.getFromUserName();
+
+            logger.info("收到地理位置事件 - 用户: {}, 纬度: {}, 经度: {}, 精度: {}",
+                       fromUser, latitude, longitude, precision);
+
+            if (latitude != null && longitude != null) {
+                // 构建位置更新消息发送给Coze
+                String locationMessage = String.format("我的坐标是经度是%s, 纬度是%s, 调用高德获得我的位置, 更新一下我的位置信息",
+                                                      longitude, latitude);
+
+                logger.info("向Coze发送位置更新消息 - 用户: {}, 消息: {}", fromUser, locationMessage);
+
+                try {
+                    new Thread(() -> {
+                        String result = generateAIReply(locationMessage, fromUser);
+                        logger.info("AI返回:%s", result);
+                    }).start();
+                } catch (Exception e) {
+                    logger.error("调用AI错误", e);
+                }
+                return null;
+            } else {
+                return null;
+            }
+
+        } catch (Exception e) {
+            logger.error("处理地理位置事件时出现异常", e);
+            return null;
+        }
+    }
+
     /**
      * 处理菜单点击事件
      */
     private String handleMenuClickEvent(String eventKey) {
         try {
             logger.info("处理菜单点击事件: eventKey={}", eventKey);
-            
+
             switch (eventKey) {
                 case "HELP":
                     return "🤖 伊甸园助手使用指南\n\n" +
@@ -409,13 +452,13 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                 default:
                     return "收到菜单点击：" + eventKey + "\n请发送消息与我聊天吧~";
             }
-            
+
         } catch (Exception e) {
             logger.error("处理菜单点击事件时出现异常", e);
             return "感谢你的点击，请发送消息与我聊天吧~";
         }
     }
-    
+
     /**
      * 获取默认回复
      */
@@ -427,7 +470,7 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
             "你说得很有道理，我再想想如何回复。",
             "感谢分享！我正在组织语言回复你。"
         };
-        
+
         int index = (int) (Math.random() * defaultReplies.length);
         return defaultReplies[index];
     }

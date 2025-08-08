@@ -79,6 +79,30 @@ public class WeChatMessage {
     @JsonProperty("EventKey")
     private String eventKey;
     
+    /**
+     * 纬度（地理位置事件）
+     */
+    @JsonProperty("Latitude")
+    private String latitude;
+    
+    /**
+     * 经度（地理位置事件）
+     */
+    @JsonProperty("Longitude")
+    private String longitude;
+    
+    /**
+     * 精度（地理位置事件）
+     */
+    @JsonProperty("Precision")
+    private String precision;
+    
+    /**
+     * 应用类型（地理位置事件）
+     */
+    @JsonProperty("AppType")
+    private String appType;
+    
     // Getters and Setters
     public String getMsgType() {
         return msgType;
@@ -176,6 +200,38 @@ public class WeChatMessage {
         this.eventKey = eventKey;
     }
     
+    public String getLatitude() {
+        return latitude;
+    }
+    
+    public void setLatitude(String latitude) {
+        this.latitude = latitude;
+    }
+    
+    public String getLongitude() {
+        return longitude;
+    }
+    
+    public void setLongitude(String longitude) {
+        this.longitude = longitude;
+    }
+    
+    public String getPrecision() {
+        return precision;
+    }
+    
+    public void setPrecision(String precision) {
+        this.precision = precision;
+    }
+    
+    public String getAppType() {
+        return appType;
+    }
+    
+    public void setAppType(String appType) {
+        this.appType = appType;
+    }
+    
     @Override
     public String toString() {
         return "WeChatMessage{" +
@@ -187,6 +243,11 @@ public class WeChatMessage {
                 ", agentId='" + agentId + '\'' +
                 ", content='" + content + '\'' +
                 ", event='" + event + '\'' +
+                ", eventKey='" + eventKey + '\'' +
+                ", latitude='" + latitude + '\'' +
+                ", longitude='" + longitude + '\'' +
+                ", precision='" + precision + '\'' +
+                ", appType='" + appType + '\'' +
                 '}';
     }
 }

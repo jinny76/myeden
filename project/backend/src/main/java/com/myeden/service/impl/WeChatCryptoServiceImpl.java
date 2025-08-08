@@ -325,6 +325,12 @@ public class WeChatCryptoServiceImpl implements WeChatCryptoService {
             message.setPicUrl(extractXmlValue(xml, "PicUrl"));
             message.setFormat(extractXmlValue(xml, "Format"));
             
+            // 地理位置相关字段
+            message.setLatitude(extractXmlValue(xml, "Latitude"));
+            message.setLongitude(extractXmlValue(xml, "Longitude"));
+            message.setPrecision(extractXmlValue(xml, "Precision"));
+            message.setAppType(extractXmlValue(xml, "AppType"));
+            
             String createTimeStr = extractXmlValue(xml, "CreateTime");
             if (createTimeStr != null && !createTimeStr.isEmpty()) {
                 message.setCreateTime(Long.parseLong(createTimeStr));
