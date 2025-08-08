@@ -9,7 +9,8 @@
       "Bash(mkdir:*)",
       "Bash(python:*)",
       "Bash(find:*)",
-      "WebFetch(domain:www.coze.cn)"
+      "WebFetch(domain:www.coze.cn)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

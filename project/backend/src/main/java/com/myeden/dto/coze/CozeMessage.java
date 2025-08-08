@@ -27,6 +27,12 @@ public class CozeMessage {
      */
     @JsonProperty("content_type")
     private String contentType = "text";
+    
+    /**
+     * 消息创建时间戳（毫秒）
+     */
+    @JsonProperty("created_at")
+    private Long createdAt;
 
     public CozeMessage() {}
     
@@ -77,6 +83,14 @@ public class CozeMessage {
         this.contentType = contentType;
     }
 
+    public Long getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Long createdAt) {
+        this.createdAt = createdAt;
+    }
+
     @Override
     public String toString() {
         return "CozeMessage{" +
@@ -84,6 +98,7 @@ public class CozeMessage {
                 ", type='" + type + '\'' +
                 ", content='" + content + '\'' +
                 ", contentType='" + contentType + '\'' +
+                ", createdAt=" + createdAt +
                 '}';
     }
 }

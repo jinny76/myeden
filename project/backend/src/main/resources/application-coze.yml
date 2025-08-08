@@ -4,7 +4,7 @@ coze:
     # API基础URL
     base-url: https://api.coze.cn
     # API密钥
-    key: ${COZE_API_KEY:pat_NsB1iCSVoUrmCMvdPA3lwvrDeseyMhWn2675pHP584NJovl3QtiHDcLb2FPILZrl}
+    key: ${COZE_API_KEY}
     # 是否启用
     enabled: ${COZE_ENABLED:true}
     
@@ -36,7 +36,7 @@ coze:
     # 默认配置
     defaults:
       # 默认机器人ID
-      bot-id: ${COZE_DEFAULT_BOT_ID:7525775173111889955}
+      bot-id: ${COZE_DEFAULT_BOT_ID:7535811476536541222}
       # 默认用户ID
       user-id: ${COZE_DEFAULT_USER_ID:jinni}
       # 对话模式：blocking(阻塞) 或 auto(自动)

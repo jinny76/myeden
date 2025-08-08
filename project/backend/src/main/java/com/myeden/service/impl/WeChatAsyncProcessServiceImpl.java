@@ -228,9 +228,9 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                     
                     if (reply != null && !reply.trim().isEmpty()) {
                         // 过滤和处理回复内容
-                        if (reply.length() > 300) {
+                        /*if (reply.length() > 300) {
                             reply = reply.substring(0, 297) + "...";
-                        }
+                        }*/
                         
                         logger.info("Coze AI生成回复成功: {}", reply);
                         return reply;
