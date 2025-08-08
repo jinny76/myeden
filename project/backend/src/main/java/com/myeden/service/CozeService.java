@@ -105,4 +105,15 @@ public interface CozeService {
      * @return 消息详情响应
      */
     CozeMessageDetailResponse getMessageDetails(String conversationId, String chatId);
+    
+    /**
+     * 获取会话消息列表（用于监控新消息）
+     * 基于message_id进行分页，获取指定消息ID之后的新消息
+     * 
+     * @param conversationId 会话ID
+     * @param afterMessageId 指定消息ID之后（可为null，获取最新消息）
+     * @param limit 限制数量，默认20，最大100
+     * @return 消息列表响应
+     */
+    CozeMessageListResponse getMessageList(String conversationId, String afterMessageId, Integer limit);
 }

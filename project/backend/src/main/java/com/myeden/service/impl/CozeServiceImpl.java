@@ -397,4 +397,87 @@ public class CozeServiceImpl implements CozeService {
             return CozeChatResponse.error(500, "测试调用异常: " + e.getMessage());
         }
     }
+    
+    @Override
+    public CozeMessageListResponse getMessageList(String conversationId, String afterMessageId, Integer limit) {
+        if (!cozeProperties.isEnabled()) {
+            logger.warn("Coze服务未启用");
+            return CozeMessageListResponse.error(400, "Coze服务未启用");
+        }
+
+        try {
+            // 构建URL - 按照curl示例使用v1版本，并将conversation_id作为查询参数
+            String url = String.format("%s/v1/conversation/message/list?conversation_id=%s", 
+                                     cozeProperties.getBaseUrl(), conversationId);
+            
+            // 构建请求体
+            CozeMessageListRequest requestBody = new CozeMessageListRequest();
+            requestBody.setOrder("asc"); // 按时间降序，获取最新消息
+            
+            if (StringUtils.hasText(afterMessageId)) {
+                requestBody.setAfterId(afterMessageId);
+            }
+            
+            if (limit != null && limit > 0) {
+                requestBody.setLimit(Math.min(limit, 100)); // 最大100
+            } else {
+                requestBody.setLimit(20); // 默认20
+            }
+            
+            // 设置HTTP Headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(cozeProperties.getKey());
+            
+            HttpEntity<CozeMessageListRequest> httpEntity = new HttpEntity<>(requestBody, headers);
+            logger.debug("获取消息列表请求: conversationId={}, afterMessageId={}, limit={}, requestBody={}", 
+                        conversationId, afterMessageId, limit, requestBody);
+            
+            // 使用POST请求，按照curl示例 - 先获取原始响应以便调试
+            ResponseEntity<String> rawResponse = restTemplate.exchange(
+                    url, HttpMethod.POST, httpEntity, String.class);
+            
+            logger.info("Coze API原始响应 - 状态码: {}, 响应体: {}", 
+                       rawResponse.getStatusCode(), rawResponse.getBody());
+            
+            if (rawResponse.getStatusCode().is2xxSuccessful() && rawResponse.getBody() != null) {
+                try {
+                    // 尝试解析为目标对象
+                    CozeMessageListResponse messageList = objectMapper.readValue(
+                            rawResponse.getBody(), CozeMessageListResponse.class);
+                    
+                    logger.info("获取消息列表成功 - 会话ID: {}, 消息数量: {}", 
+                               conversationId, 
+                               messageList.getData() != null ? messageList.getData().size() : 0);
+                    return messageList;
+                } catch (Exception parseEx) {
+                    logger.error("解析Coze API响应失败 - 原始响应: {}", rawResponse.getBody(), parseEx);
+                    
+                    // 尝试解析错误响应
+                    try {
+                        CozeMessageListResponse errorResponse = objectMapper.readValue(
+                                rawResponse.getBody(), CozeMessageListResponse.class);
+                        if (!errorResponse.isSuccess()) {
+                            logger.warn("Coze API返回业务错误 - code: {}, msg: {}", 
+                                       errorResponse.getCode(), errorResponse.getDetailError());
+                            return errorResponse;
+                        }
+                    } catch (Exception ignored) {
+                        // 如果连错误响应都解析不了，返回原始错误
+                    }
+                    
+                    return CozeMessageListResponse.error(500, "解析API响应失败: " + parseEx.getMessage());
+                }
+            } else {
+                logger.error("获取消息列表失败 - HTTP状态码: {}, 响应体: {}", 
+                            rawResponse.getStatusCode(), rawResponse.getBody());
+                return CozeMessageListResponse.error(rawResponse.getStatusCode().value(), 
+                    "获取消息列表失败: " + rawResponse.getBody());
+            }
+            
+        } catch (Exception e) {
+            logger.error("获取消息列表时发生异常", e);
+            return CozeMessageListResponse.error(500, "获取消息列表异常: " + e.getMessage());
+        }
+    }
 }

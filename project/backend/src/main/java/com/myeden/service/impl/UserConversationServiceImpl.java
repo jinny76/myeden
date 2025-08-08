@@ -137,4 +137,15 @@ public class UserConversationServiceImpl implements UserConversationService {
     public List<UserConversation> findByBotId(String botId) {
         return userConversationRepository.findByBotIdAndIsActiveTrue(botId);
     }
+    
+    @Override
+    public void updateLastMessageId(String userId, String messageId) {
+        Optional<UserConversation> conversation = userConversationRepository.findByUserIdAndIsActiveTrue(userId);
+        if (conversation.isPresent()) {
+            UserConversation userConversation = conversation.get();
+            userConversation.updateLastMessageId(messageId);
+            userConversationRepository.save(userConversation);
+            logger.debug("更新用户最后消息ID - 用户ID: {}, 消息ID: {}", userId, messageId);
+        }
+    }
 }

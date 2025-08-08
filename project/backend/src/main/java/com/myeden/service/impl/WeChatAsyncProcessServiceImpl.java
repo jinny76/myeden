@@ -7,6 +7,7 @@ import com.myeden.dto.coze.CozeMessageDetailResponse;
 import com.myeden.entity.UserConversation;
 import com.myeden.service.CozeService;
 import com.myeden.service.UserConversationService;
+import com.myeden.service.UserMessageMonitorService;
 import com.myeden.service.WeChatAsyncProcessService;
 import com.myeden.service.WeChatConversationService;
 import com.myeden.service.WeChatSendService;
@@ -34,15 +35,18 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
     private final WeChatSendService weChatSendService;
     private final WeChatConversationService conversationService;
     private final UserConversationService userConversationService;
+    private final UserMessageMonitorService userMessageMonitorService;
 
     @Autowired
     public WeChatAsyncProcessServiceImpl(CozeService cozeService, WeChatSendService weChatSendService, 
                                        WeChatConversationService conversationService, 
-                                       UserConversationService userConversationService) {
+                                       UserConversationService userConversationService,
+                                       UserMessageMonitorService userMessageMonitorService) {
         this.cozeService = cozeService;
         this.weChatSendService = weChatSendService;
         this.conversationService = conversationService;
         this.userConversationService = userConversationService;
+        this.userMessageMonitorService = userMessageMonitorService;
     }
     
     @Override
@@ -219,12 +223,19 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                 CozeMessageDetailResponse messageDetail = waitForChatCompletion(
                         chatResponse.getChatId(), 
                         userConversation.getConversationId(), 
-                        30000  // 30秒超时（微信场景可以稍短一些）
+                        60000  // 30秒超时（微信场景可以稍短一些）
                 );
                 
                 if (messageDetail != null && messageDetail.isSuccess() && messageDetail.getData() != null) {
                     // 获取最后一个answer类型的回复
                     String reply = extractLastAnswerContent(messageDetail.getData());
+                    
+                    // 记录最后一条消息ID，用于后续监控新消息
+                    String lastMessageId = extractLastMessageId(messageDetail.getData());
+                    if (lastMessageId != null) {
+                        userConversationService.updateLastMessageId(userId, lastMessageId);
+                        logger.debug("记录最后消息ID - 用户ID: {}, 消息ID: {}", userId, lastMessageId);
+                    }
                     
                     if (reply != null && !reply.trim().isEmpty()) {
                         // 过滤和处理回复内容
@@ -319,6 +330,30 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
     }
     
     /**
+     * 从消息详情中提取最后一条answer类型消息的ID
+     */
+    private String extractLastMessageId(List<CozeMessageDetailResponse.ChatV3MessageDetail> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return null;
+        }
+        
+        // 查找最后一条answer类型的消息ID，从后往前遍历
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            CozeMessageDetailResponse.ChatV3MessageDetail message = messages.get(i);
+            if ("answer".equals(message.getType()) && "assistant".equals(message.getRole())) {
+                String messageId = message.getId();
+                if (messageId != null && !messageId.trim().isEmpty()) {
+                    logger.debug("提取最后一条answer消息ID: {}", messageId);
+                    return messageId;
+                }
+            }
+        }
+        
+        logger.warn("未找到有效的answer类型消息ID");
+        return null;
+    }
+    
+    /**
      * 异步发送回复消息
      */
     @Async("weChatAsyncExecutor")
@@ -333,6 +368,14 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                 
                 // 保存AI回复消息到数据库
                 conversationService.saveAssistantMessage(toUser, content);
+                
+                // 启动用户消息监控，监听Coze主动推送的新消息
+                /*try {
+                    userMessageMonitorService.startMonitoring(toUser);
+                    logger.info("已启动用户消息监控 - 用户: {}", toUser);
+                } catch (Exception e) {
+                    logger.error("启动用户消息监控失败 - 用户: {}", toUser, e);
+                }*/
                 
             } else {
                 logger.error("回复消息发送失败: {}", response);

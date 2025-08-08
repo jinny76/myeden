@@ -62,6 +62,12 @@ public class UserConversation {
     private Boolean isActive = true;
     
     /**
+     * 最后消息ID
+     * 用于监控Coze主动推送的新消息，基于消息ID分页
+     */
+    private String lastMessageId;
+    
+    /**
      * 备注信息
      */
     private String remark;
@@ -92,6 +98,14 @@ public class UserConversation {
      */
     public void setInactive() {
         this.isActive = false;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * 更新最后消息ID
+     */
+    public void updateLastMessageId(String messageId) {
+        this.lastMessageId = messageId;
         this.updatedAt = LocalDateTime.now();
     }
 }

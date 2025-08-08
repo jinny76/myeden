@@ -87,4 +87,12 @@ public interface UserConversationService {
      * @return 对话关系列表
      */
     List<UserConversation> findByBotId(String botId);
+    
+    /**
+     * 更新最后消息ID
+     * 
+     * @param userId 用户ID
+     * @param messageId 消息ID
+     */
+    void updateLastMessageId(String userId, String messageId);
 }
