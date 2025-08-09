@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import com.myeden.dto.coze.CozeChatDetailResponse;
 
 /**
@@ -30,6 +31,12 @@ import com.myeden.dto.coze.CozeChatDetailResponse;
 public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService {
 
     private static final Logger logger = LoggerFactory.getLogger(WeChatAsyncProcessServiceImpl.class);
+    
+    // 位置上报频率限制：10分钟
+    private static final long LOCATION_REPORT_INTERVAL = 10 * 60 * 1000L; // 10分钟，单位毫秒
+    
+    // 用户上次位置上报时间缓存
+    private final ConcurrentHashMap<String, Long> lastLocationReportTime = new ConcurrentHashMap<>();
 
     private final CozeService cozeService;
     private final WeChatSendService weChatSendService;
@@ -404,6 +411,23 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                        fromUser, latitude, longitude, precision);
 
             if (latitude != null && longitude != null) {
+                // 检查位置上报频率限制
+                long currentTime = System.currentTimeMillis();
+                Long lastReportTime = lastLocationReportTime.get(fromUser);
+                
+                if (lastReportTime != null && (currentTime - lastReportTime) < LOCATION_REPORT_INTERVAL) {
+                    long remainingTime = LOCATION_REPORT_INTERVAL - (currentTime - lastReportTime);
+                    long remainingMinutes = remainingTime / (60 * 1000);
+                    
+                    logger.info("位置上报频率限制 - 用户: {}, 距离上次上报: {}分钟，还需等待: {}分钟", 
+                               fromUser, (currentTime - lastReportTime) / (60 * 1000), remainingMinutes);
+                    
+                    return null;
+                }
+                
+                // 更新上次位置上报时间
+                lastLocationReportTime.put(fromUser, currentTime);
+                
                 // 构建位置更新消息发送给Coze
                 String locationMessage = String.format("我的坐标是经度是%s, 纬度是%s, 调用高德获得我的位置, 更新一下我的位置信息",
                                                       longitude, latitude);
@@ -418,6 +442,7 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
                 } catch (Exception e) {
                     logger.error("调用AI错误", e);
                 }
+                
                 return null;
             } else {
                 return null;
@@ -425,7 +450,7 @@ public class WeChatAsyncProcessServiceImpl implements WeChatAsyncProcessService 
 
         } catch (Exception e) {
             logger.error("处理地理位置事件时出现异常", e);
-            return null;
+            return "收到您的位置信息，感谢分享！";
         }
     }
 
